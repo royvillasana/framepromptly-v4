@@ -27,7 +27,7 @@ export const ToolNode = memo(({ data, selected }: ToolNodeProps) => {
 
   const handleGeneratePrompt = () => {
     if (framework && stage) {
-      generatePrompt(framework, stage, tool);
+      generatePrompt(framework, stage, tool, undefined, undefined);
     }
   };
 

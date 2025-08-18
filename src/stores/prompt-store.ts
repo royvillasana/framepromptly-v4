@@ -19,6 +19,12 @@ export interface GeneratedPrompt {
     framework: UXFramework;
     stage: UXStage;
     tool: UXTool;
+    connectedNodes?: {
+      frameworks: any[];
+      stages: any[];
+      tools: any[];
+    };
+    nodeCustomizations?: Record<string, any>;
     previousOutputs?: string[];
   };
   variables: Record<string, string>;
@@ -33,7 +39,7 @@ export interface PromptState {
   isGenerating: boolean;
   
   // Actions
-  generatePrompt: (framework: UXFramework, stage: UXStage, tool: UXTool, previousOutputs?: string[]) => string;
+  generatePrompt: (framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => string;
   executePrompt: (promptId: string) => Promise<void>;
   updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
   setCurrentPrompt: (prompt: GeneratedPrompt | null) => void;
@@ -530,7 +536,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
   currentPrompt: null,
   isGenerating: false,
 
-  generatePrompt: (framework, stage, tool, previousOutputs = []) => {
+  generatePrompt: (framework, stage, tool, connectedNodes, nodeCustomizations, previousOutputs = []) => {
     const template = get().templates.find(
       t => t.framework === framework.id && t.stage === stage.id && t.tool === tool.id
     );
@@ -555,6 +561,8 @@ Please provide detailed, actionable guidance for implementing this UX tool in th
         framework,
         stage,
         tool,
+        connectedNodes,
+        nodeCustomizations,
         previousOutputs
       },
       variables: {},
