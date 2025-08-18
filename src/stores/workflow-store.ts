@@ -131,10 +131,181 @@ const sampleFrameworks: UXFramework[] = [
               output: 'Quantitative insights',
               when: 'Early research phase'
             }
+          },
+          { 
+            id: 'observations', 
+            name: 'Observations', 
+            description: 'Observe users in their environment', 
+            category: 'Research', 
+            icon: 'Eye',
+            characteristics: {
+              effort: 'High',
+              expertise: 'Observational skills',
+              resources: ['field access', 'observation protocols'],
+              output: 'Behavioral insights',
+              when: 'Context exploration'
+            }
+          },
+          { 
+            id: 'empathy-maps-dt', 
+            name: 'Empathy Maps', 
+            description: 'Visualize user thoughts and feelings', 
+            category: 'Analysis', 
+            icon: 'Heart',
+            characteristics: {
+              effort: 'Low',
+              expertise: 'Synthesis skills',
+              resources: ['research data', 'workshop materials'],
+              output: 'User empathy visualization',
+              when: 'After research collection'
+            }
+          }
+        ]
+      },
+      {
+        id: 'define',
+        name: 'Define',
+        description: 'Synthesize observations into problem statements',
+        position: { x: 200, y: 0 },
+        characteristics: {
+          duration: '1-2 weeks',
+          participants: 'Design team, researchers',
+          deliverables: 'Problem statements, personas, POV statements',
+          skills: ['synthesis', 'problem framing', 'storytelling'],
+          dependencies: ['research insights', 'stakeholder alignment']
+        },
+        tools: [
+          { 
+            id: 'affinity-mapping', 
+            name: 'Affinity Mapping', 
+            description: 'Group insights to find patterns', 
+            category: 'Analysis', 
+            icon: 'Grid3X3',
+            characteristics: {
+              effort: 'Medium',
+              expertise: 'Synthesis skills',
+              resources: ['sticky notes', 'wall space', 'research data'],
+              output: 'Insight clusters and themes',
+              when: 'After research collection'
+            }
+          },
+          { 
+            id: 'personas', 
+            name: 'Personas', 
+            description: 'Create user archetypes', 
+            category: 'Analysis', 
+            icon: 'User',
+            characteristics: {
+              effort: 'Medium',
+              expertise: 'User modeling',
+              resources: ['research data', 'design tools'],
+              output: 'User persona documents',
+              when: 'After pattern identification'
+            }
+          }
+        ]
+      },
+      {
+        id: 'ideate',
+        name: 'Ideate',
+        description: 'Generate creative solutions',
+        position: { x: 400, y: 0 },
+        characteristics: {
+          duration: '1-3 weeks',
+          participants: 'Multidisciplinary team',
+          deliverables: 'Solution concepts, feature ideas',
+          skills: ['creative thinking', 'brainstorming', 'facilitation'],
+          dependencies: ['clear problem definition', 'diverse perspectives']
+        },
+        tools: [
+          { 
+            id: 'brainstorming', 
+            name: 'Brainstorming', 
+            description: 'Generate ideas rapidly', 
+            category: 'Ideation', 
+            icon: 'Lightbulb',
+            characteristics: {
+              effort: 'Low',
+              expertise: 'Facilitation',
+              resources: ['workshop space', 'sticky notes'],
+              output: 'Raw ideas and concepts',
+              when: 'Divergent thinking phase'
+            }
+          },
+          { 
+            id: 'how-might-we', 
+            name: 'How Might We', 
+            description: 'Frame problems as opportunities', 
+            category: 'Ideation', 
+            icon: 'HelpCircle',
+            characteristics: {
+              effort: 'Low',
+              expertise: 'Problem reframing',
+              resources: ['problem statements', 'facilitation materials'],
+              output: 'Opportunity statements',
+              when: 'Problem to solution transition'
+            }
+          }
+        ]
+      },
+      {
+        id: 'prototype',
+        name: 'Prototype',
+        description: 'Build testable representations',
+        position: { x: 600, y: 0 },
+        characteristics: {
+          duration: '2-4 weeks',
+          participants: 'Designers, developers',
+          deliverables: 'Prototypes, mockups, wireframes',
+          skills: ['prototyping', 'design tools', 'technical skills'],
+          dependencies: ['selected concepts', 'technical constraints']
+        },
+        tools: [
+          { 
+            id: 'wireframes', 
+            name: 'Wireframes', 
+            description: 'Low-fidelity layout structures', 
+            category: 'Prototyping', 
+            icon: 'Layout',
+            characteristics: {
+              effort: 'Medium',
+              expertise: 'Information architecture',
+              resources: ['wireframing tools', 'content inventory'],
+              output: 'Structural layouts',
+              when: 'Information architecture phase'
+            }
+          }
+        ]
+      },
+      {
+        id: 'test',
+        name: 'Test',
+        description: 'Validate solutions with users',
+        position: { x: 800, y: 0 },
+        characteristics: {
+          duration: '2-3 weeks',
+          participants: 'Researchers, designers, users',
+          deliverables: 'Test results, insights, recommendations',
+          skills: ['usability testing', 'data analysis', 'facilitation'],
+          dependencies: ['testable prototypes', 'user access']
+        },
+        tools: [
+          { 
+            id: 'usability-tests', 
+            name: 'Usability Tests', 
+            description: 'Test prototype with users', 
+            category: 'Testing', 
+            icon: 'Users',
+            characteristics: {
+              effort: 'High',
+              expertise: 'Usability testing',
+              resources: ['testing lab', 'recording equipment', 'participants'],
+              output: 'Usability findings',
+              when: 'Prototype validation'
+            }
           }
         ]
       }
-      // ... Additional stages would continue with same pattern
     ]
   },
   {
@@ -175,6 +346,49 @@ const sampleFrameworks: UXFramework[] = [
               resources: ['interview guides', 'stakeholder access'],
               output: 'Business requirements',
               when: 'Project initiation'
+            }
+          },
+          { 
+            id: 'contextual-inquiry', 
+            name: 'Contextual Inquiry', 
+            description: 'Observe users in context', 
+            category: 'Research', 
+            icon: 'Search',
+            characteristics: {
+              effort: 'High',
+              expertise: 'Ethnographic research',
+              resources: ['field access', 'observation protocols'],
+              output: 'Contextual insights',
+              when: 'Problem exploration'
+            }
+          }
+        ]
+      },
+      {
+        id: 'define-dd',
+        name: 'Define',
+        description: 'Synthesize insights into focused brief',
+        position: { x: 200, y: 0 },
+        characteristics: {
+          duration: '2-3 weeks',
+          participants: 'Design team, stakeholders',
+          deliverables: 'Design brief, problem definition',
+          skills: ['synthesis', 'problem definition', 'prioritization'],
+          dependencies: ['research insights', 'stakeholder alignment']
+        },
+        tools: [
+          { 
+            id: 'synthesis-workshops', 
+            name: 'Synthesis Workshops', 
+            description: 'Collaborative insight analysis', 
+            category: 'Analysis', 
+            icon: 'Target',
+            characteristics: {
+              effort: 'High',
+              expertise: 'Workshop facilitation',
+              resources: ['workshop space', 'research data'],
+              output: 'Key insights and themes',
+              when: 'After research phase'
             }
           }
         ]

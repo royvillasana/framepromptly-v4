@@ -156,34 +156,65 @@ export default function Workflow() {
 
                     {/* Tools by Stage */}
                     <div className="space-y-4">
-                      <h4 className="font-medium text-base">Available Tools</h4>
+                      <h4 className="font-medium text-base">Available Tools by Stage</h4>
                       {selectedFramework.stages.map((stage) => (
                         <div key={stage.id} className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-primary"></div>
-                            <h5 className="font-medium text-sm">{stage.name}</h5>
-                            <Badge variant="secondary" className="text-xs">
-                              {stage.tools.length} tools
-                            </Badge>
+                          {/* Stage Header */}
+                          <div className="bg-accent/30 rounded-lg p-3 border-l-4 border-primary">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-primary"></div>
+                                <h5 className="font-semibold text-sm">{stage.name}</h5>
+                                <Badge variant="secondary" className="text-xs">
+                                  {stage.tools.length} tools
+                                </Badge>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-6 px-2 text-xs"
+                                onClick={() => handleAddStage(stage)}
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Add Stage
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2">{stage.description}</p>
+                            
+                            {/* Stage Characteristics */}
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              <div><span className="text-muted-foreground">Duration:</span> {stage.characteristics.duration}</div>
+                              <div><span className="text-muted-foreground">Participants:</span> {stage.characteristics.participants}</div>
+                            </div>
                           </div>
                           
+                          {/* Tools Grid */}
                           <div className="grid grid-cols-1 gap-2 ml-4">
                             {stage.tools.map((tool) => (
                               <Card
                                 key={`${stage.id}-${tool.id}`}
-                                className="p-3 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50 bg-background/50"
+                                className="p-3 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50 bg-background/50 border-l-2 border-l-transparent hover:border-l-primary"
                                 onClick={() => handleAddTool(tool, selectedFramework, stage)}
                               >
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center">
-                                    <Plus className="w-3 h-3 text-primary" />
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                    <div className="w-5 h-5 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
+                                      <Plus className="w-3 h-3 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h6 className="font-medium text-xs truncate">{tool.name}</h6>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <span>{tool.category}</span>
+                                        <span>•</span>
+                                        <span>{tool.characteristics.effort} effort</span>
+                                        <span>•</span>
+                                        <span>{tool.characteristics.expertise}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h6 className="font-medium text-xs truncate">{tool.name}</h6>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {tool.category} • {tool.characteristics.effort} effort
-                                    </p>
-                                  </div>
+                                  <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
+                                    Tool Node
+                                  </Badge>
                                 </div>
                               </Card>
                             ))}
