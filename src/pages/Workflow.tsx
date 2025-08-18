@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers } from 'lucide-react';
 
 export default function Workflow() {
-  const { initializeFrameworks, frameworks, selectFramework, addNode } = useWorkflowStore();
+  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
   const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
 
@@ -167,32 +167,60 @@ export default function Workflow() {
               
               <TabsContent value="canvas" className="m-0 h-[calc(100vh-200px)]">
                 <div className="p-4 space-y-4 h-full overflow-y-auto">
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-muted-foreground">Available Tools</h3>
-                    <div className="space-y-2">
-                      {frameworks[0]?.stages.flatMap(stage => 
-                        stage.tools.map(tool => (
-                          <Card
-                            key={`${stage.id}-${tool.id}`}
-                            className="p-3 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50"
-                            onClick={() => handleAddTool(tool, frameworks[0], stage)}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center">
-                                <Sparkles className="w-3 h-3 text-primary" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-medium text-xs">{tool.name}</h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {stage.name} • {tool.category}
-                                </p>
-                              </div>
-                            </div>
-                          </Card>
-                        ))
-                      )}
+                  {!selectedFramework ? (
+                    <div className="text-center py-8">
+                      <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Select a Framework</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Choose a UX framework from the left panel to see its stages and tools
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="text-center">
+                        <div 
+                          className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center"
+                          style={{ backgroundColor: selectedFramework.color }}
+                        >
+                          <Sparkles className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="font-semibold">{selectedFramework.name}</h3>
+                        <p className="text-xs text-muted-foreground">{selectedFramework.description}</p>
+                      </div>
+                      
+                      {selectedFramework.stages.map((stage) => (
+                        <div key={stage.id} className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-primary"></div>
+                            <h4 className="font-medium text-sm">{stage.name}</h4>
+                            <span className="text-xs text-muted-foreground">({stage.tools.length} tools)</span>
+                          </div>
+                          
+                          <div className="space-y-2 ml-4">
+                            {stage.tools.map((tool) => (
+                              <Card
+                                key={`${stage.id}-${tool.id}`}
+                                className="p-3 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50"
+                                onClick={() => handleAddTool(tool, selectedFramework, stage)}
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center">
+                                    <Sparkles className="w-3 h-3 text-primary" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h5 className="font-medium text-xs">{tool.name}</h5>
+                                    <p className="text-xs text-muted-foreground">
+                                      {tool.category}
+                                    </p>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
               
