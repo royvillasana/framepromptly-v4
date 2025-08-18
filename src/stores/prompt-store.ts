@@ -41,9 +41,9 @@ export interface PromptState {
   initializeTemplates: () => void;
 }
 
-// Comprehensive prompt templates for UX frameworks
+// Comprehensive prompt templates for all UX frameworks
 const promptTemplates: PromptTemplate[] = [
-  // Design Thinking - Empathize
+  // Design Thinking Templates
   {
     id: 'dt-empathize-interviews',
     framework: 'design-thinking',
@@ -66,12 +66,53 @@ Generate:
 4. Questions to uncover emotional responses and motivations
 5. Practical considerations for conducting the interviews
 
-Focus on understanding user context, needs, frustrations, and desired outcomes. Ensure questions are neutral and encourage storytelling.`,
+Focus on understanding user context, needs, frustrations, and desired outcomes.`,
     variables: ['projectName', 'targetUsers', 'researchGoals'],
     description: 'Generate user interview questions and guide'
   },
   
-  // Design Thinking - Define
+  {
+    id: 'dt-empathize-empathy-maps',
+    framework: 'design-thinking',
+    stage: 'empathize',
+    tool: 'empathy-maps',
+    template: `Create detailed empathy maps for {{projectName}} to visualize user thoughts, feelings, actions, and pain points.
+
+User Context:
+- Target User: {{targetUser}}
+- User Scenario: {{userScenario}}
+{{#if previousOutputs}}
+- Research Data: {{previousOutputs}}
+{{/if}}
+
+For each empathy map quadrant, provide:
+
+SAYS:
+- Direct quotes and defining words
+- What they tell others about their experience
+
+THINKS:
+- Beliefs, thoughts, and preoccupations
+- What occupies their thoughts
+
+DOES:
+- Actions and behaviors
+- What they do in their environment
+
+FEELS:
+- Emotions and feelings
+- What they feel and experience
+
+Also include:
+- Pain points and frustrations
+- Needs and wants
+- Goals and motivations
+
+Make it specific and based on real user insights.`,
+    variables: ['projectName', 'targetUser', 'userScenario'],
+    description: 'Create detailed user empathy maps'
+  },
+
   {
     id: 'dt-define-personas',
     framework: 'design-thinking',
@@ -89,7 +130,7 @@ Additional Context:
 - Product/Service: {{productService}}
 - Key User Segments: {{userSegments}}
 
-For each persona, provide:
+For each persona (create 2-3), provide:
 1. Demographic information and background
 2. Goals, needs, and motivations
 3. Pain points and frustrations
@@ -99,229 +140,12 @@ For each persona, provide:
 7. A day-in-the-life scenario
 8. Quote that captures their essence
 
-Create 2-3 primary personas with distinct characteristics and needs. Make them feel like real people with specific details.`,
+Create personas that feel like real people with specific details and distinct characteristics.`,
     variables: ['projectName', 'targetMarket', 'productService', 'userSegments'],
     description: 'Create detailed user personas from research'
   },
 
-  // Design Thinking - Ideate
-  {
-    id: 'dt-ideate-brainstorm',
-    framework: 'design-thinking',
-    stage: 'ideate',
-    tool: 'brainstorming',
-    template: `Facilitate a creative ideation session for {{projectName}} to generate innovative solutions.
-
-Problem Statement:
-{{problemStatement}}
-
-User Insights:
-{{#if previousOutputs}}
-{{previousOutputs}}
-{{/if}}
-
-Constraints:
-- Timeline: {{timeline}}
-- Budget: {{budget}}
-- Technical Limitations: {{techConstraints}}
-
-Generate:
-1. 20+ diverse solution ideas using different ideation techniques:
-   - Direct solutions
-   - Analogical thinking (how do other industries solve this?)
-   - Reverse thinking (what would make this problem worse?)
-   - Technology-enabled solutions
-   - Low-tech alternatives
-
-2. For each idea, provide:
-   - Brief description
-   - Key benefits
-   - Implementation complexity (Low/Medium/High)
-   - Potential impact (Low/Medium/High)
-
-3. Suggest criteria for evaluating and prioritizing ideas
-
-Focus on quantity over quality at first, encourage wild ideas, and build on others' suggestions.`,
-    variables: ['projectName', 'problemStatement', 'timeline', 'budget', 'techConstraints'],
-    description: 'Generate creative solution ideas'
-  },
-
-  // Design Thinking - Prototype
-  {
-    id: 'dt-prototype-wireframes',
-    framework: 'design-thinking',
-    stage: 'prototype',
-    tool: 'wireframes',
-    template: `Create wireframes for {{projectName}} based on the selected solution concept.
-
-Solution Concept:
-{{solutionConcept}}
-
-User Personas:
-{{#if previousOutputs}}
-{{previousOutputs}}
-{{/if}}
-
-Requirements:
-- Platform: {{platform}}
-- Key Features: {{keyFeatures}}
-- User Goals: {{userGoals}}
-
-Wireframe Specifications:
-1. Information architecture and site map
-2. Key user flows (3-5 primary tasks)
-3. Low-fidelity wireframes for:
-   - Landing/home page
-   - Core feature screens
-   - Navigation system
-   - Form/input screens
-   - Error states
-
-4. For each wireframe, include:
-   - Layout and content hierarchy
-   - Navigation elements
-   - Interactive components
-   - Content areas and placeholders
-   - Notes on functionality
-
-5. Design rationale explaining how wireframes address user needs
-
-Focus on functionality and user flow rather than visual design. Ensure wireframes support user goals and business objectives.`,
-    variables: ['projectName', 'solutionConcept', 'platform', 'keyFeatures', 'userGoals'],
-    description: 'Create wireframes for solution concept'
-  },
-
-  // Design Thinking - Test
-  {
-    id: 'dt-test-usability',
-    framework: 'design-thinking',
-    stage: 'test',
-    tool: 'usability-tests',
-    template: `Design a usability testing plan for {{projectName}} prototype validation.
-
-Prototype Details:
-{{prototypeDetails}}
-
-Previous Design Work:
-{{#if previousOutputs}}
-{{previousOutputs}}
-{{/if}}
-
-Testing Parameters:
-- Participant Profile: {{participantProfile}}
-- Testing Environment: {{testingEnvironment}}
-- Timeline: {{testingTimeline}}
-
-Create:
-1. Testing objectives and key questions
-2. Task scenarios (5-7 realistic tasks)
-3. Success criteria and metrics
-4. Pre-test questionnaire
-5. Think-aloud protocol instructions
-6. Post-test interview questions
-7. Observation sheet template
-8. Analysis plan for findings
-
-For each task:
-- Clear scenario context
-- Specific goal to accomplish
-- Success/failure criteria
-- Expected completion time
-- Potential pain points to watch for
-
-Include both quantitative measures (task completion, time, errors) and qualitative insights (satisfaction, confusion points).`,
-    variables: ['projectName', 'prototypeDetails', 'participantProfile', 'testingEnvironment', 'testingTimeline'],
-    description: 'Design usability testing plan'
-  },
-
-  // Double Diamond - Discover
-  {
-    id: 'dd-discover-stakeholder',
-    framework: 'double-diamond',
-    stage: 'discover',
-    tool: 'stakeholder-interviews',
-    template: `Plan stakeholder interviews to understand the business context and constraints for {{projectName}}.
-
-Project Overview:
-- Business Domain: {{businessDomain}}
-- Project Scope: {{projectScope}}
-- Key Stakeholders: {{keyStakeholders}}
-
-{{#if previousOutputs}}
-Existing Research:
-{{previousOutputs}}
-{{/if}}
-
-Design stakeholder interview strategy:
-1. Stakeholder mapping and interview priorities
-2. Customized question sets for different stakeholder types:
-   - Business leaders/decision makers
-   - Product managers
-   - Technical teams
-   - Customer support
-   - Sales/marketing
-
-3. Key topics to explore:
-   - Business goals and success metrics
-   - Current processes and pain points
-   - Technical constraints and opportunities
-   - Budget and timeline expectations
-   - Organizational dynamics and politics
-   - Customer feedback and market insights
-
-4. Interview logistics and documentation plan
-5. Synthesis approach for consolidating insights
-
-Focus on understanding business context, constraints, and success criteria from multiple perspectives.`,
-    variables: ['projectName', 'businessDomain', 'projectScope', 'keyStakeholders'],
-    description: 'Plan comprehensive stakeholder interviews'
-  },
-
-  // Double Diamond - Define
-  {
-    id: 'dd-define-synthesis',
-    framework: 'double-diamond',
-    stage: 'define-dd',
-    tool: 'synthesis-workshops',
-    template: `Facilitate a synthesis workshop to define the core problem for {{projectName}}.
-
-Research Inputs:
-{{#if previousOutputs}}
-{{previousOutputs}}
-{{/if}}
-
-Workshop Details:
-- Participants: {{workshopParticipants}}
-- Duration: {{workshopDuration}}
-- Expected Outcomes: {{expectedOutcomes}}
-
-Workshop Agenda:
-1. Research findings presentation (30 min)
-2. Insights clustering activity (45 min)
-3. Problem statement drafting (60 min)
-4. Opportunity identification (45 min)
-5. Success criteria definition (30 min)
-
-Workshop Activities:
-1. Affinity mapping of research insights
-2. How Might We question generation
-3. Problem statement mad libs
-4. Impact vs. effort prioritization
-5. Success metrics definition
-
-Deliverables:
-- Consolidated insights themes
-- Prioritized problem statements
-- Opportunity areas ranking
-- Design principles
-- Success criteria and KPIs
-
-Design activities that engage all participants and build consensus around the core problem to solve.`,
-    variables: ['projectName', 'workshopParticipants', 'workshopDuration', 'expectedOutcomes'],
-    description: 'Facilitate problem definition workshop'
-  },
-
-  // Google Design Sprint - Understand
+  // Google Design Sprint Templates
   {
     id: 'gds-understand-expert',
     framework: 'google-design-sprint',
@@ -333,11 +157,6 @@ Sprint Context:
 - Sprint Goal: {{sprintGoal}}
 - Target Users: {{targetUsers}}
 - Business Challenge: {{businessChallenge}}
-
-{{#if previousOutputs}}
-Background Research:
-{{previousOutputs}}
-{{/if}}
 
 Expert Interview Plan:
 1. Expert identification and recruitment:
@@ -358,14 +177,350 @@ Expert Interview Plan:
    - Questions and clarifications
    - Insight prioritization
 
-4. Documentation approach:
-   - Insight capture templates
-   - How Might We note generation
-   - Key themes identification
-
-Focus on gathering diverse perspectives quickly to build comprehensive problem understanding in the sprint timeframe.`,
+Focus on gathering diverse perspectives quickly to build comprehensive problem understanding.`,
     variables: ['projectName', 'sprintGoal', 'targetUsers', 'businessChallenge'],
     description: 'Design expert interviews for Design Sprint'
+  },
+
+  {
+    id: 'gds-sketch-crazy8s',
+    framework: 'google-design-sprint',
+    stage: 'sketch',
+    tool: 'crazy-8s-sprint',
+    template: `Facilitate a Crazy 8s sketching session for {{projectName}} to generate rapid solution ideas.
+
+Challenge Statement:
+{{challengeStatement}}
+
+How Might We Questions:
+{{#if previousOutputs}}
+{{previousOutputs}}
+{{/if}}
+
+Crazy 8s Instructions:
+1. Setup (5 minutes):
+   - Fold paper into 8 sections
+   - Set timer for 8 minutes
+   - One idea per section
+
+2. Sketching Rules:
+   - Focus on UI/screen ideas
+   - Don't worry about quality
+   - Build on previous ideas
+   - Go for volume
+
+3. Ideas to explore:
+   - Different entry points
+   - Various interaction patterns
+   - Alternative user flows
+   - Creative solutions to {{specificProblem}}
+
+4. Follow-up:
+   - Quick idea sharing (30 seconds each)
+   - Dot voting on promising concepts
+   - Note interesting patterns
+   - Set up for solution sketching
+
+Generate 20+ diverse UI concepts that address the core challenge.`,
+    variables: ['projectName', 'challengeStatement', 'specificProblem'],
+    description: 'Facilitate rapid idea sketching session'
+  },
+
+  // Human-Centered Design Templates
+  {
+    id: 'hcd-hear-contextual',
+    framework: 'human-centered-design',
+    stage: 'hear',
+    tool: 'contextual-interviews',
+    template: `Design contextual interviews for {{projectName}} to understand users in their natural environment.
+
+Research Context:
+- Location: {{researchLocation}}
+- User Activities: {{userActivities}}
+- Research Questions: {{researchQuestions}}
+
+Contextual Interview Plan:
+1. Pre-visit preparation:
+   - Site logistics and permissions
+   - Equipment and materials needed
+   - Safety considerations
+   - Cultural sensitivity guidelines
+
+2. Interview structure:
+   - Introduction and rapport building (10 min)
+   - Environment tour and observation (20 min)
+   - Task demonstration and narration (30 min)
+   - Reflection and deeper discussion (20 min)
+   - Wrap-up and next steps (10 min)
+
+3. Observation areas:
+   - Physical environment and constraints
+   - Social dynamics and interactions
+   - Tools and technology usage
+   - Workflow and process patterns
+   - Workarounds and adaptations
+
+4. Documentation approach:
+   - Photo/video permissions
+   - Note-taking strategies
+   - Real-time insight capture
+   - Follow-up question tracking
+
+Focus on understanding the context that shapes user behavior and needs.`,
+    variables: ['projectName', 'researchLocation', 'userActivities', 'researchQuestions'],
+    description: 'Plan in-context user research'
+  },
+
+  // Jobs-to-Be-Done Templates
+  {
+    id: 'jtbd-mapping-steps',
+    framework: 'jobs-to-be-done',
+    stage: 'job-mapping',
+    tool: 'job-steps',
+    template: `Map the job steps for {{customerJob}} in the context of {{projectName}}.
+
+Job Context:
+- Core Functional Job: {{customerJob}}
+- Job Executor: {{jobExecutor}}
+- Job Context: {{jobContext}}
+
+Job Mapping Structure:
+Create a detailed map of the customer job with these elements:
+
+1. Job Steps (8-12 main steps):
+   - Define the beginning (job trigger)
+   - Map the middle (execution steps)
+   - Define the end (job completion)
+
+2. For each step, identify:
+   - What the customer is trying to accomplish
+   - Current solutions and tools used
+   - Information needed at this step
+   - Success criteria for this step
+   - Common failures or inefficiencies
+
+3. Emotional job layers:
+   - How customers want to feel
+   - What they want to avoid feeling
+   - Social perceptions and status
+
+4. Related jobs:
+   - Jobs that happen before/after
+   - Competing jobs for attention
+   - Supporting jobs that enable success
+
+Focus on creating a comprehensive view of the customer's job process.`,
+    variables: ['customerJob', 'projectName', 'jobExecutor', 'jobContext'],
+    description: 'Map detailed customer job steps'
+  },
+
+  // Lean UX Templates
+  {
+    id: 'lean-hypothesize-canvas',
+    framework: 'lean-ux',
+    stage: 'hypothesize',
+    tool: 'hypothesis-canvas',
+    template: `Create hypothesis statements for {{projectName}} using the Lean UX hypothesis format.
+
+Project Context:
+- Business Goal: {{businessGoal}}
+- Target User: {{targetUser}}
+- User Problem: {{userProblem}}
+
+Hypothesis Structure:
+We believe that [building this feature/solution]
+For [these people/personas]
+Will achieve [this outcome]
+We will know this is true when [we see this signal/metric]
+
+Generate 5-7 hypotheses covering:
+
+1. Problem Hypothesis:
+   - What problem are we solving?
+   - Who has this problem?
+   - How do we know it's a real problem?
+
+2. Solution Hypothesis:
+   - What solution will address the problem?
+   - Why will this solution work?
+   - What alternatives did we consider?
+
+3. Value Hypothesis:
+   - What value will users get?
+   - Why will they choose our solution?
+   - What's the job-to-be-done?
+
+4. Growth Hypothesis:
+   - How will users discover our solution?
+   - What will drive adoption?
+   - How will it spread?
+
+Include success metrics and validation methods for each hypothesis.`,
+    variables: ['projectName', 'businessGoal', 'targetUser', 'userProblem'],
+    description: 'Create testable hypothesis statements'
+  },
+
+  // Agile UX Templates
+  {
+    id: 'agile-plan-story-mapping',
+    framework: 'agile-ux',
+    stage: 'plan',
+    tool: 'user-story-mapping',
+    template: `Create a user story map for {{projectName}} to visualize the user journey and prioritize features.
+
+Product Context:
+- Product Vision: {{productVision}}
+- Target Users: {{targetUsers}}
+- Core User Journey: {{coreJourney}}
+
+Story Mapping Structure:
+
+1. User Activities (Top Level):
+   - High-level activities users perform
+   - Organized left to right in sequence
+   - Represent the user's workflow
+
+2. User Tasks (Second Level):
+   - Specific tasks within each activity
+   - More detailed breakdown of activities
+   - Still in chronological order
+
+3. User Stories (Bottom Levels):
+   - Detailed stories for each task
+   - Include acceptance criteria
+   - Organized by priority/release
+
+4. Story Details:
+   - As a [user type]
+   - I want [functionality]
+   - So that [benefit/value]
+
+5. Release Planning:
+   - Walking skeleton (MVP)
+   - Release 1, 2, 3 priorities
+   - Nice-to-have features
+
+6. Story Acceptance Criteria:
+   - Given [context]
+   - When [action]
+   - Then [expected outcome]
+
+Create a comprehensive story map that guides development priorities.`,
+    variables: ['projectName', 'productVision', 'targetUsers', 'coreJourney'],
+    description: 'Create user story map for feature prioritization'
+  },
+
+  // HEART Framework Templates
+  {
+    id: 'heart-happiness-nps',
+    framework: 'heart-framework',
+    stage: 'happiness',
+    tool: 'nps-surveys',
+    template: `Design NPS surveys and happiness metrics for {{projectName}}.
+
+Measurement Context:
+- Product Type: {{productType}}
+- Key User Touchpoints: {{userTouchpoints}}
+- Business Goals: {{businessGoals}}
+
+NPS Survey Design:
+
+1. Core NPS Question:
+   "How likely are you to recommend {{productName}} to a friend or colleague?"
+   (0-10 scale with follow-up)
+
+2. Follow-up Questions by Score:
+   
+   Promoters (9-10):
+   - What do you love most about {{productName}}?
+   - What features are most valuable to you?
+   - How has {{productName}} helped you achieve your goals?
+
+   Passives (7-8):
+   - What would make you more likely to recommend us?
+   - What's missing from your experience?
+   - How could we better serve your needs?
+
+   Detractors (0-6):
+   - What's your biggest frustration with {{productName}}?
+   - What would need to change for you to recommend us?
+   - What alternatives are you considering?
+
+3. Additional Happiness Metrics:
+   - Customer satisfaction (CSAT) scores
+   - Customer effort score (CES)
+   - Emotional response tracking
+   - Feature satisfaction ratings
+
+4. Implementation Plan:
+   - Survey timing and triggers
+   - Response rate optimization
+   - Analysis and reporting cadence
+   - Action planning based on results
+
+Create a comprehensive happiness measurement system.`,
+    variables: ['projectName', 'productType', 'userTouchpoints', 'businessGoals', 'productName'],
+    description: 'Design NPS and happiness measurement system'
+  },
+
+  // Hooked Model Templates
+  {
+    id: 'hooked-trigger-notifications',
+    framework: 'hooked-model',
+    stage: 'trigger',
+    tool: 'notification-strategy',
+    template: `Design a notification strategy for {{projectName}} to create effective external triggers.
+
+Product Context:
+- App Type: {{appType}}
+- User Behavior Goal: {{behaviorGoal}}
+- Current User Patterns: {{userPatterns}}
+
+Notification Strategy:
+
+1. External Trigger Types:
+   
+   Paid Triggers:
+   - Advertising and promotional content
+   - Sponsored content and placements
+   - Email marketing campaigns
+   
+   Earned Triggers:
+   - Social media mentions and shares
+   - Press coverage and reviews
+   - Word-of-mouth referrals
+   
+   Relationship Triggers:
+   - App notifications and alerts
+   - Email communications
+   - SMS and push notifications
+   
+   Owned Triggers:
+   - App icons and visual cues
+   - Website and landing pages
+   - In-app messaging
+
+2. Notification Framework:
+   - Trigger timing and frequency
+   - Personalization strategies
+   - Content and messaging
+   - Call-to-action design
+
+3. Behavioral Triggers:
+   - Time-based triggers (daily, weekly)
+   - Activity-based triggers (milestone reached)
+   - Social triggers (friend activity)
+   - Location-based triggers (geofencing)
+
+4. Optimization Approach:
+   - A/B testing framework
+   - Opt-out and preference management
+   - Performance metrics tracking
+   - User feedback integration
+
+Design triggers that motivate action without causing notification fatigue.`,
+    variables: ['projectName', 'appType', 'behaviorGoal', 'userPatterns'],
+    description: 'Create comprehensive notification trigger strategy'
   }
 ];
 
