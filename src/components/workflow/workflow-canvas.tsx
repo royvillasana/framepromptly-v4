@@ -16,11 +16,13 @@ import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { StageNode } from './stage-node';
 import { FrameworkNode } from './framework-node';
+import { ToolNode } from './tool-node';
 import { motion } from 'framer-motion';
 
 const nodeTypes = {
   stage: StageNode,
   framework: FrameworkNode,
+  tool: ToolNode,
 };
 
 export function WorkflowCanvas() {
