@@ -7,6 +7,7 @@ export interface Project {
   name: string;
   description?: string;
   canvas_data: any;
+  node_contexts?: Record<string, string>;
   created_at: string;
   updated_at: string;
 }

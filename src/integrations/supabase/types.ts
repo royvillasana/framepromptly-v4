@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      knowledge_base: {
+        Row: {
+          content: string
+          created_at: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          metadata: Json | null
+          project_id: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           api_calls_count: number | null
@@ -60,6 +107,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          node_contexts: Json | null
           updated_at: string
           user_id: string
         }
@@ -69,6 +117,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          node_contexts?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -78,6 +127,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          node_contexts?: Json | null
           updated_at?: string
           user_id?: string
         }

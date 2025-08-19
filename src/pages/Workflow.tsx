@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown } from 'lucide-react';
+import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen } from 'lucide-react';
+import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
 
 export default function Workflow() {
   const { currentProject, fetchProjects } = useProjectStore();
@@ -37,7 +38,7 @@ function WorkflowWithProject() {
   const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData, nodes, edges } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
-  const [activePanel, setActivePanel] = useState<'canvas' | 'prompts'>('canvas');
+  const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
 
   useEffect(() => {
     initializeFrameworks();
@@ -159,7 +160,7 @@ function WorkflowWithProject() {
 
           <Tabs value={activePanel} onValueChange={(value: any) => setActivePanel(value)}>
             <div className="border-b border-border p-4">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="canvas" className="text-xs">
                   <Layers className="w-3 h-3 mr-1" />
                   Canvas
@@ -167,6 +168,10 @@ function WorkflowWithProject() {
                 <TabsTrigger value="prompts" className="text-xs">
                   <Sparkles className="w-3 h-3 mr-1" />
                   Prompts
+                </TabsTrigger>
+                <TabsTrigger value="knowledge" className="text-xs">
+                  <BookOpen className="w-3 h-3 mr-1" />
+                  Knowledge
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -235,6 +240,10 @@ function WorkflowWithProject() {
             
             <TabsContent value="prompts" className="m-0 h-[calc(100vh-280px)]">
               <PromptPanel />
+            </TabsContent>
+            
+            <TabsContent value="knowledge" className="m-0 h-[calc(100vh-280px)]">
+              <KnowledgeBasePanel />
             </TabsContent>
           </Tabs>
         </motion.div>

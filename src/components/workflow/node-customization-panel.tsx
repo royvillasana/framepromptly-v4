@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Settings, X, Plus } from 'lucide-react';
+import { Settings, X, Plus, MessageSquare } from 'lucide-react';
 import { UXFramework, UXStage, UXTool, NodeCustomization } from '@/stores/workflow-store';
+import { NodeContextDialog } from './node-context-dialog';
 
 interface NodeCustomizationPanelProps {
   node: {
@@ -28,6 +29,7 @@ export function NodeCustomizationPanel({ node, customization, onUpdate, onClose 
   const [properties, setProperties] = useState<Record<string, any>>(
     customization?.customProperties || {}
   );
+  const [showContextDialog, setShowContextDialog] = useState(false);
 
   const handlePropertyChange = (key: string, value: any) => {
     const updated = { ...properties, [key]: value };
@@ -80,9 +82,20 @@ export function NodeCustomizationPanel({ node, customization, onUpdate, onClose 
           <Settings className="w-4 h-4" />
           <h3 className="font-semibold text-sm">Customize Node</h3>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose} className="w-6 h-6 p-0">
-          <X className="w-3 h-3" />
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowContextDialog(true)}
+            className="w-6 h-6 p-0"
+            title="Add node-specific context"
+          >
+            <MessageSquare className="w-3 h-3" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose} className="w-6 h-6 p-0">
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -193,6 +206,13 @@ export function NodeCustomizationPanel({ node, customization, onUpdate, onClose 
           </>
         )}
       </div>
+
+      <NodeContextDialog
+        isOpen={showContextDialog}
+        onClose={() => setShowContextDialog(false)}
+        nodeId={node.id}
+        nodeTitle={getNodeTitle()}
+      />
     </Card>
   );
 }
