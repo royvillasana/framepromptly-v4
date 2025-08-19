@@ -58,7 +58,7 @@ serve(async (req) => {
     }
 
     // Generate AI response using OpenAI with model fallback
-    const models = ['gpt-5-2025-08-07', 'gpt-5-mini-2025-08-07', 'o4-mini-2025-04-16', 'gpt-4.1-2025-04-14'];
+    const models = ['gpt-4o-mini', 'o4-mini-2025-04-16', 'gpt-4.1-2025-04-14', 'gpt-5-mini-2025-08-07', 'gpt-5-2025-08-07'];
     let aiResponse: string | null = null;
     let usedModel = '';
 
