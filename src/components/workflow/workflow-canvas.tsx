@@ -19,6 +19,7 @@ import { StageNode } from './stage-node';
 import { FrameworkNode } from './framework-node';
 import { ToolNode } from './tool-node';
 import { PromptNode } from './prompt-node';
+import { ProjectNode } from './project-node';
 import { motion } from 'framer-motion';
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
@@ -29,6 +30,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     framework: FrameworkNode,
     tool: (props: any) => <ToolNode {...props} onSwitchToPromptTab={onSwitchToPromptTab} />,
     prompt: PromptNode,
+    project: ProjectNode,
   };
   
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(nodes);

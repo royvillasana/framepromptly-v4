@@ -3,6 +3,7 @@ import { WorkflowCanvas } from '@/components/workflow/workflow-canvas';
 import { PromptPanel } from '@/components/workflow/prompt-panel';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
+import { useProjectStore } from '@/stores/project-store';
 import { Navigation } from '@/components/ui/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,12 +16,14 @@ import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown } from 'lucide-r
 export default function Workflow() {
   const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
+  const { currentProject, fetchProjects } = useProjectStore();
   const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
 
   useEffect(() => {
     initializeFrameworks();
     initializeTemplates();
-  }, [initializeFrameworks, initializeTemplates]);
+    fetchProjects();
+  }, [initializeFrameworks, initializeTemplates, fetchProjects]);
 
   const handleAddFramework = (framework: any) => {
     selectFramework(framework);

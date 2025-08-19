@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 import { Play, Settings, Sparkles } from 'lucide-react';
 import { UXTool, useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
+import { useProjectStore } from '@/stores/project-store';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ToolNodeData {
   tool: UXTool;
@@ -25,20 +27,49 @@ interface ToolNodeProps {
 export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolNodeProps & { id?: string; onSwitchToPromptTab?: () => void }) => {
   const { generatePrompt, setCurrentPrompt } = usePromptStore();
   const { addNode, addEdge, nodes } = useWorkflowStore();
+  const { currentProject } = useProjectStore();
   const { tool, framework, stage, isActive, isCompleted } = data;
 
-  const handleGeneratePrompt = () => {
-    if (framework && stage) {
-      const prompt = generatePrompt(framework, stage, tool, undefined, undefined);
+  const handleGeneratePrompt = async () => {
+    if (!framework || !stage || !currentProject) {
+      console.error('Missing required data for prompt generation');
+      return;
+    }
+
+    try {
+      // Generate the initial prompt content
+      const promptContent = generatePrompt(framework, stage, tool, undefined, undefined);
       
-      // Create the generated prompt object
+      // Call the AI edge function
+      const { data, error } = await supabase.functions.invoke('generate-ai-prompt', {
+        body: {
+          promptContent,
+          variables: {},
+          projectId: currentProject.id,
+          frameworkName: framework.name,
+          stageName: stage.name,
+          toolName: tool.name
+        }
+      });
+
+      if (error) {
+        console.error('Error calling AI function:', error);
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate AI response');
+      }
+
+      // Create the generated prompt object with AI response
       const generatedPrompt = {
-        id: `prompt-${Date.now()}`,
+        id: data.id,
         workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
-        content: prompt,
+        content: data.prompt,
         context: { framework, stage, tool },
         variables: {},
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        output: data.aiResponse
       };
       
       // Set as current prompt
@@ -78,6 +109,8 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
       if (onSwitchToPromptTab) {
         onSwitchToPromptTab();
       }
+    } catch (error) {
+      console.error('Error generating AI prompt:', error);
     }
   };
 
@@ -140,7 +173,7 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
               size="sm"
               onClick={handleGeneratePrompt}
               className="flex-1 h-8 text-xs"
-              disabled={!framework || !stage}
+              disabled={!framework || !stage || !currentProject}
             >
               <Play className="w-3 h-3 mr-1" />
               Generate Prompt

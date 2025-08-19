@@ -1,1 +1,36 @@
 project_id = "drfaomantrtmtydbelxe"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+port = 54327
+
+[auth]
+enabled = true
+port = 54328
+
+[edge_runtime]
+enabled = true
+port = 54329
+
+[functions.generate-ai-prompt]
+verify_jwt = true
