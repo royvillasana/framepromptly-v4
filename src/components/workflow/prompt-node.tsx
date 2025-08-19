@@ -61,7 +61,7 @@ export const PromptNode = memo(({ data, selected }: PromptNodeProps) => {
       />
       
       <Card className={`
-        w-72 p-4 transition-all duration-200 cursor-pointer
+        w-96 p-4 transition-all duration-200 cursor-pointer
         ${selected ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'}
         ${isActive ? 'border-primary bg-primary/5' : ''}
         border-dashed border-2
