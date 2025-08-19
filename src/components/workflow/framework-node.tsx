@@ -4,8 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Layers, Settings, MoreVertical } from 'lucide-react';
-import { UXFramework } from '@/stores/workflow-store';
+import { Layers, Settings, MoreVertical, Plus } from 'lucide-react';
+import { UXFramework, UXStage, useWorkflowStore } from '@/stores/workflow-store';
 
 interface FrameworkNodeData {
   framework: UXFramework;
@@ -17,8 +17,45 @@ interface FrameworkNodeProps {
   selected?: boolean;
 }
 
-export const FrameworkNode = memo(({ data, selected }: FrameworkNodeProps) => {
+export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & { id?: string }) => {
   const { framework, isSelected } = data;
+  const { addNode, addEdge, nodes } = useWorkflowStore();
+
+  const handleAddStage = (stage: UXStage) => {
+    // Find a good position for the new stage node
+    const existingStageNodes = nodes.filter(node => 
+      node.type === 'stage' && 
+      node.data && 
+      (node.data as any).framework?.id === framework.id
+    );
+    
+    const yOffset = existingStageNodes.length * 120;
+    
+    const stageNode = {
+      id: `stage-${stage.id}-${Date.now()}`,
+      type: 'stage',
+      position: { x: 500, y: 100 + yOffset },
+      data: {
+        stage,
+        framework
+      }
+    };
+    
+    addNode(stageNode);
+    
+    // Create edge from framework to stage
+    if (id) {
+      const edge = {
+        id: `edge-${id}-${stageNode.id}`,
+        source: id,
+        target: stageNode.id,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: 'hsl(var(--primary))' }
+      };
+      addEdge(edge);
+    }
+  };
 
   return (
     <motion.div
@@ -63,15 +100,21 @@ export const FrameworkNode = memo(({ data, selected }: FrameworkNodeProps) => {
               {framework.stages.length}
             </Badge>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {framework.stages.map((stage) => (
               <div 
                 key={stage.id}
-                className="p-2 bg-secondary/50 rounded-md text-xs"
+                className="p-2 bg-secondary/50 rounded-md text-xs hover:bg-secondary/70 transition-colors cursor-pointer group"
+                onClick={() => handleAddStage(stage)}
               >
-                <div className="font-medium">{stage.name}</div>
-                <div className="text-muted-foreground">
-                  {stage.tools.length} tools
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{stage.name}</div>
+                    <div className="text-muted-foreground">
+                      {stage.tools.length} tools
+                    </div>
+                  </div>
+                  <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             ))}

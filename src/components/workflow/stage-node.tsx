@@ -4,11 +4,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Play, Settings, MoreVertical } from 'lucide-react';
-import { UXStage } from '@/stores/workflow-store';
+import { Play, Settings, MoreVertical, Plus } from 'lucide-react';
+import { UXStage, UXTool, UXFramework, useWorkflowStore } from '@/stores/workflow-store';
 
 interface StageNodeData {
   stage: UXStage;
+  framework?: UXFramework;
   isActive?: boolean;
   isCompleted?: boolean;
 }
@@ -18,8 +19,46 @@ interface StageNodeProps {
   selected?: boolean;
 }
 
-export const StageNode = memo(({ data, selected }: StageNodeProps) => {
-  const { stage, isActive, isCompleted } = data;
+export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: string }) => {
+  const { stage, framework, isActive, isCompleted } = data;
+  const { addNode, addEdge, nodes } = useWorkflowStore();
+
+  const handleAddTool = (tool: UXTool) => {
+    // Find a good position for the new tool node
+    const existingToolNodes = nodes.filter(node => 
+      node.type === 'tool' && 
+      node.data &&
+      (node.data as any).stage?.id === stage.id
+    );
+    
+    const yOffset = existingToolNodes.length * 100;
+    
+    const toolNode = {
+      id: `tool-${tool.id}-${Date.now()}`,
+      type: 'tool',
+      position: { x: 850, y: 100 + yOffset },
+      data: {
+        tool,
+        stage,
+        framework
+      }
+    };
+    
+    addNode(toolNode);
+    
+    // Create edge from stage to tool
+    if (id) {
+      const edge = {
+        id: `edge-${id}-${toolNode.id}`,
+        source: id,
+        target: toolNode.id,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: 'hsl(var(--primary))' }
+      };
+      addEdge(edge);
+    }
+  };
 
   return (
     <motion.div
@@ -64,16 +103,21 @@ export const StageNode = memo(({ data, selected }: StageNodeProps) => {
               {stage.tools.length}
             </Badge>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {stage.tools.slice(0, 3).map((tool) => (
-              <Badge key={tool.id} variant="outline" className="text-xs">
-                {tool.name}
-              </Badge>
+          <div className="space-y-1">
+            {stage.tools.slice(0, 4).map((tool) => (
+              <div 
+                key={tool.id}
+                className="flex items-center justify-between p-1 hover:bg-secondary/50 rounded cursor-pointer group text-xs"
+                onClick={() => handleAddTool(tool)}
+              >
+                <span className="font-medium">{tool.name}</span>
+                <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             ))}
-            {stage.tools.length > 3 && (
-              <Badge variant="outline" className="text-xs">
-                +{stage.tools.length - 3}
-              </Badge>
+            {stage.tools.length > 4 && (
+              <div className="text-xs text-muted-foreground p-1">
+                +{stage.tools.length - 4} more tools
+              </div>
             )}
           </div>
         </div>
