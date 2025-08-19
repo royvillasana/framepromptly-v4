@@ -51,7 +51,7 @@ function WorkflowWithProject() {
     }
   }, [currentProject, loadCanvasData]);
 
-  const handleAddFramework = (framework: any) => {
+  const handleFrameworkSelection = (framework: any) => {
     selectFramework(framework);
     const newNode = {
       id: `framework-${framework.id}`,
@@ -118,10 +118,10 @@ function WorkflowWithProject() {
             
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Select UX Framework</h3>
-              <Select onValueChange={(value) => {
-                const framework = frameworks.find(f => f.id === value);
-                if (framework) selectFramework(framework);
-              }}>
+               <Select onValueChange={(value) => {
+                 const framework = frameworks.find(f => f.id === value);
+                 if (framework) handleFrameworkSelection(framework);
+               }}>
                 <SelectTrigger className="w-full bg-background border border-border shadow-sm hover:bg-accent/50 transition-colors">
                   <SelectValue placeholder="Choose a framework..." />
                 </SelectTrigger>
@@ -202,77 +202,26 @@ function WorkflowWithProject() {
                       </div>
                     </div>
                     
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm">Quick Actions</h4>
-                      <div className="space-y-2">
-                        <Button 
-                          size="sm" 
-                          className="w-full justify-start"
-                          onClick={() => handleAddFramework(selectedFramework)}
-                        >
-                          <Plus className="w-3 h-3 mr-2" />
-                          Add Framework to Canvas
-                        </Button>
-                        {selectedFramework.stages.map((stage) => (
-                          <Button
-                            key={stage.id}
-                            variant="outline"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={() => handleAddStage(stage)}
-                          >
-                            <Plus className="w-3 h-3 mr-2" />
-                            Add {stage.name} Stage
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm">Available Tools by Stage</h4>
-                      <div className="space-y-3">
-                        {selectedFramework.stages.map((stage) => (
-                          <div key={stage.id} className="space-y-2">
-                            <div className="bg-accent/30 rounded-lg p-2 border-l-2 border-primary">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-primary"></div>
-                                  <h5 className="font-semibold text-xs">{stage.name}</h5>
-                                  <Badge variant="secondary" className="text-xs h-4 px-1">
-                                    {stage.tools.length}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <p className="text-xs text-muted-foreground">{stage.description}</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 gap-1 ml-3">
-                              {stage.tools.map((tool) => (
-                                <Button
-                                  key={`${stage.id}-${tool.id}`}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full justify-start h-auto p-2 text-left"
-                                  onClick={() => handleAddTool(tool, selectedFramework, stage)}
-                                >
-                                  <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                    <div className="w-3 h-3 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
-                                      <Plus className="w-2 h-2 text-primary" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-medium text-xs truncate">{tool.name}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {tool.category} • {tool.characteristics.effort}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                     <div className="space-y-3">
+                       <h4 className="font-medium text-sm">Framework Stages</h4>
+                       <p className="text-xs text-muted-foreground">
+                         Add stages to your workflow to access their tools
+                       </p>
+                       <div className="space-y-2">
+                         {selectedFramework.stages.map((stage) => (
+                           <Button
+                             key={stage.id}
+                             variant="outline"
+                             size="sm"
+                             className="w-full justify-start"
+                             onClick={() => handleAddStage(stage)}
+                           >
+                             <Plus className="w-3 h-3 mr-2" />
+                             Add {stage.name} Stage
+                           </Button>
+                         ))}
+                       </div>
+                     </div>
                   </div>
                 )}
               </div>
