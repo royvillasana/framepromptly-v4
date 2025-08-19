@@ -35,10 +35,10 @@ export const KnowledgeBasePanel = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (currentProject) {
+    if (currentProject?.id) {
       fetchEntries(currentProject.id);
     }
-  }, [currentProject, fetchEntries]);
+  }, [currentProject?.id, fetchEntries]);
 
   useEffect(() => {
     if (error) {
