@@ -87,15 +87,20 @@ function WorkflowWithProject() {
       <Navigation />
       
       <div className="flex-1 flex">
-        {/* Sidebar */}
+        {/* Canvas */}
+        <div className="flex-1">
+          <WorkflowCanvas onSwitchToPromptTab={() => setRightPanel('prompts')} />
+        </div>
+        
+        {/* Right Panel */}
         <motion.div
-          initial={{ x: -300, opacity: 0 }}
+          initial={{ x: 400, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="w-80 bg-card border-r border-border p-6 overflow-y-auto"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="w-96 border-l border-border bg-card"
         >
-          <div className="space-y-6">
-            {/* Toolbar */}
+          {/* Framework Selector Header */}
+          <div className="border-b border-border p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Workflow Builder</h2>
               <div className="flex space-x-2">
@@ -110,9 +115,8 @@ function WorkflowWithProject() {
                 </Button>
               </div>
             </div>
-
-            {/* Framework Selector */}
-            <div className="space-y-4">
+            
+            <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Select UX Framework</h3>
               <Select onValueChange={(value) => {
                 const framework = frameworks.find(f => f.id === value);
@@ -145,220 +149,140 @@ function WorkflowWithProject() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            {/* Selected Framework Container */}
-            {selectedFramework && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4"
-              >
-                <Card className="p-6 border-2 shadow-lg bg-gradient-to-br from-background to-accent/10">
+          <Tabs value={rightPanel} onValueChange={(value: any) => setRightPanel(value)}>
+            <div className="border-b border-border p-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="canvas" className="text-xs">
+                  <Layers className="w-3 h-3 mr-1" />
+                  Canvas
+                </TabsTrigger>
+                <TabsTrigger value="prompts" className="text-xs">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Prompts
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="canvas" className="m-0 h-[calc(100vh-280px)]">
+              <div className="p-4 space-y-4 h-full overflow-y-auto">
+                {!selectedFramework ? (
+                  <div className="text-center py-8">
+                    <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Select a Framework</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Choose a UX framework from the dropdown above to see its details and add tools to your workflow
+                    </p>
+                  </div>
+                ) : (
                   <div className="space-y-4">
-                    {/* Framework Header */}
-                    <div className="flex items-center space-x-3">
+                    <div className="text-center">
                       <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center"
                         style={{ backgroundColor: selectedFramework.color }}
                       >
-                        <Sparkles className="w-4 h-4 text-white" />
+                        <Sparkles className="w-6 h-6 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{selectedFramework.name}</h3>
-                        <p className="text-sm text-muted-foreground">{selectedFramework.description}</p>
-                      </div>
+                      <h3 className="font-semibold">{selectedFramework.name}</h3>
+                      <p className="text-xs text-muted-foreground">{selectedFramework.description}</p>
                     </div>
-
-                    {/* Framework Characteristics */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(selectedFramework.characteristics).map(([key, value]) => (
-                        <div key={key} className="bg-accent/20 rounded-lg p-2">
-                          <div className="text-xs font-medium text-muted-foreground capitalize">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Framework Characteristics</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {Object.entries(selectedFramework.characteristics).map(([key, value]) => (
+                          <div key={key} className="flex justify-between text-xs">
+                            <span className="text-muted-foreground capitalize">
+                              {key.replace(/([A-Z])/g, ' $1').trim()}:
+                            </span>
+                            <span className="font-medium">{value}</span>
                           </div>
-                          <div className="text-sm font-semibold">{value}</div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Quick Actions</h4>
+                      <div className="space-y-2">
+                        <Button 
+                          size="sm" 
+                          className="w-full justify-start"
+                          onClick={() => handleAddFramework(selectedFramework)}
+                        >
+                          <Plus className="w-3 h-3 mr-2" />
+                          Add Framework to Canvas
+                        </Button>
+                        {selectedFramework.stages.map((stage) => (
+                          <Button
+                            key={stage.id}
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => handleAddStage(stage)}
+                          >
+                            <Plus className="w-3 h-3 mr-2" />
+                            Add {stage.name} Stage
+                          </Button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Tools by Stage */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-base">Available Tools by Stage</h4>
-                      {selectedFramework.stages.map((stage) => (
-                        <div key={stage.id} className="space-y-3">
-                          {/* Stage Header */}
-                          <div className="bg-accent/30 rounded-lg p-3 border-l-4 border-primary">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-primary"></div>
-                                <h5 className="font-semibold text-sm">{stage.name}</h5>
-                                <Badge variant="secondary" className="text-xs">
-                                  {stage.tools.length} tools
-                                </Badge>
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Available Tools by Stage</h4>
+                      <div className="space-y-3">
+                        {selectedFramework.stages.map((stage) => (
+                          <div key={stage.id} className="space-y-2">
+                            <div className="bg-accent/30 rounded-lg p-2 border-l-2 border-primary">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                  <h5 className="font-semibold text-xs">{stage.name}</h5>
+                                  <Badge variant="secondary" className="text-xs h-4 px-1">
+                                    {stage.tools.length}
+                                  </Badge>
+                                </div>
                               </div>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-6 px-2 text-xs"
-                                onClick={() => handleAddStage(stage)}
-                              >
-                                <Plus className="w-3 h-3 mr-1" />
-                                Add Stage
-                              </Button>
+                              <p className="text-xs text-muted-foreground">{stage.description}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground mb-2">{stage.description}</p>
                             
-                            {/* Stage Characteristics */}
-                            <div className="grid grid-cols-2 gap-1 text-xs">
-                              <div><span className="text-muted-foreground">Duration:</span> {stage.characteristics.duration}</div>
-                              <div><span className="text-muted-foreground">Participants:</span> {stage.characteristics.participants}</div>
-                            </div>
-                          </div>
-                          
-                          {/* Tools Grid */}
-                          <div className="grid grid-cols-1 gap-2 ml-4">
-                            {stage.tools.map((tool) => (
-                              <Card
-                                key={`${stage.id}-${tool.id}`}
-                                className="p-3 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50 bg-background/50 border-l-2 border-l-transparent hover:border-l-primary"
-                                onClick={() => handleAddTool(tool, selectedFramework, stage)}
-                              >
-                                <div className="flex items-center justify-between">
+                            <div className="grid grid-cols-1 gap-1 ml-3">
+                              {stage.tools.map((tool) => (
+                                <Button
+                                  key={`${stage.id}-${tool.id}`}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start h-auto p-2 text-left"
+                                  onClick={() => handleAddTool(tool, selectedFramework, stage)}
+                                >
                                   <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                    <div className="w-5 h-5 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
-                                      <Plus className="w-3 h-3 text-primary" />
+                                    <div className="w-3 h-3 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
+                                      <Plus className="w-2 h-2 text-primary" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <h6 className="font-medium text-xs truncate">{tool.name}</h6>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{tool.category}</span>
-                                        <span>•</span>
-                                        <span>{tool.characteristics.effort} effort</span>
-                                        <span>•</span>
-                                        <span>{tool.characteristics.expertise}</span>
+                                      <div className="font-medium text-xs truncate">{tool.name}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {tool.category} • {tool.characteristics.effort}
                                       </div>
                                     </div>
                                   </div>
-                                  <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
-                                    Tool Node
-                                  </Badge>
-                                </div>
-                              </Card>
-                            ))}
+                                </Button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </Card>
-              </motion.div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex">
-          {/* Canvas */}
-          <div className="flex-1">
-            <WorkflowCanvas onSwitchToPromptTab={() => setRightPanel('prompts')} />
-          </div>
-          
-          {/* Right Panel */}
-          <motion.div
-            initial={{ x: 400, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-96 border-l border-border bg-card"
-          >
-            <Tabs value={rightPanel} onValueChange={(value: any) => setRightPanel(value)}>
-              <div className="border-b border-border p-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="canvas" className="text-xs">
-                    <Layers className="w-3 h-3 mr-1" />
-                    Canvas
-                  </TabsTrigger>
-                  <TabsTrigger value="prompts" className="text-xs">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Prompts
-                  </TabsTrigger>
-                </TabsList>
+                )}
               </div>
-              
-              <TabsContent value="canvas" className="m-0 h-[calc(100vh-200px)]">
-                <div className="p-4 space-y-4 h-full overflow-y-auto">
-                  {!selectedFramework ? (
-                    <div className="text-center py-8">
-                      <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Select a Framework</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Choose a UX framework from the dropdown in the left panel to see its details and add tools to your workflow
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <div 
-                          className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center"
-                          style={{ backgroundColor: selectedFramework.color }}
-                        >
-                          <Sparkles className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="font-semibold">{selectedFramework.name}</h3>
-                        <p className="text-xs text-muted-foreground">{selectedFramework.description}</p>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-sm">Framework Characteristics</h4>
-                        <div className="grid grid-cols-1 gap-2">
-                          {Object.entries(selectedFramework.characteristics).map(([key, value]) => (
-                            <div key={key} className="flex justify-between text-xs">
-                              <span className="text-muted-foreground capitalize">
-                                {key.replace(/([A-Z])/g, ' $1').trim()}:
-                              </span>
-                              <span className="font-medium">{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-sm">Quick Actions</h4>
-                        <div className="space-y-2">
-                          <Button 
-                            size="sm" 
-                            className="w-full justify-start"
-                            onClick={() => handleAddFramework(selectedFramework)}
-                          >
-                            <Plus className="w-3 h-3 mr-2" />
-                            Add Framework to Canvas
-                          </Button>
-                          {selectedFramework.stages.map((stage) => (
-                            <Button
-                              key={stage.id}
-                              variant="outline"
-                              size="sm"
-                              className="w-full justify-start"
-                              onClick={() => handleAddStage(stage)}
-                            >
-                              <Plus className="w-3 h-3 mr-2" />
-                              Add {stage.name} Stage
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="prompts" className="m-0 h-[calc(100vh-200px)]">
-                <PromptPanel />
-              </TabsContent>
-            </Tabs>
-          </motion.div>
-        </div>
+            </TabsContent>
+            
+            <TabsContent value="prompts" className="m-0 h-[calc(100vh-280px)]">
+              <PromptPanel />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
       </div>
     </div>
   );
