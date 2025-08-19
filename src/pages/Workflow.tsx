@@ -15,10 +15,7 @@ import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown } from 'lucide-react';
 
 export default function Workflow() {
-  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode } = useWorkflowStore();
-  const { initializeTemplates } = usePromptStore();
   const { currentProject, fetchProjects } = useProjectStore();
-  const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
 
   // If no current project is selected, show project selection
   if (!currentProject) {
@@ -32,11 +29,20 @@ export default function Workflow() {
     );
   }
 
+  // Only call other hooks after we know we have a project
+  return <WorkflowWithProject />;
+}
+
+function WorkflowWithProject() {
+  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode } = useWorkflowStore();
+  const { initializeTemplates } = usePromptStore();
+  const { currentProject } = useProjectStore();
+  const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
+
   useEffect(() => {
     initializeFrameworks();
     initializeTemplates();
-    fetchProjects();
-  }, [initializeFrameworks, initializeTemplates, fetchProjects]);
+  }, [initializeFrameworks, initializeTemplates]);
 
   const handleAddFramework = (framework: any) => {
     selectFramework(framework);
