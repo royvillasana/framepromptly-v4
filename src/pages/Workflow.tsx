@@ -34,9 +34,9 @@ export default function Workflow() {
 }
 
 function WorkflowWithProject() {
-  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData } = useWorkflowStore();
+  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData, nodes, edges } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
-  const { currentProject } = useProjectStore();
+  const { currentProject, saveCanvasData } = useProjectStore();
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts'>('canvas');
 
   useEffect(() => {
@@ -50,6 +50,17 @@ function WorkflowWithProject() {
       loadCanvasData(currentProject.canvas_data);
     }
   }, [currentProject, loadCanvasData]);
+
+  // Auto-save when nodes or edges change
+  useEffect(() => {
+    if (currentProject && (nodes.length > 0 || edges.length > 0)) {
+      const timeoutId = setTimeout(() => {
+        saveCanvasData(currentProject.id, nodes, edges);
+      }, 500); // Debounce to avoid too many saves
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [nodes, edges, currentProject, saveCanvasData]);
 
   const handleFrameworkSelection = (framework: any) => {
     selectFramework(framework);
