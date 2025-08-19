@@ -11,6 +11,7 @@ import {
   Edge,
   Connection,
   ConnectionMode,
+  BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -76,7 +77,8 @@ export function WorkflowCanvas() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="h-full w-full bg-background"
+      className="h-full w-full"
+      style={{ backgroundColor: '#333446' }}
     >
       <ReactFlow
         nodes={flowNodes}
@@ -87,13 +89,14 @@ export function WorkflowCanvas() {
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView
-        className="bg-background"
+        style={{ backgroundColor: '#333446' }}
         colorMode="system"
       >
         <Background
-          color="hsl(var(--border))"
+          color="#ffffff"
           gap={20}
-          size={1}
+          size={2}
+          variant={BackgroundVariant.Dots}
         />
         <Controls
           className="bg-card border border-border shadow-lg"
