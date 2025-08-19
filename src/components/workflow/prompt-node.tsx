@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { FileText, Eye, Copy, Download } from 'lucide-react';
 import { GeneratedPrompt } from '@/stores/prompt-store';
 import { useToast } from '@/hooks/use-toast';
+import { NodeActionsMenu } from './node-actions-menu';
 
 interface PromptNodeData {
   prompt: GeneratedPrompt;
@@ -18,7 +19,7 @@ interface PromptNodeProps {
   selected?: boolean;
 }
 
-export const PromptNode = memo(({ data, selected }: PromptNodeProps) => {
+export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?: string }) => {
   const { toast } = useToast();
   const { prompt, isActive } = data;
 
@@ -133,6 +134,13 @@ export const PromptNode = memo(({ data, selected }: PromptNodeProps) => {
             >
               <Download className="w-3 h-3" />
             </Button>
+
+            <NodeActionsMenu
+              nodeId={id || ''}
+              nodeType="prompt"
+              nodeData={data}
+              position={{ x: 0, y: 0 }}
+            />
           </div>
         </div>
       </Card>

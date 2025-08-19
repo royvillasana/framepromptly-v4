@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Play, Settings, MoreVertical, Plus } from 'lucide-react';
 import { UXStage, UXTool, UXFramework, useWorkflowStore } from '@/stores/workflow-store';
+import { NodeActionsMenu } from './node-actions-menu';
 
 interface StageNodeData {
   stage: UXStage;
@@ -180,9 +181,12 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
             <Play className="w-3 h-3 mr-1" />
             Run Stage
           </Button>
-          <Button variant="outline" size="sm" className="w-7 h-7 p-0">
-            <Settings className="w-3 h-3" />
-          </Button>
+          <NodeActionsMenu
+            nodeId={id || ''}
+            nodeType="stage"
+            nodeData={data}
+            position={{ x: 0, y: 0 }}
+          />
         </div>
       </Card>
 

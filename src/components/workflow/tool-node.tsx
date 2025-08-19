@@ -11,6 +11,7 @@ import { useProjectStore } from '@/stores/project-store';
 import { supabase } from '@/integrations/supabase/client';
 import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
+import { NodeActionsMenu } from './node-actions-menu';
 
 interface ToolNodeData {
   tool: UXTool;
@@ -212,13 +213,12 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
               {showProgress ? 'Generating...' : 'Generate Prompt'}
             </Button>
             
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-8 h-8 p-0"
-            >
-              <Settings className="w-3 h-3" />
-            </Button>
+            <NodeActionsMenu
+              nodeId={id || ''}
+              nodeType="tool"
+              nodeData={data}
+              position={{ x: 0, y: 0 }}
+            />
           </div>
         </div>
       </Card>

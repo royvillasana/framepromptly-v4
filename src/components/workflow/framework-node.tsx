@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Layers, Settings, MoreVertical, Plus } from 'lucide-react';
 import { UXFramework, UXStage, useWorkflowStore } from '@/stores/workflow-store';
+import { NodeActionsMenu } from './node-actions-menu';
 
 interface FrameworkNodeData {
   framework: UXFramework;
@@ -168,9 +169,12 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
             <Layers className="w-4 h-4 mr-2" />
             Use Framework
           </Button>
-          <Button variant="outline" size="sm" className="w-8 h-8 p-0">
-            <Settings className="w-4 h-4" />
-          </Button>
+          <NodeActionsMenu
+            nodeId={id || ''}
+            nodeType="framework"
+            nodeData={data}
+            position={{ x: 0, y: 0 }}
+          />
         </div>
       </Card>
 
