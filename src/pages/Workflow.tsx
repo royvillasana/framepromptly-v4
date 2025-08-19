@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { WorkflowCanvas } from '@/components/workflow/workflow-canvas';
 import { PromptPanel } from '@/components/workflow/prompt-panel';
 import { ProjectList } from '@/components/project/project-list';
@@ -39,29 +39,39 @@ function WorkflowWithProject() {
   const { initializeTemplates } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
+  const lastAppliedRef = useRef<string>('');
+  const lastSavedRef = useRef<string>('');
 
   useEffect(() => {
     initializeFrameworks();
     initializeTemplates();
   }, [initializeFrameworks, initializeTemplates]);
 
-  // Load canvas data when project changes
+  // Load canvas data only when project ID changes
   useEffect(() => {
-    if (currentProject?.canvas_data) {
-      loadCanvasData(currentProject.canvas_data);
-    }
-  }, [currentProject, loadCanvasData]);
+    if (!currentProject) return;
+    const canvas = currentProject.canvas_data || { nodes: [], edges: [] };
+    loadCanvasData(canvas);
+    const payload = JSON.stringify(canvas);
+    lastAppliedRef.current = payload;
+    lastSavedRef.current = payload; // prevent immediate save loop after load
+  }, [currentProject?.id, loadCanvasData]);
 
-  // Auto-save when nodes or edges change
+  // Auto-save when nodes or edges change (debounced) and only if changed since last save
   useEffect(() => {
-    if (currentProject && (nodes.length > 0 || edges.length > 0)) {
-      const timeoutId = setTimeout(() => {
-        saveCanvasData(currentProject.id, nodes, edges);
-      }, 500); // Debounce to avoid too many saves
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [nodes, edges, currentProject, saveCanvasData]);
+    if (!currentProject) return;
+
+    const signature = JSON.stringify({ nodes, edges });
+    // Skip if nothing changed compared to last applied/saved state
+    if (signature === lastSavedRef.current || signature === lastAppliedRef.current) return;
+
+    const timeoutId = setTimeout(() => {
+      saveCanvasData(currentProject.id, nodes, edges);
+      lastSavedRef.current = signature;
+    }, 600);
+
+    return () => clearTimeout(timeoutId);
+  }, [nodes, edges, currentProject?.id, saveCanvasData]);
 
   const handleFrameworkSelection = (framework: any) => {
     selectFramework(framework);
