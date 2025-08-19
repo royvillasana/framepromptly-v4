@@ -133,8 +133,8 @@ export const KnowledgeBasePanel = () => {
 
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="mb-6">
+        <div className="mb-4">
           <h3 className="text-lg font-semibold">Project Knowledge Base</h3>
           <p className="text-sm text-muted-foreground">
             Add context, documents, and images to enhance your project
