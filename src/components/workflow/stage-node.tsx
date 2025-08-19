@@ -60,6 +60,49 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
     }
   };
 
+  const handleRunStage = () => {
+    // Check if there are already tools for this stage
+    const existingToolNodes = nodes.filter(node => 
+      node.type === 'tool' && 
+      node.data &&
+      (node.data as any).stage?.id === stage.id
+    );
+    
+    // If no tools exist, create all tools for this stage
+    if (existingToolNodes.length === 0) {
+      stage.tools.forEach((tool, index) => {
+        const yOffset = index * 100;
+        
+        const toolNode = {
+          id: `tool-${tool.id}-${Date.now()}-${index}`,
+          type: 'tool',
+          position: { x: 850, y: 100 + yOffset },
+          data: {
+            tool,
+            stage,
+            framework
+          }
+        };
+        
+        addNode(toolNode);
+        
+        // Create edge from stage to tool
+        if (id) {
+          const edge = {
+            id: `edge-${id}-${toolNode.id}`,
+            source: id,
+            target: toolNode.id,
+            type: 'smoothstep',
+            animated: true,
+            style: { stroke: 'hsl(var(--primary))' }
+          };
+          addEdge(edge);
+        }
+      });
+    }
+    // If tools already exist, just run the stage (existing behavior)
+  };
+
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -123,7 +166,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button size="sm" className="flex-1 text-xs h-7">
+          <Button size="sm" className="flex-1 text-xs h-7" onClick={handleRunStage}>
             <Play className="w-3 h-3 mr-1" />
             Run Stage
           </Button>

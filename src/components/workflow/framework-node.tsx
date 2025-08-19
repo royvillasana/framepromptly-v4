@@ -57,6 +57,38 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
     }
   };
 
+  const handleUseFramework = () => {
+    // Create all stages at once
+    framework.stages.forEach((stage, index) => {
+      const yOffset = index * 120;
+      
+      const stageNode = {
+        id: `stage-${stage.id}-${Date.now()}-${index}`,
+        type: 'stage',
+        position: { x: 500, y: 100 + yOffset },
+        data: {
+          stage,
+          framework
+        }
+      };
+      
+      addNode(stageNode);
+      
+      // Create edge from framework to stage
+      if (id) {
+        const edge = {
+          id: `edge-${id}-${stageNode.id}`,
+          source: id,
+          target: stageNode.id,
+          type: 'smoothstep',
+          animated: true,
+          style: { stroke: 'hsl(var(--primary))' }
+        };
+        addEdge(edge);
+      }
+    });
+  };
+
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -122,7 +154,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button className="flex-1 text-sm h-8">
+          <Button className="flex-1 text-sm h-8" onClick={handleUseFramework}>
             <Layers className="w-4 h-4 mr-2" />
             Use Framework
           </Button>
