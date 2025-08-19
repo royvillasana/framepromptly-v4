@@ -34,7 +34,7 @@ export default function Workflow() {
 }
 
 function WorkflowWithProject() {
-  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode } = useWorkflowStore();
+  const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
   const { currentProject } = useProjectStore();
   const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
@@ -43,6 +43,13 @@ function WorkflowWithProject() {
     initializeFrameworks();
     initializeTemplates();
   }, [initializeFrameworks, initializeTemplates]);
+
+  // Load canvas data when project changes
+  useEffect(() => {
+    if (currentProject?.canvas_data) {
+      loadCanvasData(currentProject.canvas_data);
+    }
+  }, [currentProject, loadCanvasData]);
 
   const handleAddFramework = (framework: any) => {
     selectFramework(framework);

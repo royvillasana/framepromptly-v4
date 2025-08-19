@@ -73,6 +73,7 @@ export interface WorkflowState {
   getConnectedNodes: (nodeId: string) => { frameworks: Node[]; stages: Node[]; tools: Node[] };
   selectFramework: (framework: UXFramework) => void;
   selectStage: (stage: UXStage) => void;
+  loadCanvasData: (canvasData: any) => void;
   initializeFrameworks: () => void;
 }
 
@@ -716,13 +717,36 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
   
-  addNode: (node) => set((state) => ({
-    nodes: [...state.nodes, node]
-  })),
+  addNode: (node) => set((state) => {
+    const newNodes = [...state.nodes, node];
+    // Auto-save to project if available
+    const { useProjectStore } = require('./project-store');
+    const currentProject = useProjectStore.getState().currentProject;
+    if (currentProject) {
+      useProjectStore.getState().saveCanvasData(currentProject.id, newNodes, state.edges);
+    }
+    return { nodes: newNodes };
+  }),
   
-  addEdge: (edge) => set((state) => ({
-    edges: [...state.edges, edge]
-  })),
+  addEdge: (edge) => set((state) => {
+    const newEdges = [...state.edges, edge];
+    // Auto-save to project if available
+    const { useProjectStore } = require('./project-store');
+    const currentProject = useProjectStore.getState().currentProject;
+    if (currentProject) {
+      useProjectStore.getState().saveCanvasData(currentProject.id, state.nodes, newEdges);
+    }
+    return { edges: newEdges };
+  }),
+
+  loadCanvasData: (canvasData: any) => {
+    if (canvasData && canvasData.nodes && canvasData.edges) {
+      set({ 
+        nodes: canvasData.nodes || [], 
+        edges: canvasData.edges || [] 
+      });
+    }
+  },
   
   updateNode: (id, data) => set((state) => ({
     nodes: state.nodes.map(node => 
