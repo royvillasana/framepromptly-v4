@@ -57,37 +57,66 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    // Generate AI response using OpenAI
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a UX design expert assistant. Generate comprehensive, actionable outputs for the ${toolName} tool in the ${stageName} stage of the ${frameworkName} framework. Provide practical, detailed responses that practitioners can immediately use.`
-          },
-          {
-            role: 'user',
-            content: processedPrompt
-          }
-        ],
-        max_completion_tokens: 2000,
-      }),
-    });
+    // Generate AI response using OpenAI with model fallback
+    const models = ['gpt-5-2025-08-07', 'gpt-5-mini-2025-08-07', 'o4-mini-2025-04-16', 'gpt-4.1-2025-04-14'];
+    let aiResponse: string | null = null;
+    let usedModel = '';
 
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    for (const model of models) {
+      try {
+        console.log('Attempting OpenAI call with model:', model);
+        const payload: Record<string, unknown> = {
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a UX design expert assistant. Generate comprehensive, actionable outputs for the ${toolName} tool in the ${stageName} stage of the ${frameworkName} framework. Provide practical, detailed responses that practitioners can immediately use.`
+            },
+            { role: 'user', content: processedPrompt }
+          ],
+        };
+
+        // Parameter differences between models
+        if (model.startsWith('gpt-5') || model.startsWith('gpt-4.1') || model.startsWith('o3') || model.startsWith('o4')) {
+          (payload as any).max_completion_tokens = 2000;
+        } else {
+          (payload as any).max_tokens = 2000;
+        }
+
+        const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!openAIResponse.ok) {
+          const errorData = await openAIResponse.json().catch(() => ({}));
+          console.error('OpenAI API error:', errorData);
+          // Try next model on model access issues
+          if (errorData?.error?.code === 'model_not_found' || errorData?.error?.type === 'invalid_request_error') {
+            continue;
+          }
+          continue;
+        }
+
+        const aiData = await openAIResponse.json();
+        aiResponse = aiData.choices?.[0]?.message?.content ?? '';
+        usedModel = model;
+        break;
+      } catch (modelErr) {
+        console.error('Error with model', model, modelErr);
+        continue;
+      }
     }
 
-    const aiData = await openAIResponse.json();
-    const aiResponse = aiData.choices[0].message.content;
+    if (!aiResponse) {
+      throw new Error('OpenAI API error: All model attempts failed');
+    }
+
+    console.log('AI response generated successfully using model:', usedModel);
 
     console.log('AI response generated successfully');
 
