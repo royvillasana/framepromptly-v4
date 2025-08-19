@@ -22,7 +22,12 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
   const { addNode, addEdge, nodes } = useWorkflowStore();
 
   const handleAddStage = (stage: UXStage) => {
-    // Find a good position for the new stage node
+    // Get the current framework node position
+    const frameworkNode = nodes.find(node => node.id === id);
+    const baseX = frameworkNode ? frameworkNode.position.x + 400 : 500;
+    const baseY = frameworkNode ? frameworkNode.position.y : 100;
+    
+    // Find existing stage nodes for this framework to calculate offset
     const existingStageNodes = nodes.filter(node => 
       node.type === 'stage' && 
       node.data && 
@@ -34,7 +39,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
     const stageNode = {
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
-      position: { x: 500, y: 100 + yOffset },
+      position: { x: baseX, y: baseY + yOffset },
       data: {
         stage,
         framework
@@ -58,6 +63,11 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
   };
 
   const handleUseFramework = () => {
+    // Get the current framework node position
+    const frameworkNode = nodes.find(node => node.id === id);
+    const baseX = frameworkNode ? frameworkNode.position.x + 400 : 500;
+    const baseY = frameworkNode ? frameworkNode.position.y : 100;
+    
     // Create all stages at once
     framework.stages.forEach((stage, index) => {
       const yOffset = index * 120;
@@ -65,7 +75,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
       const stageNode = {
         id: `stage-${stage.id}-${Date.now()}-${index}`,
         type: 'stage',
-        position: { x: 500, y: 100 + yOffset },
+        position: { x: baseX, y: baseY + yOffset },
         data: {
           stage,
           framework

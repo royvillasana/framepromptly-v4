@@ -24,7 +24,12 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
   const { addNode, addEdge, nodes } = useWorkflowStore();
 
   const handleAddTool = (tool: UXTool) => {
-    // Find a good position for the new tool node
+    // Get the current stage node position
+    const stageNode = nodes.find(node => node.id === id);
+    const baseX = stageNode ? stageNode.position.x + 350 : 850;
+    const baseY = stageNode ? stageNode.position.y : 100;
+    
+    // Find existing tool nodes for this stage to calculate offset
     const existingToolNodes = nodes.filter(node => 
       node.type === 'tool' && 
       node.data &&
@@ -36,7 +41,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
     const toolNode = {
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
-      position: { x: 850, y: 100 + yOffset },
+      position: { x: baseX, y: baseY + yOffset },
       data: {
         tool,
         stage,
@@ -70,13 +75,18 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
     
     // If no tools exist, create all tools for this stage
     if (existingToolNodes.length === 0) {
+      // Get the current stage node position
+      const stageNode = nodes.find(node => node.id === id);
+      const baseX = stageNode ? stageNode.position.x + 350 : 850;
+      const baseY = stageNode ? stageNode.position.y : 100;
+      
       stage.tools.forEach((tool, index) => {
         const yOffset = index * 100;
         
         const toolNode = {
           id: `tool-${tool.id}-${Date.now()}-${index}`,
           type: 'tool',
-          position: { x: 850, y: 100 + yOffset },
+          position: { x: baseX, y: baseY + yOffset },
           data: {
             tool,
             stage,

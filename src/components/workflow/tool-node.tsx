@@ -24,7 +24,7 @@ interface ToolNodeProps {
 
 export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolNodeProps & { id?: string; onSwitchToPromptTab?: () => void }) => {
   const { generatePrompt, setCurrentPrompt } = usePromptStore();
-  const { addNode, addEdge } = useWorkflowStore();
+  const { addNode, addEdge, nodes } = useWorkflowStore();
   const { tool, framework, stage, isActive, isCompleted } = data;
 
   const handleGeneratePrompt = () => {
@@ -44,11 +44,16 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
       // Set as current prompt
       setCurrentPrompt(generatedPrompt);
       
+      // Get the current tool node position
+      const toolNode = nodes.find(node => node.id === id);
+      const baseX = toolNode ? toolNode.position.x + 350 : 1200;
+      const baseY = toolNode ? toolNode.position.y : 200;
+      
       // Create a new prompt node
       const promptNode = {
         id: `prompt-${Date.now()}`,
         type: 'prompt',
-        position: { x: 400, y: 100 }, // Position it to the right of the tool node
+        position: { x: baseX, y: baseY },
         data: {
           prompt: generatedPrompt
         }
