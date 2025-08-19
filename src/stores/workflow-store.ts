@@ -717,27 +717,31 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
   
-  addNode: (node) => set((state) => {
-    const newNodes = [...state.nodes, node];
+  addNode: (node) => {
+    set((state) => ({ nodes: [...state.nodes, node] }));
     // Auto-save to project if available
-    const { useProjectStore } = require('./project-store');
-    const currentProject = useProjectStore.getState().currentProject;
-    if (currentProject) {
-      useProjectStore.getState().saveCanvasData(currentProject.id, newNodes, state.edges);
-    }
-    return { nodes: newNodes };
-  }),
+    setTimeout(() => {
+      const currentState = get();
+      const { useProjectStore } = require('./project-store');
+      const currentProject = useProjectStore.getState().currentProject;
+      if (currentProject) {
+        useProjectStore.getState().saveCanvasData(currentProject.id, currentState.nodes, currentState.edges);
+      }
+    }, 0);
+  },
   
-  addEdge: (edge) => set((state) => {
-    const newEdges = [...state.edges, edge];
+  addEdge: (edge) => {
+    set((state) => ({ edges: [...state.edges, edge] }));
     // Auto-save to project if available
-    const { useProjectStore } = require('./project-store');
-    const currentProject = useProjectStore.getState().currentProject;
-    if (currentProject) {
-      useProjectStore.getState().saveCanvasData(currentProject.id, state.nodes, newEdges);
-    }
-    return { edges: newEdges };
-  }),
+    setTimeout(() => {
+      const currentState = get();
+      const { useProjectStore } = require('./project-store');
+      const currentProject = useProjectStore.getState().currentProject;
+      if (currentProject) {
+        useProjectStore.getState().saveCanvasData(currentProject.id, currentState.nodes, currentState.edges);
+      }
+    }, 0);
+  },
 
   loadCanvasData: (canvasData: any) => {
     if (canvasData && canvasData.nodes && canvasData.edges) {
