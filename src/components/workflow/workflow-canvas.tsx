@@ -21,15 +21,15 @@ import { ToolNode } from './tool-node';
 import { PromptNode } from './prompt-node';
 import { motion } from 'framer-motion';
 
-const nodeTypes = {
-  stage: StageNode,
-  framework: FrameworkNode,
-  tool: ToolNode,
-  prompt: PromptNode,
-};
-
-export function WorkflowCanvas() {
+export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
   const { nodes, edges, setNodes, setEdges, addEdge: addStoreEdge } = useWorkflowStore();
+
+  const nodeTypes = {
+    stage: StageNode,
+    framework: FrameworkNode,
+    tool: (props: any) => <ToolNode {...props} onSwitchToPromptTab={onSwitchToPromptTab} />,
+    prompt: PromptNode,
+  };
   
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(nodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(edges);
@@ -93,7 +93,7 @@ export function WorkflowCanvas() {
         colorMode="system"
       >
         <Background
-          color="#ffffff"
+          color="rgba(255, 255, 255, 0.3)"
           gap={20}
           size={2}
           variant={BackgroundVariant.Dots}

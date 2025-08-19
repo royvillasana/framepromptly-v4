@@ -233,7 +233,7 @@ export default function Workflow() {
         <div className="flex-1 flex">
           {/* Canvas */}
           <div className="flex-1">
-            <WorkflowCanvas />
+            <WorkflowCanvas onSwitchToPromptTab={() => setRightPanel('prompts')} />
           </div>
           
           {/* Right Panel */}

@@ -19,16 +19,30 @@ interface ToolNodeData {
 interface ToolNodeProps {
   data: ToolNodeData;
   selected?: boolean;
+  onSwitchToPromptTab?: () => void;
 }
 
-export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
-  const { generatePrompt } = usePromptStore();
-  const { addNode } = useWorkflowStore();
+export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolNodeProps & { id?: string; onSwitchToPromptTab?: () => void }) => {
+  const { generatePrompt, setCurrentPrompt } = usePromptStore();
+  const { addNode, addEdge } = useWorkflowStore();
   const { tool, framework, stage, isActive, isCompleted } = data;
 
   const handleGeneratePrompt = () => {
     if (framework && stage) {
       const prompt = generatePrompt(framework, stage, tool, undefined, undefined);
+      
+      // Create the generated prompt object
+      const generatedPrompt = {
+        id: `prompt-${Date.now()}`,
+        workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
+        content: prompt,
+        context: { framework, stage, tool },
+        variables: {},
+        timestamp: Date.now()
+      };
+      
+      // Set as current prompt
+      setCurrentPrompt(generatedPrompt);
       
       // Create a new prompt node
       const promptNode = {
@@ -36,18 +50,29 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         type: 'prompt',
         position: { x: 400, y: 100 }, // Position it to the right of the tool node
         data: {
-          prompt: {
-            id: `prompt-${Date.now()}`,
-            workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
-            content: prompt,
-            context: { framework, stage, tool },
-            variables: {},
-            timestamp: Date.now()
-          }
+          prompt: generatedPrompt
         }
       };
       
       addNode(promptNode);
+      
+      // Create edge from tool to prompt
+      if (id) {
+        const edge = {
+          id: `edge-${id}-${promptNode.id}`,
+          source: id,
+          target: promptNode.id,
+          type: 'smoothstep',
+          animated: true,
+          style: { stroke: 'hsl(var(--primary))' }
+        };
+        addEdge(edge);
+      }
+      
+      // Switch to prompt tab if callback is provided
+      if (onSwitchToPromptTab) {
+        onSwitchToPromptTab();
+      }
     }
   };
 
