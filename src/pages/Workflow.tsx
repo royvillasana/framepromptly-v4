@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WorkflowCanvas } from '@/components/workflow/workflow-canvas';
 import { PromptPanel } from '@/components/workflow/prompt-panel';
+import { ProjectList } from '@/components/project/project-list';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -18,6 +19,18 @@ export default function Workflow() {
   const { initializeTemplates } = usePromptStore();
   const { currentProject, fetchProjects } = useProjectStore();
   const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
+
+  // If no current project is selected, show project selection
+  if (!currentProject) {
+    return (
+      <div className="h-screen bg-background flex flex-col">
+        <Navigation />
+        <div className="flex-1 p-6">
+          <ProjectList />
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     initializeFrameworks();
