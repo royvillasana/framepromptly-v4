@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen } from 'lucide-react';
 import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
+import { PromptsSidebar } from '@/components/workflow/prompts-sidebar';
 
 export default function Workflow() {
   const { currentProject, fetchProjects } = useProjectStore();
@@ -38,6 +39,7 @@ function WorkflowWithProject() {
   const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData, nodes, edges } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
   const lastAppliedRef = useRef<string>('');
   const lastSavedRef = useRef<string>('');
@@ -105,10 +107,23 @@ function WorkflowWithProject() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col">
-      <Navigation />
+    <div className="h-screen bg-background flex flex-col w-full">
+      {/* Header */}
+      <div className="h-12 flex items-center border-b bg-card px-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="mr-2"
+        >
+          <Layers className="w-4 h-4" />
+        </Button>
+        <Navigation />
+      </div>
       
-      <div className="flex-1 flex">
+      <div className="flex-1 flex w-full">
+        {/* Prompts Sidebar */}
+        <PromptsSidebar collapsed={sidebarCollapsed} />
         {/* Left Panel */}
         <motion.div
           initial={{ x: -400, opacity: 0 }}
