@@ -718,7 +718,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setEdges: (edges) => set({ edges }),
   
   addNode: (node) => {
-    set((state) => ({ nodes: [...state.nodes, node] }));
+    set((state) => ({ 
+      nodes: [...state.nodes, node]
+    }));
   },
   
   addEdge: (edge) => {

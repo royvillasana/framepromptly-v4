@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { UXTool, useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 import { useProjectStore } from '@/stores/project-store';
 import { supabase } from '@/integrations/supabase/client';
+import { ProgressOverlay } from './progress-overlay';
+import { getSmartPosition } from '@/utils/node-positioning';
 
 interface ToolNodeData {
   tool: UXTool;
@@ -29,6 +31,10 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
   const { addNode, addEdge, nodes } = useWorkflowStore();
   const { currentProject } = useProjectStore();
   const { tool, framework, stage, isActive, isCompleted } = data;
+  
+  const [showProgress, setShowProgress] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const totalSteps = 4;
 
   const handleGeneratePrompt = async () => {
     if (!framework || !stage || !currentProject) {
@@ -37,10 +43,24 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
     }
 
     try {
-      // Generate the initial prompt content
+      setShowProgress(true);
+      setCurrentStep(0);
+
+      // Step 1: Analyzing Context
+      setCurrentStep(1);
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Step 2: Gathering Knowledge
+      setCurrentStep(2);
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Step 3: Generating Prompt
+      setCurrentStep(3);
       const promptContent = generatePrompt(framework, stage, tool, undefined, undefined);
+      await new Promise(resolve => setTimeout(resolve, 400));
       
-      // Call the AI edge function
+      // Step 4: Executing AI Request
+      setCurrentStep(4);
       const { data, error } = await supabase.functions.invoke('generate-ai-prompt', {
         body: {
           promptContent,
@@ -75,16 +95,18 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
       // Set as current prompt
       setCurrentPrompt(generatedPrompt);
       
-      // Get the current tool node position
+      // Get smart position for the new prompt node
       const toolNode = nodes.find(node => node.id === id);
-      const baseX = toolNode ? toolNode.position.x + 350 : 1200;
-      const baseY = toolNode ? toolNode.position.y : 200;
+      const newPosition = getSmartPosition('prompt', nodes, { 
+        sourceNodeId: id,
+        workflowType: 'tool-to-prompt' 
+      });
       
-      // Create a new prompt node
+      // Create a new prompt node with proper positioning
       const promptNode = {
         id: `prompt-${Date.now()}`,
         type: 'prompt',
-        position: { x: baseX, y: baseY },
+        position: newPosition,
         data: {
           prompt: generatedPrompt
         }
@@ -105,22 +127,33 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
         addEdge(edge);
       }
       
-      // Switch to prompt tab if callback is provided
-      if (onSwitchToPromptTab) {
-        onSwitchToPromptTab();
-      }
     } catch (error) {
       console.error('Error generating AI prompt:', error);
+      setShowProgress(false);
+      setCurrentStep(0);
+    }
+  };
+
+  const handleProgressComplete = () => {
+    setShowProgress(false);
+    setCurrentStep(0);
+    
+    // Switch to prompt tab if callback is provided
+    if (onSwitchToPromptTab) {
+      setTimeout(() => {
+        onSwitchToPromptTab();
+      }, 500);
     }
   };
 
   return (
-    <motion.div
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.2 }}
-      whileHover={{ scale: 1.02 }}
-    >
+    <>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        whileHover={{ scale: 1.02 }}
+      >
       <Handle
         type="target"
         position={Position.Top}
@@ -173,10 +206,10 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
               size="sm"
               onClick={handleGeneratePrompt}
               className="flex-1 h-8 text-xs"
-              disabled={!framework || !stage || !currentProject}
+              disabled={!framework || !stage || !currentProject || showProgress}
             >
               <Play className="w-3 h-3 mr-1" />
-              Generate Prompt
+              {showProgress ? 'Generating...' : 'Generate Prompt'}
             </Button>
             
             <Button
@@ -195,6 +228,13 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
         position={Position.Bottom}
         className="w-3 h-3 bg-muted-foreground hover:bg-primary transition-colors"
       />
-    </motion.div>
+      </motion.div>
+      <ProgressOverlay
+        isVisible={showProgress}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        onComplete={handleProgressComplete}
+      />
+    </>
   );
 });
