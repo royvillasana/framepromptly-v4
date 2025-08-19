@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useProjectStore } from './project-store';
 import { Node, Edge, Connection } from '@xyflow/react';
 
 export interface UXFramework {
@@ -722,7 +723,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     // Auto-save to project if available
     setTimeout(() => {
       const currentState = get();
-      const { useProjectStore } = require('./project-store');
       const currentProject = useProjectStore.getState().currentProject;
       if (currentProject) {
         useProjectStore.getState().saveCanvasData(currentProject.id, currentState.nodes, currentState.edges);
@@ -735,7 +735,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     // Auto-save to project if available
     setTimeout(() => {
       const currentState = get();
-      const { useProjectStore } = require('./project-store');
       const currentProject = useProjectStore.getState().currentProject;
       if (currentProject) {
         useProjectStore.getState().saveCanvasData(currentProject.id, currentState.nodes, currentState.edges);
