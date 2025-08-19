@@ -37,7 +37,7 @@ function WorkflowWithProject() {
   const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData } = useWorkflowStore();
   const { initializeTemplates } = usePromptStore();
   const { currentProject } = useProjectStore();
-  const [rightPanel, setRightPanel] = useState<'canvas' | 'prompts'>('canvas');
+  const [activePanel, setActivePanel] = useState<'canvas' | 'prompts'>('canvas');
 
   useEffect(() => {
     initializeFrameworks();
@@ -87,17 +87,12 @@ function WorkflowWithProject() {
       <Navigation />
       
       <div className="flex-1 flex">
-        {/* Canvas */}
-        <div className="flex-1">
-          <WorkflowCanvas onSwitchToPromptTab={() => setRightPanel('prompts')} />
-        </div>
-        
-        {/* Right Panel */}
+        {/* Left Panel */}
         <motion.div
-          initial={{ x: 400, opacity: 0 }}
+          initial={{ x: -400, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-96 border-l border-border bg-card"
+          className="w-96 border-r border-border bg-card"
         >
           {/* Framework Selector Header */}
           <div className="border-b border-border p-4 space-y-4">
@@ -151,7 +146,7 @@ function WorkflowWithProject() {
             </div>
           </div>
 
-          <Tabs value={rightPanel} onValueChange={(value: any) => setRightPanel(value)}>
+          <Tabs value={activePanel} onValueChange={(value: any) => setActivePanel(value)}>
             <div className="border-b border-border p-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="canvas" className="text-xs">
@@ -232,6 +227,11 @@ function WorkflowWithProject() {
             </TabsContent>
           </Tabs>
         </motion.div>
+        
+        {/* Canvas */}
+        <div className="flex-1">
+          <WorkflowCanvas onSwitchToPromptTab={() => setActivePanel('prompts')} />
+        </div>
       </div>
     </div>
   );
