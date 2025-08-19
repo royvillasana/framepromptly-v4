@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Play, Settings, Sparkles } from 'lucide-react';
-import { UXTool } from '@/stores/workflow-store';
+import { UXTool, useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 
 interface ToolNodeData {
@@ -21,13 +21,33 @@ interface ToolNodeProps {
   selected?: boolean;
 }
 
-export const ToolNode = memo(({ data, selected }: ToolNodeProps) => {
+export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
   const { generatePrompt } = usePromptStore();
+  const { addNode } = useWorkflowStore();
   const { tool, framework, stage, isActive, isCompleted } = data;
 
   const handleGeneratePrompt = () => {
     if (framework && stage) {
-      generatePrompt(framework, stage, tool, undefined, undefined);
+      const prompt = generatePrompt(framework, stage, tool, undefined, undefined);
+      
+      // Create a new prompt node
+      const promptNode = {
+        id: `prompt-${Date.now()}`,
+        type: 'prompt',
+        position: { x: 400, y: 100 }, // Position it to the right of the tool node
+        data: {
+          prompt: {
+            id: `prompt-${Date.now()}`,
+            workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
+            content: prompt,
+            context: { framework, stage, tool },
+            variables: {},
+            timestamp: Date.now()
+          }
+        }
+      };
+      
+      addNode(promptNode);
     }
   };
 

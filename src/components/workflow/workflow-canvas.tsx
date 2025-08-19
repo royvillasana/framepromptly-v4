@@ -17,12 +17,14 @@ import { useWorkflowStore } from '@/stores/workflow-store';
 import { StageNode } from './stage-node';
 import { FrameworkNode } from './framework-node';
 import { ToolNode } from './tool-node';
+import { PromptNode } from './prompt-node';
 import { motion } from 'framer-motion';
 
 const nodeTypes = {
   stage: StageNode,
   framework: FrameworkNode,
   tool: ToolNode,
+  prompt: PromptNode,
 };
 
 export function WorkflowCanvas() {
