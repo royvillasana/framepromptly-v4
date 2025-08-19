@@ -61,10 +61,13 @@ export function ProjectDialog({ children }: ProjectDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="project-dialog-description">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
         </DialogHeader>
+        <p id="project-dialog-description" className="sr-only">
+          Fill out the form below to create a new UX workflow project
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Project Name *</Label>

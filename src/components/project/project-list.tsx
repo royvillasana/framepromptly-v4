@@ -23,7 +23,7 @@ export function ProjectList() {
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+  }, []);
 
   const handleOpenProject = (project: any) => {
     setCurrentProject(project);
