@@ -32,9 +32,46 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { fileUrl, fileName, projectId, title } = await req.json();
+    const { fileUrl, fileName, projectId, title, storagePath } = await req.json();
 
-    console.log('Processing image:', { fileUrl, fileName, projectId, title });
+    console.log('Processing image:', { fileUrl, fileName, projectId, title, storagePath });
+
+    // Determine storage path (prefer explicit storagePath, fallback to parse from URL)
+    let path = storagePath || null;
+    if (!path && fileUrl) {
+      try {
+        const url = new URL(fileUrl);
+        const parts = url.pathname.split('/knowledge-base/');
+        if (parts.length === 2) path = parts[1];
+      } catch (_) {
+        // ignore parse errors
+      }
+    }
+
+    if (!path) {
+      throw new Error('Missing storage path for image');
+    }
+
+    // Download the image securely from private bucket via Storage API
+    const { data: imageBlob, error: downloadError } = await supabase
+      .storage
+      .from('knowledge-base')
+      .download(path);
+
+    if (downloadError || !imageBlob) {
+      throw new Error(`Failed to download image from storage: ${downloadError?.message || 'unknown error'}`);
+    }
+
+    const buffer = await imageBlob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    // Convert to base64 (Deno btoa expects binary string)
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    const contentType = (imageBlob.type || 'image/png');
+    const dataUrl = `data:${contentType};base64,${base64}`;
 
     // Use OpenAI Vision API to analyze the image
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -44,21 +81,13 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'user',
             content: [
-              {
-                type: 'text',
-                text: 'Please analyze this image and provide a detailed description of what you see. Include any text, objects, people, settings, colors, and any other relevant details that would be useful for context in a UX project knowledge base.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: fileUrl
-                }
-              }
+              { type: 'text', text: 'Please analyze this image and provide a detailed description of what you see. Include any text, objects, people, settings, colors, and any other relevant details that would be useful for context in a UX project knowledge base.' },
+              { type: 'image_url', image_url: { url: dataUrl } }
             ]
           }
         ],
@@ -81,19 +110,27 @@ serve(async (req) => {
 
     console.log('Image analyzed successfully, description length:', imageDescription.length);
 
+    // Create a long-lived signed URL for reference (30 days)
+    const { data: signedData } = await supabase
+      .storage
+      .from('knowledge-base')
+      .createSignedUrl(path, 60 * 60 * 24 * 30);
+
     // Save to knowledge base
     const { data: knowledgeEntry, error: insertError } = await supabase
       .from('knowledge_base')
       .insert({
         project_id: projectId,
-        title: title || `Image: ${fileName}`,
+        title: title || `Image: ${fileName || path.split('/').pop()}`,
         content: imageDescription,
         type: 'image',
-        file_name: fileName,
-        file_url: fileUrl,
+        file_name: fileName || path.split('/').pop(),
+        file_url: signedData?.signedUrl || null,
         metadata: {
+          storage_path: path,
           analyzed_at: new Date().toISOString(),
-          model_used: 'gpt-4o'
+          model_used: 'gpt-4o-mini',
+          content_type: contentType
         }
       })
       .select()

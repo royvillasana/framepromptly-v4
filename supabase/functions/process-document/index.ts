@@ -27,18 +27,38 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { fileUrl, fileName, projectId, title } = await req.json();
+    const { fileUrl, fileName, projectId, title, storagePath } = await req.json();
 
-    console.log('Processing document:', { fileUrl, fileName, projectId, title });
+    console.log('Processing document:', { fileUrl, fileName, projectId, title, storagePath });
 
-    // Download the file
-    const fileResponse = await fetch(fileUrl);
-    if (!fileResponse.ok) {
-      throw new Error('Failed to download file');
+    // Determine storage path (prefer explicit storagePath, fallback to parse from URL)
+    let path = storagePath || null;
+    if (!path && fileUrl) {
+      try {
+        const url = new URL(fileUrl);
+        const parts = url.pathname.split('/knowledge-base/');
+        if (parts.length === 2) path = parts[1];
+      } catch (_) {
+        // ignore parse errors
+      }
     }
 
-    const fileBuffer = await fileResponse.arrayBuffer();
-    const fileExtension = fileName.toLowerCase().split('.').pop();
+    if (!path) {
+      throw new Error('Missing storage path for file');
+    }
+
+    // Download the file securely from private bucket via Storage API
+    const { data: fileBlob, error: downloadError } = await supabase
+      .storage
+      .from('knowledge-base')
+      .download(path);
+
+    if (downloadError || !fileBlob) {
+      throw new Error(`Failed to download file from storage: ${downloadError?.message || 'unknown error'}`);
+    }
+
+    const fileBuffer = await fileBlob.arrayBuffer();
+    const fileExtension = (fileName || path).toLowerCase().split('.').pop();
     
     let extractedText = '';
 
@@ -66,6 +86,12 @@ serve(async (req) => {
       throw new Error('No text could be extracted from the document');
     }
 
+    // Create a long-lived signed URL for reference (30 days)
+    const { data: signedData } = await supabase
+      .storage
+      .from('knowledge-base')
+      .createSignedUrl(path, 60 * 60 * 24 * 30);
+
     // Save to knowledge base
     const { data: knowledgeEntry, error: insertError } = await supabase
       .from('knowledge_base')
@@ -74,9 +100,10 @@ serve(async (req) => {
         title: title || fileName,
         content: extractedText,
         type: 'document',
-        file_name: fileName,
-        file_url: fileUrl,
+        file_name: fileName || path.split('/').pop(),
+        file_url: signedData?.signedUrl || null,
         metadata: {
+          storage_path: path,
           file_size: fileBuffer.byteLength,
           file_type: fileExtension,
           extracted_at: new Date().toISOString()

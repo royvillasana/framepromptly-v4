@@ -120,6 +120,7 @@ export const useKnowledgeStore = create<KnowledgeState>((set, get) => ({
       const { data: processData, error: processError } = await supabase.functions.invoke(processFunctionName, {
         body: {
           fileUrl: publicUrl,
+          storagePath: filePath,
           fileName: file.name,
           projectId,
           title: title || file.name
