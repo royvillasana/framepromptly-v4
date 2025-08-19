@@ -53,6 +53,86 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          canvas_data: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          canvas_data?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          canvas_data?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          ai_response: string | null
+          created_at: string
+          framework_name: string
+          id: string
+          project_id: string
+          prompt_content: string
+          stage_name: string
+          tool_name: string
+          updated_at: string
+          user_id: string
+          variables: Json | null
+        }
+        Insert: {
+          ai_response?: string | null
+          created_at?: string
+          framework_name: string
+          id?: string
+          project_id: string
+          prompt_content: string
+          stage_name: string
+          tool_name: string
+          updated_at?: string
+          user_id: string
+          variables?: Json | null
+        }
+        Update: {
+          ai_response?: string | null
+          created_at?: string
+          framework_name?: string
+          id?: string
+          project_id?: string
+          prompt_content?: string
+          stage_name?: string
+          tool_name?: string
+          updated_at?: string
+          user_id?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
