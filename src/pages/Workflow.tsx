@@ -11,9 +11,13 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
-import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen } from 'lucide-react';
+import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen, ArrowLeft, Copy, Download, ChevronRight } from 'lucide-react';
 import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
+import { toast } from 'sonner';
 
 export default function Workflow() {
   const { currentProject, fetchProjects } = useProjectStore();
@@ -36,10 +40,11 @@ export default function Workflow() {
 
 function WorkflowWithProject() {
   const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData, nodes, edges } = useWorkflowStore();
-  const { initializeTemplates, loadProjectPrompts, clearProjectPrompts } = usePromptStore();
+  const { initializeTemplates, loadProjectPrompts, clearProjectPrompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating, updatePromptVariables } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
+  const [variables, setVariables] = useState<Record<string, string>>({});
   const lastAppliedRef = useRef<string>('');
   const lastSavedRef = useRef<string>('');
 
@@ -67,6 +72,13 @@ function WorkflowWithProject() {
       clearProjectPrompts();
     };
   }, [currentProject?.id, loadCanvasData, loadProjectPrompts, clearProjectPrompts]);
+
+  // Initialize variables when current prompt changes
+  useEffect(() => {
+    if (currentPrompt) {
+      setVariables(currentPrompt.variables || {});
+    }
+  }, [currentPrompt]);
 
   // Auto-save when nodes or edges change (debounced) and only if changed since last save
   useEffect(() => {
@@ -113,6 +125,41 @@ function WorkflowWithProject() {
       data: { tool, framework, stage, isActive: true },
     };
     addNode(newNode);
+  };
+
+  const handleVariableChange = (key: string, value: string) => {
+    const newVariables = { ...variables, [key]: value };
+    setVariables(newVariables);
+    if (currentPrompt) {
+      updatePromptVariables(currentPrompt.id, newVariables);
+    }
+  };
+
+  const handleExecutePrompt = async () => {
+    if (!currentPrompt) return;
+    
+    try {
+      await executePrompt(currentPrompt.id);
+    } catch (error) {
+      console.error('Failed to execute prompt:', error);
+    }
+  };
+
+  const handleCopyPrompt = () => {
+    if (!currentPrompt) return;
+    
+    let content = currentPrompt.content;
+    Object.entries(variables).forEach(([key, value]) => {
+      content = content.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    });
+    
+    navigator.clipboard.writeText(content);
+    toast.success('Prompt copied to clipboard');
+  };
+
+  const extractVariables = (content: string): string[] => {
+    const matches = content.match(/{{(\w+)}}/g);
+    return matches ? matches.map(match => match.slice(2, -2)) : [];
   };
 
   return (
@@ -210,7 +257,109 @@ function WorkflowWithProject() {
             
             <TabsContent value="canvas" className="m-0 h-[calc(100vh-280px)]">
               <div className="p-4 space-y-4 h-full overflow-y-auto">
-                {!selectedFramework ? (
+                {currentPrompt ? (
+                  // Prompt Details View
+                  <div className="space-y-4">
+                    {/* Header with back button */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setCurrentPrompt(null)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                      </Button>
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <h3 className="font-medium text-sm">Prompt Details</h3>
+                    </div>
+
+                    {/* Context Info */}
+                    <div className="p-3 border border-border bg-muted/50 rounded-md">
+                      <div className="flex items-center gap-2 text-sm mb-2">
+                        <Badge variant="outline">{currentPrompt.context.framework.name}</Badge>
+                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                        <Badge variant="outline">{currentPrompt.context.stage.name}</Badge>
+                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                        <Badge variant="default">{currentPrompt.context.tool.name}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Created: {new Date(currentPrompt.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* Variables Section */}
+                    {extractVariables(currentPrompt.content).length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm">Customize Variables</h4>
+                        <div className="grid gap-3">
+                          {extractVariables(currentPrompt.content).map((variable) => (
+                            <div key={variable} className="space-y-1">
+                              <Label className="text-xs capitalize">
+                                {variable.replace(/([A-Z])/g, ' $1').trim()}
+                              </Label>
+                              <Input
+                                placeholder={`Enter ${variable}`}
+                                value={variables[variable] || ''}
+                                onChange={(e) => handleVariableChange(variable, e.target.value)}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Prompt Content */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">Generated Prompt</h4>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={handleCopyPrompt}>
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={handleExecutePrompt}
+                            disabled={isGenerating}
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            {isGenerating ? 'Generating...' : 'Execute'}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <ScrollArea className="max-h-48">
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <pre className="text-xs whitespace-pre-wrap font-mono">
+                            {currentPrompt.content}
+                          </pre>
+                        </div>
+                      </ScrollArea>
+                    </div>
+
+                    {/* Output Section */}
+                    {currentPrompt.output && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm">AI Output</h4>
+                          <Button size="sm" variant="outline">
+                            <Download className="w-3 h-3 mr-1" />
+                            Export
+                          </Button>
+                        </div>
+                        <ScrollArea className="max-h-48">
+                          <div className="p-3 bg-card rounded-md border">
+                            <div className="text-sm whitespace-pre-wrap">
+                              {currentPrompt.output}
+                            </div>
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    )}
+                  </div>
+                ) : !selectedFramework ? (
                   <div className="text-center py-8">
                     <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Select a Framework</h3>
