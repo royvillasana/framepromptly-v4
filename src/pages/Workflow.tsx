@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen, ArrowLeft, Copy, Download, ChevronRight, X } from 'lucide-react';
+import { NodeDetails } from '@/components/workflow/node-details';
 import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
 import { toast } from 'sonner';
 
@@ -283,35 +284,7 @@ function WorkflowWithProject() {
                       </Button>
                     </div>
                     
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Node Type</label>
-                        <p className="text-sm capitalize">{selectedNode.type}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Node ID</label>
-                        <p className="text-sm font-mono">{selectedNode.id}</p>
-                      </div>
-                      
-                      {selectedNode.data && (
-                        <div>
-                          <label className="text-xs font-medium text-muted-foreground">Data</label>
-                          <div className="text-xs bg-muted p-3 rounded-md">
-                            <pre className="whitespace-pre-wrap">
-                              {JSON.stringify(selectedNode.data, null, 2)}
-                            </pre>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Position</label>
-                        <p className="text-sm">
-                          x: {Math.round(selectedNode.position.x)}, y: {Math.round(selectedNode.position.y)}
-                        </p>
-                      </div>
-                    </div>
+                    <NodeDetails node={selectedNode} />
                   </div>
                 ) : currentPrompt ? (
                   // Prompt Details View
