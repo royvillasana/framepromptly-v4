@@ -23,7 +23,7 @@ import { ProjectNode } from './project-node';
 import { motion } from 'framer-motion';
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
-  const { nodes, edges, setNodes, setEdges, addEdge: addStoreEdge } = useWorkflowStore();
+  const { nodes, edges, setNodes, setEdges, addEdge: addStoreEdge, selectNode } = useWorkflowStore();
 
   const nodeTypes = {
     stage: StageNode,
@@ -74,6 +74,13 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     [onEdgesChange]
   );
 
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      selectNode(node);
+    },
+    [selectNode]
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -88,6 +95,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         onNodesChange={onNodesChangeHandler}
         onEdgesChange={onEdgesChangeHandler}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView
