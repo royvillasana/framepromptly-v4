@@ -12,7 +12,7 @@ interface NodeDetailsProps {
 }
 
 export function NodeDetails({ node }: NodeDetailsProps) {
-  const { nodes, addNode } = useWorkflowStore();
+  const { nodes, edges, addNode } = useWorkflowStore();
   const { prompts } = usePromptStore();
   const getNodeIcon = (type: string) => {
     switch (type) {
@@ -98,12 +98,11 @@ export function NodeDetails({ node }: NodeDetailsProps) {
   const renderStageDetails = (data: any) => {
     const stage = data;
     
-    // Find tool nodes in canvas that belong to this stage
-    const stageToolNodes = nodes.filter(n => 
-      n.type === 'tool' && 
-      stage.tools && 
-      stage.tools.some((tool: any) => tool.id === n.data?.id)
-    );
+    // Find tool nodes connected to this stage node via edges
+    const connectedToolNodes = edges
+      .filter(edge => edge.source === node.id) // Edges from this stage node
+      .map(edge => nodes.find(n => n.id === edge.target)) // Get target nodes
+      .filter(n => n && n.type === 'tool'); // Only tool nodes
 
     return (
       <div className="space-y-4">
@@ -145,10 +144,10 @@ export function NodeDetails({ node }: NodeDetailsProps) {
         )}
         
         <div>
-          <h4 className="font-medium text-sm mb-3">UX Tools in Canvas ({stageToolNodes.length})</h4>
-          {stageToolNodes.length > 0 ? (
+          <h4 className="font-medium text-sm mb-3">Connected UX Tools ({connectedToolNodes.length})</h4>
+          {connectedToolNodes.length > 0 ? (
             <div className="space-y-2">
-              {stageToolNodes.map((toolNode) => (
+              {connectedToolNodes.map((toolNode) => (
                 <div key={toolNode.id} className="flex items-center gap-2 p-2 border rounded-md">
                   <Wrench className="w-3 h-3 text-muted-foreground" />
                   <div className="flex-1">
@@ -162,12 +161,10 @@ export function NodeDetails({ node }: NodeDetailsProps) {
           ) : (
             <div className="text-center py-4 text-muted-foreground">
               <Wrench className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs">No UX tools from this stage in canvas yet</p>
-              {stage.tools && (
-                <p className="text-xs mt-1">
-                  {stage.tools.length} tools available in this stage
-                </p>
-              )}
+              <p className="text-xs">No UX tools connected to this stage yet</p>
+              <p className="text-xs mt-1">
+                Connect tool nodes to see them here
+              </p>
             </div>
           )}
         </div>
