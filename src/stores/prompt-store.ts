@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { UXFramework, UXStage, UXTool } from './workflow-store';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface PromptTemplate {
   id: string;
@@ -17,6 +18,7 @@ export interface PromptTemplate {
 export interface GeneratedPrompt {
   id: string;
   workflowId: string;
+  projectId: string;
   content: string;
   context: {
     framework: UXFramework;
@@ -42,12 +44,14 @@ export interface PromptState {
   isGenerating: boolean;
   
   // Actions
-  generatePrompt: (framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => string;
+  loadProjectPrompts: (projectId: string) => Promise<void>;
+  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => Promise<string>;
   executePrompt: (promptId: string) => Promise<void>;
   updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
   setCurrentPrompt: (prompt: GeneratedPrompt | null) => void;
   addPromptOutput: (promptId: string, output: string) => void;
   initializeTemplates: () => void;
+  clearProjectPrompts: () => void;
 }
 
 // Framework-level instructions for prompt generation
@@ -693,7 +697,41 @@ export const usePromptStore = create<PromptState>((set, get) => ({
   currentPrompt: null,
   isGenerating: false,
 
-  generatePrompt: (framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => {
+  loadProjectPrompts: async (projectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('prompts')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform database data to GeneratedPrompt format
+      const transformedPrompts: GeneratedPrompt[] = (data || []).map(dbPrompt => ({
+        id: dbPrompt.id,
+        workflowId: 'current-workflow',
+        projectId: dbPrompt.project_id,
+        content: dbPrompt.prompt_content,
+        context: {
+          framework: { id: dbPrompt.framework_name, name: dbPrompt.framework_name } as UXFramework,
+          stage: { id: dbPrompt.stage_name, name: dbPrompt.stage_name } as UXStage,
+          tool: { id: dbPrompt.tool_name, name: dbPrompt.tool_name } as UXTool,
+        },
+        variables: (dbPrompt.variables && typeof dbPrompt.variables === 'object' && !Array.isArray(dbPrompt.variables)) 
+          ? dbPrompt.variables as Record<string, string>
+          : {},
+        output: dbPrompt.ai_response || undefined,
+        timestamp: new Date(dbPrompt.created_at).getTime()
+      }));
+
+      set({ prompts: transformedPrompts });
+    } catch (error) {
+      console.error('Error loading project prompts:', error);
+    }
+  },
+
+  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => {
     const template = get().templates.find(
       t => t.framework === framework.id && t.stage === stage.id && t.tool === tool.id
     );
@@ -728,6 +766,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     const prompt: GeneratedPrompt = {
       id: `prompt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       workflowId: 'current-workflow',
+      projectId,
       content: enhancedTemplate,
       context: {
         framework,
@@ -743,6 +782,28 @@ export const usePromptStore = create<PromptState>((set, get) => ({
       }, {} as Record<string, string>) || {},
       timestamp: Date.now()
     };
+
+    // Save to database
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('prompts')
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+          framework_name: framework.name,
+          stage_name: stage.name,
+          tool_name: tool.name,
+          prompt_content: enhancedTemplate,
+          variables: prompt.variables
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving prompt to database:', error);
+    }
 
     set(state => ({
       prompts: [...state.prompts, prompt],
@@ -804,6 +865,8 @@ export const usePromptStore = create<PromptState>((set, get) => ({
       )
     }));
   },
+
+  clearProjectPrompts: () => set({ prompts: [], currentPrompt: null }),
 
   initializeTemplates: () => set({ templates: promptTemplates })
 }));

@@ -57,7 +57,7 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
 
       // Step 3: Generating Prompt
       setCurrentStep(3);
-      const promptContent = generatePrompt(framework, stage, tool, undefined, undefined);
+      const promptContent = await generatePrompt(currentProject.id, framework, stage, tool, undefined, undefined);
       await new Promise(resolve => setTimeout(resolve, 400));
       
       // Step 4: Executing AI Request
@@ -86,6 +86,7 @@ export const ToolNode = memo(({ data, selected, id, onSwitchToPromptTab }: ToolN
       const generatedPrompt = {
         id: data.id,
         workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
+        projectId: currentProject.id,
         content: data.prompt,
         context: { framework, stage, tool },
         variables: {},

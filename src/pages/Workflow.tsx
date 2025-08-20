@@ -37,7 +37,7 @@ export default function Workflow() {
 
 function WorkflowWithProject() {
   const { initializeFrameworks, frameworks, selectedFramework, selectFramework, addNode, loadCanvasData, nodes, edges } = useWorkflowStore();
-  const { initializeTemplates } = usePromptStore();
+  const { initializeTemplates, loadProjectPrompts, clearProjectPrompts } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
@@ -49,15 +49,25 @@ function WorkflowWithProject() {
     initializeTemplates();
   }, [initializeFrameworks, initializeTemplates]);
 
-  // Load canvas data only when project ID changes
+  // Load project-specific data when project changes
   useEffect(() => {
     if (!currentProject) return;
+    
+    // Load prompts for this project
+    loadProjectPrompts(currentProject.id);
+    
+    // Load canvas data
     const canvas = currentProject.canvas_data || { nodes: [], edges: [] };
     loadCanvasData(canvas);
     const payload = JSON.stringify(canvas);
     lastAppliedRef.current = payload;
     lastSavedRef.current = payload; // prevent immediate save loop after load
-  }, [currentProject?.id, loadCanvasData]);
+    
+    return () => {
+      // Clear project-specific data when project changes
+      clearProjectPrompts();
+    };
+  }, [currentProject?.id, loadCanvasData, loadProjectPrompts, clearProjectPrompts]);
 
   // Auto-save when nodes or edges change (debounced) and only if changed since last save
   useEffect(() => {
