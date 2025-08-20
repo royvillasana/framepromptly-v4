@@ -55,10 +55,16 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
       transition={{ duration: 0.2 }}
       whileHover={{ scale: 1.02 }}
     >
+      {/* Connection Handles - 4 points */}
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 bg-muted-foreground hover:bg-primary transition-colors"
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 bg-primary border-2 border-background"
       />
       
       <Card className={`
@@ -147,8 +153,13 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
 
       <Handle
         type="source"
+        position={Position.Right}
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
+      <Handle
+        type="source"
         position={Position.Bottom}
-        className="w-3 h-3 bg-muted-foreground hover:bg-primary transition-colors"
+        className="w-3 h-3 bg-primary border-2 border-background"
       />
     </motion.div>
   );

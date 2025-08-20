@@ -178,10 +178,26 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         </div>
       </Card>
 
+      {/* Connection Handles - 4 points */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-4 h-4 bg-primary border-2 border-background"
+        className="w-3 h-3 bg-primary border-2 border-background"
       />
     </motion.div>
   );

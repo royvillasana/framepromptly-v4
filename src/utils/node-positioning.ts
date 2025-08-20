@@ -10,12 +10,12 @@ export interface NodeSpacing {
 }
 
 export const DEFAULT_SPACING: NodeSpacing = {
-  horizontal: 400,
-  vertical: 250,
-  framework: { width: 300, height: 180 },
-  stage: { width: 280, height: 160 },
-  tool: { width: 260, height: 140 },
-  prompt: { width: 320, height: 200 }
+  horizontal: 420,
+  vertical: 280,
+  framework: { width: 320, height: 200 },
+  stage: { width: 280, height: 180 },
+  tool: { width: 280, height: 160 },
+  prompt: { width: 400, height: 220 }
 };
 
 export interface PositionCalculator {
@@ -37,7 +37,7 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
     }
   };
 
-  const isPositionOccupied = (x: number, y: number, nodeType: string, existingNodes: Node[], buffer = 50) => {
+  const isPositionOccupied = (x: number, y: number, nodeType: string, existingNodes: Node[], buffer = 80) => {
     const dimensions = getNodeDimensions(nodeType);
     
     return existingNodes.some(node => {
@@ -45,7 +45,7 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
       const nodeX = node.position.x;
       const nodeY = node.position.y;
       
-      // Check for overlap with buffer
+      // Check for overlap with increased buffer for better spacing
       const overlapX = x < nodeX + nodeDimensions.width + buffer && x + dimensions.width + buffer > nodeX;
       const overlapY = y < nodeY + nodeDimensions.height + buffer && y + dimensions.height + buffer > nodeY;
       
@@ -77,46 +77,57 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
     const sourceDimensions = getNodeDimensions(sourceNode.type || 'tool');
     const targetDimensions = getNodeDimensions(targetNodeType);
     
-    // Position to the right of the source node
-    let x = sourceNode.position.x + sourceDimensions.width + spacing.horizontal * 0.6;
-    let y = sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2;
+    // Try multiple positions around the source node with better spacing
+    const positions = [
+      // Right of source
+      {
+        x: sourceNode.position.x + sourceDimensions.width + spacing.horizontal * 0.8,
+        y: sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2
+      },
+      // Below source
+      {
+        x: sourceNode.position.x + (sourceDimensions.width - targetDimensions.width) / 2,
+        y: sourceNode.position.y + sourceDimensions.height + spacing.vertical * 0.6
+      },
+      // Above source
+      {
+        x: sourceNode.position.x + (sourceDimensions.width - targetDimensions.width) / 2,
+        y: sourceNode.position.y - targetDimensions.height - spacing.vertical * 0.6
+      },
+      // Left of source
+      {
+        x: sourceNode.position.x - targetDimensions.width - spacing.horizontal * 0.8,
+        y: sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2
+      }
+    ];
     
-    // Ensure we don't have negative positions
-    x = Math.max(x, 0);
-    y = Math.max(y, 0);
-    
-    // If position is occupied, find alternative
-    if (isPositionOccupied(x, y, targetNodeType, existingNodes)) {
-      // Try below the source node
-      y = sourceNode.position.y + sourceDimensions.height + spacing.vertical * 0.4;
+    // Try each position and return the first available one
+    for (const pos of positions) {
+      const x = Math.max(pos.x, 0);
+      const y = Math.max(pos.y, 0);
       
-      if (isPositionOccupied(x, y, targetNodeType, existingNodes)) {
-        // Try above the source node
-        y = sourceNode.position.y - targetDimensions.height - spacing.vertical * 0.4;
-        y = Math.max(y, 0);
-        
-        if (isPositionOccupied(x, y, targetNodeType, existingNodes)) {
-          // Fallback to grid-based positioning
-          return getAvailablePosition(targetNodeType, existingNodes, x, sourceNode.position.y);
-        }
+      if (!isPositionOccupied(x, y, targetNodeType, existingNodes)) {
+        return { x, y };
       }
     }
     
-    return { x, y };
+    // Fallback to grid-based positioning if all preferred positions are occupied
+    return getAvailablePosition(targetNodeType, existingNodes, sourceNode.position.x, sourceNode.position.y);
   };
 
   const getAvailablePosition = (nodeType: string, existingNodes: Node[], startX = 0, startY = 0) => {
-    let x = startX;
-    let y = startY;
+    const maxCols = 15;
+    const maxRows = 25;
     
-    const maxCols = 10;
-    const maxRows = 20;
+    // Start from a clean grid position if no preferred start position
+    const gridStartX = startX || 100;
+    const gridStartY = startY || 100;
     
-    // Grid search starting from the preferred position
+    // Grid search with improved spacing
     for (let row = 0; row < maxRows; row++) {
       for (let col = 0; col < maxCols; col++) {
-        x = startX + (col * spacing.horizontal * 0.8);
-        y = startY + (row * spacing.vertical * 0.6);
+        const x = gridStartX + (col * spacing.horizontal);
+        const y = gridStartY + (row * spacing.vertical);
         
         if (!isPositionOccupied(x, y, nodeType, existingNodes)) {
           return { x, y };
@@ -124,11 +135,24 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
       }
     }
     
-    // Fallback to a position that's definitely clear
-    const fallbackX = existingNodes.length * spacing.horizontal * 0.3;
-    const fallbackY = existingNodes.length * spacing.vertical * 0.2;
+    // If grid is full, use a spiral pattern outward
+    const spiralRadius = Math.max(spacing.horizontal, spacing.vertical);
+    for (let radius = 1; radius <= 10; radius++) {
+      for (let angle = 0; angle < 360; angle += 45) {
+        const x = gridStartX + Math.cos(angle * Math.PI / 180) * radius * spiralRadius;
+        const y = gridStartY + Math.sin(angle * Math.PI / 180) * radius * spiralRadius;
+        
+        if (x >= 0 && y >= 0 && !isPositionOccupied(x, y, nodeType, existingNodes)) {
+          return { x: Math.round(x), y: Math.round(y) };
+        }
+      }
+    }
     
-    return { x: fallbackX, y: fallbackY };
+    // Ultimate fallback
+    return { 
+      x: Math.max(100, existingNodes.length * 200), 
+      y: Math.max(100, existingNodes.length * 150) 
+    };
   };
 
   return {

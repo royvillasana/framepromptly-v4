@@ -121,6 +121,12 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       transition={{ duration: 0.3 }}
       whileHover={{ scale: 1.02 }}
     >
+      {/* Connection Handles - 4 points */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
       <Handle
         type="target"
         position={Position.Left}
@@ -193,6 +199,11 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       <Handle
         type="source"
         position={Position.Right}
+        className="w-3 h-3 bg-primary border-2 border-background"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
         className="w-3 h-3 bg-primary border-2 border-background"
       />
     </motion.div>
