@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Layers, Settings, MoreVertical, Plus } from 'lucide-react';
 import { UXFramework, UXStage, useWorkflowStore } from '@/stores/workflow-store';
 import { NodeActionsMenu } from './node-actions-menu';
+import { getSmartPosition } from '@/utils/node-positioning';
 
 interface FrameworkNodeData {
   framework: UXFramework;
@@ -23,24 +24,16 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
   const { addNode, addEdge, nodes } = useWorkflowStore();
 
   const handleAddStage = (stage: UXStage) => {
-    // Get the current framework node position
-    const frameworkNode = nodes.find(node => node.id === id);
-    const baseX = frameworkNode ? frameworkNode.position.x + 400 : 500;
-    const baseY = frameworkNode ? frameworkNode.position.y : 100;
-    
-    // Find existing stage nodes for this framework to calculate offset
-    const existingStageNodes = nodes.filter(node => 
-      node.type === 'stage' && 
-      node.data && 
-      (node.data as any).framework?.id === framework.id
-    );
-    
-    const yOffset = existingStageNodes.length * 120;
+    // Use smart positioning to avoid overlaps
+    const newPosition = getSmartPosition('stage', nodes, { 
+      sourceNodeId: id,
+      workflowType: 'framework-to-stage' 
+    });
     
     const stageNode = {
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
-      position: { x: baseX, y: baseY + yOffset },
+      position: newPosition,
       data: {
         stage,
         framework
@@ -64,19 +57,18 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
   };
 
   const handleUseFramework = () => {
-    // Get the current framework node position
-    const frameworkNode = nodes.find(node => node.id === id);
-    const baseX = frameworkNode ? frameworkNode.position.x + 400 : 500;
-    const baseY = frameworkNode ? frameworkNode.position.y : 100;
-    
-    // Create all stages at once
+    // Create all stages at once with smart positioning
     framework.stages.forEach((stage, index) => {
-      const yOffset = index * 120;
+      // For multiple stages, use smart positioning with some variety
+      const newPosition = getSmartPosition('stage', nodes, { 
+        sourceNodeId: id,
+        workflowType: 'framework-to-stage' 
+      });
       
       const stageNode = {
         id: `stage-${stage.id}-${Date.now()}-${index}`,
         type: 'stage',
-        position: { x: baseX, y: baseY + yOffset },
+        position: newPosition,
         data: {
           stage,
           framework

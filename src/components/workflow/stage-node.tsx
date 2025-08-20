@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Play, Settings, MoreVertical, Plus } from 'lucide-react';
 import { UXStage, UXTool, UXFramework, useWorkflowStore } from '@/stores/workflow-store';
 import { NodeActionsMenu } from './node-actions-menu';
+import { getSmartPosition } from '@/utils/node-positioning';
 
 interface StageNodeData {
   stage: UXStage;
@@ -25,24 +26,16 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
   const { addNode, addEdge, nodes } = useWorkflowStore();
 
   const handleAddTool = (tool: UXTool) => {
-    // Get the current stage node position
-    const stageNode = nodes.find(node => node.id === id);
-    const baseX = stageNode ? stageNode.position.x + 350 : 850;
-    const baseY = stageNode ? stageNode.position.y : 100;
-    
-    // Find existing tool nodes for this stage to calculate offset
-    const existingToolNodes = nodes.filter(node => 
-      node.type === 'tool' && 
-      node.data &&
-      (node.data as any).stage?.id === stage.id
-    );
-    
-    const yOffset = existingToolNodes.length * 100;
+    // Use smart positioning to avoid overlaps
+    const newPosition = getSmartPosition('tool', nodes, { 
+      sourceNodeId: id,
+      workflowType: 'stage-to-tool' 
+    });
     
     const toolNode = {
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
-      position: { x: baseX, y: baseY + yOffset },
+      position: newPosition,
       data: {
         tool,
         stage,
@@ -76,18 +69,17 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
     
     // If no tools exist, create all tools for this stage
     if (existingToolNodes.length === 0) {
-      // Get the current stage node position
-      const stageNode = nodes.find(node => node.id === id);
-      const baseX = stageNode ? stageNode.position.x + 350 : 850;
-      const baseY = stageNode ? stageNode.position.y : 100;
-      
       stage.tools.forEach((tool, index) => {
-        const yOffset = index * 100;
+        // Use smart positioning for each tool
+        const newPosition = getSmartPosition('tool', nodes, { 
+          sourceNodeId: id,
+          workflowType: 'stage-to-tool' 
+        });
         
         const toolNode = {
           id: `tool-${tool.id}-${Date.now()}-${index}`,
           type: 'tool',
-          position: { x: baseX, y: baseY + yOffset },
+          position: newPosition,
           data: {
             tool,
             stage,
