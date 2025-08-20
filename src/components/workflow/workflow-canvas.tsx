@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -12,6 +12,7 @@ import {
   Connection,
   ConnectionMode,
   BackgroundVariant,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -20,6 +21,7 @@ import { FrameworkNode } from './framework-node';
 import { ToolNode } from './tool-node';
 import { PromptNode } from './prompt-node';
 import { ProjectNode } from './project-node';
+import { CanvasToolbar } from './canvas-toolbar';
 import { motion } from 'framer-motion';
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
@@ -33,6 +35,8 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     updateNodePosition,
     saveWorkflowToStorage 
   } = useWorkflowStore();
+
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
 
   const nodeTypes = {
     stage: StageNode,
@@ -111,6 +115,17 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     [selectNode]
   );
 
+  const onSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
+      setSelectedNodes(selectedNodes.map(node => node.id));
+    },
+    []
+  );
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedNodes([]);
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -119,6 +134,8 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       className="h-full w-full"
       style={{ backgroundColor: '#333446' }}
     >
+      <CanvasToolbar onClearSelection={handleClearSelection} />
+      
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -126,8 +143,11 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         onEdgesChange={onEdgesChangeHandler}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
+        selectionMode={SelectionMode.Partial}
+        multiSelectionKeyCode="Shift"
         fitView
         style={{ backgroundColor: '#333446' }}
         colorMode="system"
