@@ -76,7 +76,6 @@ export function CanvasToolbar({ onClearSelection, isMarqueeMode, onToggleMarquee
           title="Rearrange nodes automatically"
         >
           <Grid3x3 className="h-4 w-4" />
-          Rearrange
         </ToolbarButton>
         
         <ToolbarButton
@@ -85,7 +84,6 @@ export function CanvasToolbar({ onClearSelection, isMarqueeMode, onToggleMarquee
           className={isMarqueeMode ? "bg-primary text-primary-foreground" : ""}
         >
           <MousePointer2 className="h-4 w-4" />
-          Marquee
         </ToolbarButton>
         
         <ToolbarSeparator />
@@ -94,7 +92,6 @@ export function CanvasToolbar({ onClearSelection, isMarqueeMode, onToggleMarquee
           <DropdownMenuTrigger asChild>
             <ToolbarButton title="Add new node">
               <Plus className="h-4 w-4" />
-              Add Node
             </ToolbarButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
