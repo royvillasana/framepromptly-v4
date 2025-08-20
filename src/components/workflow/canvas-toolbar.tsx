@@ -66,7 +66,7 @@ export function CanvasToolbar({ onClearSelection }: CanvasToolbarProps) {
   };
 
   return (
-    <div className="absolute top-4 left-4 z-10">
+    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
       <Toolbar className="bg-card/95 backdrop-blur-sm">
         <ToolbarButton
           onClick={handleRearrangeNodes}
