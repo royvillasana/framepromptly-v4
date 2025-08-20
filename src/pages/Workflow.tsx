@@ -420,7 +420,7 @@ function WorkflowWithProject() {
             </TabsContent>
             
             <TabsContent value="prompts" className="m-0 h-[calc(100vh-280px)]">
-              <PromptPanel />
+              <PromptPanel onPromptView={() => setActivePanel('canvas')} />
             </TabsContent>
             
             <TabsContent value="knowledge" className="m-0 h-[calc(100vh-280px)]">

@@ -18,7 +18,7 @@ import { usePromptStore } from '@/stores/prompt-store';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { toast } from 'sonner';
 
-export function PromptPanel() {
+export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
   const { prompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating } = usePromptStore();
   const { nodes } = useWorkflowStore();
 
@@ -42,6 +42,7 @@ export function PromptPanel() {
 
   const handleViewPrompt = (prompt: any) => {
     setCurrentPrompt(prompt);
+    onPromptView?.(); // Notify parent to switch tabs
   };
 
   if (!hasPromptNodes && prompts.length === 0) {
