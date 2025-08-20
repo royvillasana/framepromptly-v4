@@ -61,6 +61,7 @@ export interface WorkflowState {
   edges: Edge[];
   selectedFramework: UXFramework | null;
   selectedStage: UXStage | null;
+  selectedNode: Node | null;
   nodeCustomizations: Record<string, NodeCustomization>;
   frameworks: UXFramework[];
   
@@ -73,6 +74,7 @@ export interface WorkflowState {
   getConnectedNodes: (nodeId: string) => { frameworks: Node[]; stages: Node[]; tools: Node[] };
   selectFramework: (framework: UXFramework) => void;
   selectStage: (stage: UXStage) => void;
+  selectNode: (node: Node | null) => void;
   loadCanvasData: (canvasData: any) => void;
   initializeFrameworks: () => void;
 }
@@ -711,6 +713,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   edges: [],
   selectedFramework: null,
   selectedStage: null,
+  selectedNode: null,
   nodeCustomizations: {},
   frameworks: [],
 
@@ -775,6 +778,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   
   selectFramework: (framework) => set({ selectedFramework: framework }),
   selectStage: (stage) => set({ selectedStage: stage }),
+  selectNode: (node) => set({ selectedNode: node }),
   
   initializeFrameworks: () => set({ frameworks: sampleFrameworks })
 }));
