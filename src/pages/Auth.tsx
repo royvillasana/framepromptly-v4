@@ -22,7 +22,7 @@ export default function Auth() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      navigate('/');
+      navigate('/workflow');
     }
   }, [user, loading, navigate]);
 
