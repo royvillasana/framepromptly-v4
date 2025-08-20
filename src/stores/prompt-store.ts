@@ -699,6 +699,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
   loadProjectPrompts: async (projectId: string) => {
     try {
+      console.log('Loading prompts for project:', projectId);
       const { data, error } = await supabase
         .from('prompts')
         .select('*')
@@ -706,6 +707,8 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log('Loaded prompts from database:', data?.length || 0);
 
       // Transform database data to GeneratedPrompt format
       const transformedPrompts: GeneratedPrompt[] = (data || []).map(dbPrompt => ({
@@ -725,6 +728,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         timestamp: new Date(dbPrompt.created_at).getTime()
       }));
 
+      console.log('Setting prompts in store:', transformedPrompts.length);
       set({ prompts: transformedPrompts });
     } catch (error) {
       console.error('Error loading project prompts:', error);
@@ -866,7 +870,10 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     }));
   },
 
-  clearProjectPrompts: () => set({ prompts: [], currentPrompt: null }),
+  clearProjectPrompts: () => {
+    console.log('Clearing project prompts');
+    set({ prompts: [], currentPrompt: null });
+  },
 
   initializeTemplates: () => set({ templates: promptTemplates })
 }));
