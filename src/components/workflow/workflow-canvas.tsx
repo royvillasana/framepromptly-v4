@@ -23,7 +23,16 @@ import { ProjectNode } from './project-node';
 import { motion } from 'framer-motion';
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
-  const { nodes, edges, setNodes, setEdges, addEdge: addStoreEdge, selectNode } = useWorkflowStore();
+  const { 
+    nodes, 
+    edges, 
+    setNodes, 
+    setEdges, 
+    addEdge: addStoreEdge, 
+    selectNode, 
+    updateNodePosition,
+    saveWorkflowToStorage 
+  } = useWorkflowStore();
 
   const nodeTypes = {
     stage: StageNode,
@@ -61,17 +70,38 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
   const onNodesChangeHandler = useCallback(
     (changes: any[]) => {
       onNodesChange(changes);
-      // Sync back to store if needed
+      
+      // Handle position changes and auto-save
+      changes.forEach((change) => {
+        if (change.type === 'position' && change.position && change.id) {
+          // Update position in store and auto-save
+          updateNodePosition(change.id, change.position);
+        }
+      });
+      
+      // Also sync the current state to store for other types of changes
+      setFlowNodes((currentNodes) => {
+        const updatedNodes = [...currentNodes];
+        setNodes(updatedNodes);
+        return updatedNodes;
+      });
     },
-    [onNodesChange]
+    [onNodesChange, updateNodePosition, setNodes, setFlowNodes]
   );
 
   const onEdgesChangeHandler = useCallback(
     (changes: any[]) => {
       onEdgesChange(changes);
-      // Sync back to store if needed
+      
+      // Auto-save edges when they change
+      setFlowEdges((currentEdges) => {
+        const updatedEdges = [...currentEdges];
+        setEdges(updatedEdges);
+        saveWorkflowToStorage();
+        return updatedEdges;
+      });
     },
-    [onEdgesChange]
+    [onEdgesChange, setEdges, setFlowEdges, saveWorkflowToStorage]
   );
 
   const onNodeClick = useCallback(

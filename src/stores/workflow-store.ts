@@ -64,18 +64,25 @@ export interface WorkflowState {
   selectedNode: Node | null;
   nodeCustomizations: Record<string, NodeCustomization>;
   frameworks: UXFramework[];
-  
+
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   addNode: (node: Node) => void;
   addEdge: (edge: Edge) => void;
+  loadCanvasData: (canvasData: any) => void;
   updateNode: (id: string, data: any) => void;
+  updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  saveWorkflowToStorage: () => void;
+  loadWorkflowFromStorage: () => void;
   updateNodeCustomization: (nodeId: string, customization: Partial<NodeCustomization>) => void;
-  getConnectedNodes: (nodeId: string) => { frameworks: Node[]; stages: Node[]; tools: Node[] };
+  getConnectedNodes: (nodeId: string) => {
+    frameworks: Node[];
+    stages: Node[];
+    tools: Node[];
+  };
   selectFramework: (framework: UXFramework) => void;
   selectStage: (stage: UXStage) => void;
-  selectNode: (node: Node | null) => void;
-  loadCanvasData: (canvasData: any) => void;
+  selectNode: (node: Node) => void;
   initializeFrameworks: () => void;
 }
 
@@ -721,13 +728,27 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setEdges: (edges) => set({ edges }),
   
   addNode: (node) => {
-    set((state) => ({ 
-      nodes: [...state.nodes, node]
-    }));
+    set((state) => {
+      const updatedNodes = [...state.nodes, node];
+      
+      // Auto-save to localStorage
+      localStorage.setItem('workflow-nodes', JSON.stringify(updatedNodes));
+      localStorage.setItem('workflow-edges', JSON.stringify(state.edges));
+      
+      return { nodes: updatedNodes };
+    });
   },
   
   addEdge: (edge) => {
-    set((state) => ({ edges: [...state.edges, edge] }));
+    set((state) => {
+      const updatedEdges = [...state.edges, edge];
+      
+      // Auto-save to localStorage
+      localStorage.setItem('workflow-nodes', JSON.stringify(state.nodes));
+      localStorage.setItem('workflow-edges', JSON.stringify(updatedEdges));
+      
+      return { edges: updatedEdges };
+    });
   },
 
   loadCanvasData: (canvasData: any) => {
@@ -744,6 +765,42 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       node.id === id ? { ...node, data: { ...node.data, ...data } } : node
     )
   })),
+
+  updateNodePosition: (id, position) => {
+    set((state) => {
+      const updatedNodes = state.nodes.map(node => 
+        node.id === id ? { ...node, position } : node
+      );
+      
+      // Auto-save to localStorage
+      localStorage.setItem('workflow-nodes', JSON.stringify(updatedNodes));
+      localStorage.setItem('workflow-edges', JSON.stringify(state.edges));
+      
+      return { nodes: updatedNodes };
+    });
+  },
+
+  saveWorkflowToStorage: () => {
+    const state = get();
+    localStorage.setItem('workflow-nodes', JSON.stringify(state.nodes));
+    localStorage.setItem('workflow-edges', JSON.stringify(state.edges));
+  },
+
+  loadWorkflowFromStorage: () => {
+    try {
+      const savedNodes = localStorage.getItem('workflow-nodes');
+      const savedEdges = localStorage.getItem('workflow-edges');
+      
+      if (savedNodes && savedEdges) {
+        set({
+          nodes: JSON.parse(savedNodes),
+          edges: JSON.parse(savedEdges)
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load workflow from storage:', error);
+    }
+  },
 
   updateNodeCustomization: (nodeId, customization) => set((state) => ({
     nodeCustomizations: {
@@ -780,5 +837,23 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectStage: (stage) => set({ selectedStage: stage }),
   selectNode: (node) => set({ selectedNode: node }),
   
-  initializeFrameworks: () => set({ frameworks: sampleFrameworks })
+  initializeFrameworks: () => set({ frameworks: sampleFrameworks }),
+
+  // Load workflow from storage on initialization
+  ...((() => {
+    try {
+      const savedNodes = localStorage.getItem('workflow-nodes');
+      const savedEdges = localStorage.getItem('workflow-edges');
+      
+      if (savedNodes && savedEdges) {
+        return {
+          nodes: JSON.parse(savedNodes),
+          edges: JSON.parse(savedEdges)
+        };
+      }
+    } catch (error) {
+      console.error('Failed to load workflow from storage:', error);
+    }
+    return {};
+  })())
 }));

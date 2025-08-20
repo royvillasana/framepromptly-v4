@@ -51,7 +51,8 @@ function WorkflowWithProject() {
     nodes, 
     edges,
     addNode,
-    loadCanvasData 
+    loadCanvasData,
+    loadWorkflowFromStorage 
   } = useWorkflowStore();
   const { initializeTemplates, loadProjectPrompts, clearProjectPrompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating, updatePromptVariables } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
@@ -64,7 +65,12 @@ function WorkflowWithProject() {
   useEffect(() => {
     initializeFrameworks();
     initializeTemplates();
-  }, [initializeFrameworks, initializeTemplates]);
+    
+    // Load workflow from localStorage if no current project
+    if (!currentProject) {
+      loadWorkflowFromStorage();
+    }
+  }, [initializeFrameworks, initializeTemplates, currentProject, loadWorkflowFromStorage]);
 
   // Load project-specific data when project changes
   useEffect(() => {
