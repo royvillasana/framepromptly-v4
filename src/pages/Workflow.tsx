@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen } from 'lucide-react';
 import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
-import { PromptsSidebar } from '@/components/workflow/prompts-sidebar';
 
 export default function Workflow() {
   const { currentProject, fetchProjects } = useProjectStore();
@@ -132,14 +131,12 @@ function WorkflowWithProject() {
       </div>
       
       <div className="flex-1 flex w-full">
-        {/* Prompts Sidebar */}
-        <PromptsSidebar collapsed={sidebarCollapsed} />
         {/* Left Panel */}
         <motion.div
           initial={{ x: -400, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-96 border-r border-border bg-card"
+          className="w-80 border-r border-border bg-card"
         >
           {/* Framework Selector Header */}
           <div className="border-b border-border p-4 space-y-4">

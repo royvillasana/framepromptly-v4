@@ -1,272 +1,183 @@
-import { useState } from 'react';
+import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
 import { 
-  Play, 
-  Copy, 
-  Download, 
-  Edit, 
   Sparkles, 
-  ChevronRight,
-  FileText,
+  Copy, 
+  Play, 
+  ChevronRight, 
+  FileText, 
   Clock,
-  CheckCircle
+  CheckCircle,
+  Eye
 } from 'lucide-react';
 import { usePromptStore } from '@/stores/prompt-store';
+import { useWorkflowStore } from '@/stores/workflow-store';
 import { toast } from 'sonner';
 
 export function PromptPanel() {
-  const { 
-    currentPrompt, 
-    prompts, 
-    isGenerating,
-    updatePromptVariables, 
-    executePrompt,
-    setCurrentPrompt
-  } = usePromptStore();
-  
-  const [variables, setVariables] = useState<Record<string, string>>({});
-  const [showHistory, setShowHistory] = useState(false);
+  const { prompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating } = usePromptStore();
+  const { nodes } = useWorkflowStore();
 
-  const handleVariableChange = (key: string, value: string) => {
-    const newVariables = { ...variables, [key]: value };
-    setVariables(newVariables);
-    if (currentPrompt) {
-      updatePromptVariables(currentPrompt.id, newVariables);
-    }
+  // Check if there are any prompt nodes in the canvas
+  const promptNodes = nodes.filter(node => node.type === 'prompt');
+  const hasPromptNodes = promptNodes.length > 0;
+
+  const handleCopyPrompt = (prompt: any) => {
+    navigator.clipboard.writeText(prompt.content);
+    toast.success('Prompt copied to clipboard');
   };
 
-  const handleExecute = async () => {
-    if (!currentPrompt) return;
-    
+  const handleExecutePrompt = async (promptId: string) => {
     try {
-      await executePrompt(currentPrompt.id);
+      await executePrompt(promptId);
       toast.success('Prompt executed successfully!');
     } catch (error) {
       toast.error('Failed to execute prompt');
     }
   };
 
-  const handleCopy = () => {
-    if (!currentPrompt) return;
-    
-    let content = currentPrompt.content;
-    Object.entries(variables).forEach(([key, value]) => {
-      content = content.replace(new RegExp(`{{${key}}}`, 'g'), value);
-    });
-    
-    navigator.clipboard.writeText(content);
-    toast.success('Prompt copied to clipboard');
+  const handleViewPrompt = (prompt: any) => {
+    setCurrentPrompt(prompt);
   };
 
-  const extractVariables = (content: string): string[] => {
-    const matches = content.match(/{{(\w+)}}/g);
-    return matches ? matches.map(match => match.slice(2, -2)) : [];
-  };
-
-  if (!currentPrompt && prompts.length === 0) {
+  if (!hasPromptNodes && prompts.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="h-full flex items-center justify-center"
-      >
+      <div className="h-full flex items-center justify-center">
         <div className="text-center p-8">
-          <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Prompts Generated</h3>
-          <p className="text-muted-foreground text-sm mb-4">
-            Connect workflow nodes and click "Generate Prompt" to start creating AI prompts
+          <Sparkles className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">
+            No prompt nodes in canvas
           </p>
-          <Button variant="outline" onClick={() => setShowHistory(true)}>
-            View History
-          </Button>
+          <p className="text-xs text-muted-foreground mt-1">
+            Generate a prompt to see it here
+          </p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold">AI Prompt Generator</h2>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              <FileText className="w-4 h-4 mr-1" />
-              History ({prompts.length})
-            </Button>
-          </div>
+      <div className="p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <h3 className="font-medium text-sm">
+            Generated Prompts ({prompts.length})
+          </h3>
         </div>
       </div>
-
-      <div className="flex-1 flex">
-        {/* History Panel */}
-        <AnimatePresence>
-          {showHistory && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 300, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="border-r border-border overflow-hidden"
-            >
-              <div className="p-4">
-                <h3 className="font-medium mb-3">Prompt History</h3>
-                <ScrollArea className="max-h-96">
-                  <div className="space-y-2">
-                    {prompts.map((prompt) => (
-                      <Card
-                        key={prompt.id}
-                        className={`p-3 cursor-pointer transition-all hover:shadow-sm ${
-                          currentPrompt?.id === prompt.id ? 'border-primary bg-primary/5' : ''
-                        }`}
-                        onClick={() => setCurrentPrompt(prompt)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">
-                              {prompt.context.tool.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {prompt.context.stage.name} • {prompt.context.framework.name}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {prompt.output && (
-                              <CheckCircle className="w-3 h-3 text-success" />
-                            )}
-                            <Clock className="w-3 h-3 text-muted-foreground" />
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(prompt.timestamp).toLocaleString()}
-                        </p>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {currentPrompt ? (
-            <>
-              {/* Context Info */}
-              <div className="p-4 border-b border-border bg-muted/50">
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline">{currentPrompt.context.framework.name}</Badge>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                  <Badge variant="outline">{currentPrompt.context.stage.name}</Badge>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                  <Badge variant="default">{currentPrompt.context.tool.name}</Badge>
-                </div>
+      
+      <div className="flex-1">
+        <ScrollArea className="h-full">
+          <div className="space-y-3 p-3">
+            {prompts.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No prompts generated yet
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {currentPrompt.context.tool.description}
+                  Use the "Generate Prompt" button on tool nodes
                 </p>
               </div>
-
-              {/* Variables Section */}
-              {extractVariables(currentPrompt.content).length > 0 && (
-                <div className="p-4 border-b border-border">
-                  <h3 className="font-medium mb-3">Customize Variables</h3>
-                  <div className="grid gap-3 max-h-40 overflow-y-auto">
-                    {extractVariables(currentPrompt.content).map((variable) => (
-                      <div key={variable} className="space-y-1">
-                        <Label className="text-xs capitalize">
-                          {variable.replace(/([A-Z])/g, ' $1').trim()}
-                        </Label>
-                        <Input
-                          placeholder={`Enter ${variable}`}
-                          value={variables[variable] || ''}
-                          onChange={(e) => handleVariableChange(variable, e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Prompt Content */}
-              <div className="flex-1 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium">Generated Prompt</h3>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={handleCopy}>
-                      <Copy className="w-3 h-3 mr-1" />
-                      Copy
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={handleExecute}
-                      disabled={isGenerating}
-                    >
-                      <Play className="w-3 h-3 mr-1" />
-                      {isGenerating ? 'Generating...' : 'Execute'}
-                    </Button>
-                  </div>
-                </div>
-                
-                <ScrollArea className="h-64 mb-4">
-                  <div className="p-3 bg-muted/50 rounded-md border">
-                    <pre className="text-xs whitespace-pre-wrap font-mono">
-                      {currentPrompt.content}
-                    </pre>
-                  </div>
-                </ScrollArea>
-
-                {/* Output Section */}
-                {currentPrompt.output && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium">AI Output</h3>
-                      <Button size="sm" variant="outline">
-                        <Download className="w-3 h-3 mr-1" />
-                        Export
-                      </Button>
-                    </div>
-                    <ScrollArea className="h-48">
-                      <div className="p-3 bg-card rounded-md border">
-                        <div className="text-sm whitespace-pre-wrap">
-                          {currentPrompt.output}
+            ) : (
+              prompts.map((prompt) => (
+                <motion.div
+                  key={prompt.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card 
+                    className={`p-3 cursor-pointer transition-all hover:shadow-sm ${
+                      currentPrompt?.id === prompt.id ? 'border-primary bg-primary/5' : ''
+                    }`}
+                    onClick={() => handleViewPrompt(prompt)}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {prompt.context.tool.name}
+                        </p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {prompt.context.framework.name}
+                          </Badge>
+                          <ChevronRight className="w-2 h-2 text-muted-foreground" />
+                          <Badge variant="outline" className="text-xs">
+                            {prompt.context.stage.name}
+                          </Badge>
                         </div>
                       </div>
-                    </ScrollArea>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center">
-                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Select a Prompt</h3>
-                <p className="text-muted-foreground text-sm">
-                  Choose a prompt from the history to view and edit
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+                      <div className="flex items-center gap-1">
+                        {prompt.output && (
+                          <CheckCircle className="w-3 h-3 text-success" />
+                        )}
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      {prompt.content.substring(0, 100)}...
+                    </p>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(prompt.timestamp).toLocaleDateString()}
+                      </p>
+                      
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewPrompt(prompt);
+                          }}
+                        >
+                          <Eye className="w-3 h-3" />
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyPrompt(prompt);
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          disabled={isGenerating}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExecutePrompt(prompt.id);
+                          }}
+                        >
+                          <Play className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
