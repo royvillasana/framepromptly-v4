@@ -37,6 +37,14 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
   } = useWorkflowStore();
 
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
+  const [isMarqueeMode, setIsMarqueeMode] = useState(false);
+  const [marqueeRect, setMarqueeRect] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
 
   const nodeTypes = {
     stage: StageNode,
@@ -126,15 +134,106 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     setSelectedNodes([]);
   }, []);
 
+  const toggleMarqueeMode = useCallback(() => {
+    setIsMarqueeMode(!isMarqueeMode);
+    setMarqueeRect(null);
+    setIsDrawing(false);
+  }, [isMarqueeMode]);
+
+  const onMouseDown = useCallback((event: React.MouseEvent) => {
+    if (isMarqueeMode && event.button === 0) {
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const startX = event.clientX - rect.left;
+      const startY = event.clientY - rect.top;
+      
+      setMarqueeRect({
+        startX,
+        startY,
+        currentX: startX,
+        currentY: startY,
+      });
+      setIsDrawing(true);
+      event.preventDefault();
+    }
+  }, [isMarqueeMode]);
+
+  const onMouseMove = useCallback((event: React.MouseEvent) => {
+    if (isDrawing && marqueeRect && isMarqueeMode) {
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const currentX = event.clientX - rect.left;
+      const currentY = event.clientY - rect.top;
+      
+      setMarqueeRect({
+        ...marqueeRect,
+        currentX,
+        currentY,
+      });
+    }
+  }, [isDrawing, marqueeRect, isMarqueeMode]);
+
+  const onMouseUp = useCallback((event: React.MouseEvent) => {
+    if (isDrawing && marqueeRect && isMarqueeMode) {
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const { startX, startY, currentX, currentY } = marqueeRect;
+      
+      // Calculate selection bounds
+      const minX = Math.min(startX, currentX);
+      const minY = Math.min(startY, currentY);
+      const maxX = Math.max(startX, currentX);
+      const maxY = Math.max(startY, currentY);
+      
+      // Find nodes within selection bounds
+      const selectedNodeIds = flowNodes
+        .filter(node => {
+          const nodeX = node.position.x;
+          const nodeY = node.position.y;
+          const nodeWidth = (node.measured?.width || 100);
+          const nodeHeight = (node.measured?.height || 100);
+          
+          return (
+            nodeX >= minX - nodeWidth/2 &&
+            nodeX <= maxX + nodeWidth/2 &&
+            nodeY >= minY - nodeHeight/2 &&
+            nodeY <= maxY + nodeHeight/2
+          );
+        })
+        .map(node => node.id);
+      
+      setSelectedNodes(selectedNodeIds);
+      setIsDrawing(false);
+      setMarqueeRect(null);
+    }
+  }, [isDrawing, marqueeRect, isMarqueeMode, flowNodes]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="h-full w-full"
+      className="h-full w-full relative"
       style={{ backgroundColor: '#333446' }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
     >
-      <CanvasToolbar onClearSelection={handleClearSelection} />
+      <CanvasToolbar 
+        onClearSelection={handleClearSelection}
+        isMarqueeMode={isMarqueeMode}
+        onToggleMarqueeMode={toggleMarqueeMode}
+      />
+      
+      {/* Marquee Selection Rectangle */}
+      {marqueeRect && isDrawing && (
+        <div
+          className="absolute pointer-events-none border-2 border-primary bg-primary/20 z-50"
+          style={{
+            left: Math.min(marqueeRect.startX, marqueeRect.currentX),
+            top: Math.min(marqueeRect.startY, marqueeRect.currentY),
+            width: Math.abs(marqueeRect.currentX - marqueeRect.startX),
+            height: Math.abs(marqueeRect.currentY - marqueeRect.startY),
+          }}
+        />
+      )}
       
       <ReactFlow
         nodes={flowNodes}
@@ -146,7 +245,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
-        selectionMode={SelectionMode.Partial}
+        selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
         multiSelectionKeyCode="Shift"
         fitView
         style={{ backgroundColor: '#333446' }}

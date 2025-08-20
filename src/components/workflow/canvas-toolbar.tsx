@@ -1,4 +1,5 @@
-import { Plus, Grid3x3, Layers } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Grid3x3, Layers, MousePointer2 } from 'lucide-react';
 import { Toolbar, ToolbarButton, ToolbarSeparator } from '@/components/ui/toolbar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { autoLayoutNodes, getSmartPosition } from '@/utils/node-positioning';
@@ -12,9 +13,11 @@ import { Button } from '@/components/ui/button';
 
 interface CanvasToolbarProps {
   onClearSelection?: () => void;
+  isMarqueeMode?: boolean;
+  onToggleMarqueeMode?: () => void;
 }
 
-export function CanvasToolbar({ onClearSelection }: CanvasToolbarProps) {
+export function CanvasToolbar({ onClearSelection, isMarqueeMode, onToggleMarqueeMode }: CanvasToolbarProps) {
   const { nodes, setNodes, addNode, frameworks } = useWorkflowStore();
 
   const handleRearrangeNodes = () => {
@@ -74,6 +77,15 @@ export function CanvasToolbar({ onClearSelection }: CanvasToolbarProps) {
         >
           <Grid3x3 className="h-4 w-4" />
           Rearrange
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={onToggleMarqueeMode}
+          title="Toggle marquee selection mode"
+          className={isMarqueeMode ? "bg-primary text-primary-foreground" : ""}
+        >
+          <MousePointer2 className="h-4 w-4" />
+          Marquee
         </ToolbarButton>
         
         <ToolbarSeparator />
