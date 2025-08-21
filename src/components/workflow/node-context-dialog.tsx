@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -74,6 +74,9 @@ export const NodeContextDialog: React.FC<NodeContextDialogProps> = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Node Context: {nodeTitle}</DialogTitle>
+          <DialogDescription>
+            Add specific context and information for this workflow node to improve AI prompt generation.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">

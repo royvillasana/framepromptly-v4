@@ -83,5 +83,17 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19"
-  }
+  },
+  "description": "## Project info",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/royvillasana/framepromptly-v4.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/royvillasana/framepromptly-v4/issues"
+  },
+  "homepage": "https://github.com/royvillasana/framepromptly-v4#readme"
 }

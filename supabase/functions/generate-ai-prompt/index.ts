@@ -20,10 +20,11 @@ serve(async (req) => {
       projectId, 
       frameworkName, 
       stageName, 
-      toolName 
+      toolName,
+      knowledgeContext 
     } = await req.json();
 
-    console.log('Generating AI prompt for:', { frameworkName, stageName, toolName, projectId });
+    console.log('Generating AI prompt for:', { frameworkName, stageName, toolName, projectId, hasKnowledge: !!knowledgeContext });
 
     // Get user from request
     const authHeader = req.headers.get('Authorization');
@@ -51,6 +52,18 @@ serve(async (req) => {
       processedPrompt = processedPrompt.replace(regex, value as string);
     });
 
+    // Add knowledge context if provided
+    if (knowledgeContext && knowledgeContext.length > 0) {
+      console.log('Processing knowledge context:', knowledgeContext.length, 'entries');
+      const contextContent = knowledgeContext
+        .map((item: any) => `${item.title}:\n${item.content}`)
+        .join('\n\n');
+      processedPrompt = `Project Knowledge Base:\n${contextContent}\n\n${processedPrompt}`;
+      console.log('Final prompt length with context:', processedPrompt.length);
+    } else {
+      console.log('No knowledge context provided');
+    }
+
     // Get OpenAI API key
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
@@ -58,7 +71,7 @@ serve(async (req) => {
     }
 
     // Generate AI response using OpenAI with model fallback
-    const models = ['gpt-4o-mini', 'o4-mini-2025-04-16', 'gpt-4.1-2025-04-14', 'gpt-5-mini-2025-08-07', 'gpt-5-2025-08-07'];
+    const models = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
     let aiResponse: string | null = null;
     let usedModel = '';
 
@@ -70,18 +83,47 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: `You are a UX design expert assistant. Generate comprehensive, actionable outputs for the ${toolName} tool in the ${stageName} stage of the ${frameworkName} framework. Provide practical, detailed responses that practitioners can immediately use.`
+              content: `You are an AI instruction generator. Output ONLY direct commands for AI tools. No conversation, explanations, or commentary.
+
+CRITICAL RULES - FOLLOW EXACTLY:
+- Output format: Direct imperative commands only
+- Start with action words: Create, Generate, Build, Design, List, Define
+- No conversational text whatsoever
+- No "The process is" or "Here's how to"
+- No introductions, explanations, or context
+- No markdown formatting (* # - etc.)
+- No "Please" "Can you" "I need you to" "Your task"
+- No conclusions, summaries, or closing remarks
+- Structure as numbered steps or bullet points
+- Be specific about deliverables and outputs
+
+EXAMPLE FORMAT:
+1. Create user interview questions covering background and pain points
+2. Design follow-up probes for deeper insights  
+3. Structure as 45-60 minute session format
+
+FORBIDDEN PHRASES/PATTERNS:
+- "Let me guide you through..."
+- "Here's the process..."
+- "The goal is to..."
+- "This helps in..."
+- "By doing this..."
+- "---" dividers
+- "**bold text**"
+- Any explanatory paragraphs
+
+Generate direct AI instructions for ${toolName} in ${stageName} stage of ${frameworkName} framework. Use project knowledge base context if provided.`
             },
             { role: 'user', content: processedPrompt }
           ],
+          temperature: 0.3,
+          max_tokens: 1500,
+          top_p: 1,
+          frequency_penalty: 0,
+          presence_penalty: 0
         };
 
-        // Parameter differences between models
-        if (model.startsWith('gpt-5') || model.startsWith('gpt-4.1') || model.startsWith('o3') || model.startsWith('o4')) {
-          (payload as any).max_completion_tokens = 2000;
-        } else {
-          (payload as any).max_tokens = 2000;
-        }
+        // Remove max_tokens as it's already set in payload above
 
         const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -93,18 +135,38 @@ serve(async (req) => {
         });
 
         if (!openAIResponse.ok) {
-          const errorData = await openAIResponse.json().catch(() => ({}));
-          console.error('OpenAI API error:', errorData);
-          // Try next model on model access issues
-          if (errorData?.error?.code === 'model_not_found' || errorData?.error?.type === 'invalid_request_error') {
+          const errorText = await openAIResponse.text();
+          let errorData: any;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: { message: errorText } };
+          }
+          console.error(`OpenAI API error (${openAIResponse.status}):`, errorData);
+          
+          // Try next model on specific errors
+          if (errorData?.error?.code === 'model_not_found' || 
+              errorData?.error?.type === 'invalid_request_error' ||
+              openAIResponse.status === 404) {
+            console.log(`Model ${model} not available, trying next model`);
             continue;
           }
+          
+          // For other errors, continue to next model
           continue;
         }
 
         const aiData = await openAIResponse.json();
-        aiResponse = aiData.choices?.[0]?.message?.content ?? '';
+        const content = aiData.choices?.[0]?.message?.content;
+        
+        if (!content || content.trim().length === 0) {
+          console.error('Empty response from OpenAI for model:', model);
+          continue;
+        }
+        
+        aiResponse = content.trim();
         usedModel = model;
+        console.log(`Successfully generated response with model: ${model}`);
         break;
       } catch (modelErr) {
         console.error('Error with model', model, modelErr);

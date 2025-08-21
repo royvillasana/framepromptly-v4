@@ -729,7 +729,20 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   
   addNode: (node) => {
     set((state) => {
-      const updatedNodes = [...state.nodes, node];
+      // Check if node with this ID already exists
+      const existingNodeIndex = state.nodes.findIndex(n => n.id === node.id);
+      
+      let updatedNodes;
+      if (existingNodeIndex >= 0) {
+        // Replace existing node
+        updatedNodes = [...state.nodes];
+        updatedNodes[existingNodeIndex] = node;
+        console.log('Replacing existing node:', node.id);
+      } else {
+        // Add new node
+        updatedNodes = [...state.nodes, node];
+        console.log('Adding new node:', node.id);
+      }
       
       // Auto-save to localStorage
       localStorage.setItem('workflow-nodes', JSON.stringify(updatedNodes));

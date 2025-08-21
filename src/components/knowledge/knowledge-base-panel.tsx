@@ -8,7 +8,7 @@ import { useProjectStore } from '@/stores/project-store';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Upload, FileText, Image, Trash2, Edit3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
 export const KnowledgeBasePanel = () => {
@@ -132,7 +132,7 @@ export const KnowledgeBasePanel = () => {
   }
 
   return (
-    <Card className="p-6">
+    <Card className="p-6" style={{ flexDirection: 'column' }}>
       <div className="mb-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Project Knowledge Base</h3>
@@ -151,6 +151,9 @@ export const KnowledgeBasePanel = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add Text Entry</DialogTitle>
+                <DialogDescription>
+                  Create a new text entry to add context and information to your knowledge base.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -193,6 +196,9 @@ export const KnowledgeBasePanel = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Upload File</DialogTitle>
+                <DialogDescription>
+                  Upload a document or image file to automatically process and add to your knowledge base.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -259,9 +265,16 @@ export const KnowledgeBasePanel = () => {
                   ) : (
                     <>
                       <h4 className="font-medium truncate">{entry.title}</h4>
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
-                        {entry.content}
-                      </p>
+                      <div className="text-sm text-muted-foreground mt-1 max-h-16 overflow-hidden">
+                        <p className="break-words" style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {entry.content}
+                        </p>
+                      </div>
                       {entry.file_name && (
                         <p className="text-xs text-muted-foreground mt-2">
                           File: {entry.file_name}

@@ -45,7 +45,7 @@ export interface PromptState {
   
   // Actions
   loadProjectPrompts: (projectId: string) => Promise<void>;
-  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => Promise<string>;
+  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string) => Promise<string>;
   executePrompt: (promptId: string) => Promise<void>;
   updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
   setCurrentPrompt: (prompt: GeneratedPrompt | null) => void;
@@ -56,7 +56,7 @@ export interface PromptState {
 
 // Framework-level instructions for prompt generation
 const FRAMEWORK_INSTRUCTIONS = {
-  'design-thinking': 'Apply human-centered design principles focusing on empathy, ideation, and experimentation. Emphasize iterative problem-solving and user validation throughout the process.',
+  'design-thinking': 'Focus on empathy, ideation, and experimentation. Use iterative problem-solving and user validation.',
   'double-diamond': 'Follow the divergent-convergent thinking pattern. In Discovery and Development phases, explore broadly. In Define and Deliver phases, focus and synthesize insights into actionable solutions.',
   'google-design-sprint': 'Maintain the 5-day sprint methodology focus on rapid prototyping and validation. Emphasize time-boxed activities, collaborative decision-making, and quick user feedback.',
   'human-centered-design': 'Prioritize deep user understanding and contextual research. Focus on designing solutions that fit naturally into users\' lives and address real human needs.',
@@ -128,7 +128,7 @@ const STAGE_INSTRUCTIONS = {
 // Tool-level instructions for prompt generation
 const TOOL_INSTRUCTIONS = {
   // Research & Discovery Tools
-  'user-interviews': 'Create open-ended questions that uncover deep insights about user needs, behaviors, and contexts. Focus on "why" questions and emotional responses.',
+  'user-interviews': 'Generate open-ended questions uncovering user needs, behaviors, and contexts. Focus on why questions and emotional responses.',
   'surveys': 'Design quantitative and qualitative questions that can be analyzed statistically. Ensure proper sampling and avoid leading questions.',
   'observations': 'Create structured observation protocols that capture user behavior in natural contexts. Focus on actions, not just stated preferences.',
   'contextual-inquiry': 'Design immersive research that understands work environments and natural usage contexts. Combine observation with in-the-moment questioning.',
@@ -203,24 +203,24 @@ const promptTemplates: PromptTemplate[] = [
     framework: 'design-thinking',
     stage: 'empathize',
     tool: 'user-interviews',
-    template: `As a UX researcher conducting user interviews for {{projectName}}, create a comprehensive interview guide to understand user needs, pain points, and behaviors.
-
-Context:
-- Project: {{projectName}}
-- Target Users: {{targetUsers}}
-- Research Goals: {{researchGoals}}
+    template: `Generate user interview questions for {{projectName}} targeting {{targetUsers}} with research goals: {{researchGoals}}.
 {{#if previousOutputs}}
-- Previous Research Insights: {{previousOutputs}}
+Previous research: {{previousOutputs}}
 {{/if}}
 
-Generate:
-1. 10-15 open-ended interview questions organized by theme
-2. Follow-up probes for deeper insights
-3. Scenarios or tasks to discuss with users
-4. Questions to uncover emotional responses and motivations
-5. Practical considerations for conducting the interviews
+Reference the project knowledge base to understand existing context and avoid repeating covered areas.
 
-Focus on understanding user context, needs, frustrations, and desired outcomes.`,
+Create warm-up questions covering background, role, and daily routines.
+
+Design 8-10 core questions exploring pain points, workflows, decision-making processes, and desired outcomes.
+
+Include follow-up probes for deeper insights.
+
+Add scenario-based questions for specific situations and task completion.
+
+End with priority ranking and solution gap identification.
+
+Structure as 45-60 minute session with recording setup and note-taking approach.`,
     variables: ['projectName', 'targetUsers', 'researchGoals'],
     description: 'Generate user interview questions and guide',
     frameworkInstructions: FRAMEWORK_INSTRUCTIONS['design-thinking'],
@@ -233,39 +233,26 @@ Focus on understanding user context, needs, frustrations, and desired outcomes.`
     framework: 'design-thinking',
     stage: 'empathize',
     tool: 'empathy-maps',
-    template: `Create detailed empathy maps for {{projectName}} to visualize user thoughts, feelings, actions, and pain points.
-
-User Context:
-- Target User: {{targetUser}}
-- User Scenario: {{userScenario}}
+    template: `Create empathy maps for {{projectName}} focusing on {{targetUser}} in scenario: {{userScenario}}.
 {{#if previousOutputs}}
-- Research Data: {{previousOutputs}}
+Research data: {{previousOutputs}}
 {{/if}}
 
-For each empathy map quadrant, provide:
+Use the project knowledge base to inform understanding of user context and existing insights.
 
-SAYS:
-- Direct quotes and defining words
-- What they tell others about their experience
+Map user expressions including direct quotes, repeated phrases, problem descriptions, and language patterns.
 
-THINKS:
-- Beliefs, thoughts, and preoccupations
-- What occupies their thoughts
+Document internal thoughts covering beliefs, assumptions, concerns, and mental models.
 
-DOES:
-- Actions and behaviors
-- What they do in their environment
+Record observable actions including behaviors, workarounds, tools used, and process steps.
 
-FEELS:
-- Emotions and feelings
-- What they feel and experience
+Capture emotional states identifying frustrations, satisfaction moments, anxiety triggers, and excitement drivers.
 
-Also include:
-- Pain points and frustrations
-- Needs and wants
-- Goals and motivations
+List pain points covering process breakdowns, time wasters, error-prone steps, and unmet needs.
 
-Make it specific and based on real user insights.`,
+Identify gains including desired outcomes, success metrics, and value sought.
+
+Base all content on specific research data and real user examples.`,
     variables: ['projectName', 'targetUser', 'userScenario'],
     description: 'Create detailed user empathy maps',
     frameworkInstructions: FRAMEWORK_INSTRUCTIONS['design-thinking'],
@@ -278,29 +265,26 @@ Make it specific and based on real user insights.`,
     framework: 'design-thinking',
     stage: 'define',
     tool: 'personas',
-    template: `Based on user research findings, create detailed user personas for {{projectName}}.
-
-Research Data:
+    template: `Create 2-3 user personas for {{projectName}} targeting {{targetMarket}} with {{productService}} for segments: {{userSegments}}.
 {{#if previousOutputs}}
-{{previousOutputs}}
+Research data: {{previousOutputs}}
 {{/if}}
 
-Additional Context:
-- Target Market: {{targetMarket}}
-- Product/Service: {{productService}}
-- Key User Segments: {{userSegments}}
+Build demographic profiles with specific background details.
 
-For each persona (create 2-3), provide:
-1. Demographic information and background
-2. Goals, needs, and motivations
-3. Pain points and frustrations
-4. Behaviors and preferences
-5. Technology comfort level
-6. Preferred communication channels
-7. A day-in-the-life scenario
-8. Quote that captures their essence
+Define goals, needs, and core motivations for each persona.
 
-Create personas that feel like real people with specific details and distinct characteristics.`,
+Document pain points and key frustrations.
+
+Outline behaviors, preferences, and technology comfort levels.
+
+Specify preferred communication channels.
+
+Write day-in-the-life scenarios showing typical usage patterns.
+
+Include authentic quotes that capture each persona's perspective.
+
+Ensure personas feel like real people with distinct, specific characteristics.`,
     variables: ['projectName', 'targetMarket', 'productService', 'userSegments'],
     description: 'Create detailed user personas from research',
     frameworkInstructions: FRAMEWORK_INSTRUCTIONS['design-thinking'],
@@ -735,7 +719,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     }
   },
 
-  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[]) => {
+  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string) => {
     const template = get().templates.find(
       t => t.framework === framework.id && t.stage === stage.id && t.tool === tool.id
     );
@@ -751,6 +735,14 @@ export const usePromptStore = create<PromptState>((set, get) => ({
       ].filter(Boolean).join('\n\n');
       
       enhancedTemplate = instructions ? `${instructions}\n\n${template.template}` : template.template;
+      
+      // Add knowledge context if provided
+      if (knowledgeContext) {
+        enhancedTemplate = `Project Knowledge Base:
+${knowledgeContext}
+
+${enhancedTemplate}`;
+      }
     } else {
       // Fallback with general instructions
       const frameworkInstruction = FRAMEWORK_INSTRUCTIONS[framework.id] || '';
@@ -763,7 +755,15 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         toolInstruction && `Tool Guidance: ${toolInstruction}`,
       ].filter(Boolean).join('\n\n');
       
-      enhancedTemplate = `${instructions}\n\nGenerate a comprehensive ${tool.name} deliverable for the ${stage.name} stage of the ${framework.name} framework. Focus on creating actionable, professional outputs that practitioners can immediately use.`;
+      enhancedTemplate = `${instructions}\n\nCreate ${tool.name} deliverable for ${stage.name} stage using ${framework.name} framework. Generate actionable outputs for immediate practitioner use.`;
+      
+      // Add knowledge context if provided
+      if (knowledgeContext) {
+        enhancedTemplate = `Project Knowledge Base:
+${knowledgeContext}
+
+${enhancedTemplate}`;
+      }
     }
 
     // Create a new generated prompt
@@ -814,7 +814,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
       currentPrompt: prompt
     }));
 
-    return prompt.id;
+    return enhancedTemplate;
   },
 
   executePrompt: async (promptId: string) => {

@@ -59,6 +59,7 @@ function WorkflowWithProject() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
   const [variables, setVariables] = useState<Record<string, string>>({});
+  const [testClicks, setTestClicks] = useState(0);
   const lastAppliedRef = useRef<string>('');
   const lastSavedRef = useRef<string>('');
 
@@ -116,6 +117,7 @@ function WorkflowWithProject() {
   }, [nodes, edges, currentProject?.id, saveCanvasData]);
 
   const handleFrameworkSelection = (framework: any) => {
+    console.log('Handling framework selection:', framework);
     selectFramework(framework);
     const newNode = {
       id: `framework-${framework.id}`,
@@ -123,7 +125,9 @@ function WorkflowWithProject() {
       position: { x: 100, y: 100 },
       data: { framework, isSelected: true },
     };
+    console.log('Creating framework node:', newNode);
     addNode(newNode);
+    console.log('Current nodes after adding framework:', nodes);
   };
 
   const handleAddStage = (stage: any) => {
@@ -184,7 +188,7 @@ function WorkflowWithProject() {
   return (
     <div className="h-screen bg-background flex flex-col w-full">
       {/* Header */}
-      <div className="h-12 flex items-center border-b bg-card px-4">
+      <div className="h-12 flex items-center justify-between border-b bg-card px-4">
         <Button
           variant="ghost"
           size="sm"
@@ -193,7 +197,9 @@ function WorkflowWithProject() {
         >
           <Layers className="w-4 h-4" />
         </Button>
-        <Navigation />
+        <div className="flex-1">
+          <Navigation className="p-0" />
+        </div>
       </div>
       
       <div className="flex-1 flex w-full">
@@ -202,15 +208,23 @@ function WorkflowWithProject() {
           initial={{ x: -400, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-80 border-r border-border bg-card"
+          className="w-80 border-r border-border bg-card flex-shrink-0"
         >
           {/* Framework Selector Header */}
           <div className="border-b border-border p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Workflow Builder</h2>
               <div className="flex space-x-2">
-                <Button size="sm" variant="outline">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    console.log('Save button clicked!');
+                    setTestClicks(prev => prev + 1);
+                  }}
+                >
                   <Save className="w-4 h-4" />
+                  {testClicks > 0 && <span className="ml-1 text-xs">({testClicks})</span>}
                 </Button>
                 <Button size="sm" variant="outline">
                   <Share className="w-4 h-4" />
@@ -224,13 +238,14 @@ function WorkflowWithProject() {
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Select UX Framework</h3>
                <Select onValueChange={(value) => {
+                 console.log('Select value changed:', value);
                  const framework = frameworks.find(f => f.id === value);
                  if (framework) handleFrameworkSelection(framework);
                }}>
                 <SelectTrigger className="w-full bg-background border border-border shadow-sm hover:bg-accent/50 transition-colors">
                   <SelectValue placeholder="Choose a framework..." />
                 </SelectTrigger>
-                <SelectContent className="bg-background border border-border shadow-lg z-50 max-h-60 overflow-y-auto">
+                <SelectContent className="bg-background border border-border shadow-lg z-[100] max-h-60 overflow-y-auto">
                   {frameworks.map((framework) => (
                     <SelectItem 
                       key={framework.id} 
@@ -365,9 +380,16 @@ function WorkflowWithProject() {
                         </div>
                       </div>
                       
-                      <ScrollArea className="max-h-48">
+                      {/* Prompt Stats */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>{currentPrompt.content.length} characters</span>
+                        <span>{currentPrompt.content.split('\n').length} lines</span>
+                        <span>{currentPrompt.content.split(' ').length} words</span>
+                      </div>
+                      
+                      <ScrollArea className="max-h-64">
                         <div className="p-3 bg-muted/50 rounded-md border">
-                          <pre className="text-xs whitespace-pre-wrap font-mono">
+                          <pre className="text-xs whitespace-pre-wrap font-mono leading-relaxed">
                             {currentPrompt.content}
                           </pre>
                         </div>
@@ -465,7 +487,7 @@ function WorkflowWithProject() {
         </motion.div>
         
         {/* Canvas */}
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <WorkflowCanvas onSwitchToPromptTab={() => setActivePanel('prompts')} />
         </div>
       </div>

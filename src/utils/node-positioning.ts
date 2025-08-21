@@ -15,7 +15,7 @@ export const DEFAULT_SPACING: NodeSpacing = {
   framework: { width: 320, height: 200 },
   stage: { width: 280, height: 180 },
   tool: { width: 280, height: 160 },
-  prompt: { width: 400, height: 220 }
+  prompt: { width: 800, height: 300 }
 };
 
 export interface PositionCalculator {
@@ -76,6 +76,29 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
   const getConnectedPosition = (sourceNode: Node, targetNodeType: string, existingNodes: Node[]) => {
     const sourceDimensions = getNodeDimensions(sourceNode.type || 'tool');
     const targetDimensions = getNodeDimensions(targetNodeType);
+    
+    // For prompt nodes, check if there are existing prompts connected to this tool
+    if (targetNodeType === 'prompt') {
+      const connectedPrompts = existingNodes.filter(node => 
+        node.type === 'prompt' && 
+        node.data?.sourceToolId === sourceNode.id
+      );
+      
+      // If there are existing prompts, stack them vertically
+      if (connectedPrompts.length > 0) {
+        const baseY = sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2;
+        const stackedY = baseY + (connectedPrompts.length * (targetDimensions.height + 80));
+        
+        const stackedPosition = {
+          x: sourceNode.position.x + sourceDimensions.width + spacing.horizontal * 0.8,
+          y: stackedY
+        };
+        
+        if (!isPositionOccupied(stackedPosition.x, stackedPosition.y, targetNodeType, existingNodes)) {
+          return stackedPosition;
+        }
+      }
+    }
     
     // Try multiple positions around the source node with better spacing
     const positions = [

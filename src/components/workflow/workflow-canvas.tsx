@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -21,8 +21,18 @@ import { FrameworkNode } from './framework-node';
 import { ToolNode } from './tool-node';
 import { PromptNode } from './prompt-node';
 import { ProjectNode } from './project-node';
+import { ContextNode } from './context-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { motion } from 'framer-motion';
+
+// Define nodeTypes outside the component to prevent recreation on each render
+const staticNodeTypes = {
+  stage: StageNode,
+  framework: FrameworkNode,
+  prompt: PromptNode,
+  project: ProjectNode,
+  context: ContextNode,
+};
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
   const { 
@@ -46,22 +56,35 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
   } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  const nodeTypes = {
-    stage: StageNode,
-    framework: FrameworkNode,
-    tool: (props: any) => <ToolNode {...props} onSwitchToPromptTab={onSwitchToPromptTab} />,
-    prompt: PromptNode,
-    project: ProjectNode,
-  };
+  // Create stable nodeTypes - tool node will get onSwitchToPromptTab via context or props
+  const nodeTypes = useMemo(() => ({
+    ...staticNodeTypes,
+    tool: ToolNode,
+  }), []);
   
-  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(nodes);
+  // Add onSwitchToPromptTab to tool nodes
+  const enhancedNodes = useMemo(() => 
+    nodes.map(node => 
+      node.type === 'tool' 
+        ? { ...node, data: { ...node.data, onSwitchToPromptTab } }
+        : node
+    ), [nodes, onSwitchToPromptTab]
+  );
+
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(enhancedNodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(edges);
 
-  // Sync with store
-  useMemo(() => {
-    setFlowNodes(nodes);
+  // Sync store nodes with flow nodes when store nodes change
+  useEffect(() => {
+    console.log('Store nodes changed, updating flow nodes:', enhancedNodes.length);
+    setFlowNodes(enhancedNodes);
+  }, [enhancedNodes, setFlowNodes]);
+
+  // Sync store edges with flow edges when store edges change
+  useEffect(() => {
+    console.log('Store edges changed, updating flow edges:', edges.length);
     setFlowEdges(edges);
-  }, [nodes, edges, setFlowNodes, setFlowEdges]);
+  }, [edges, setFlowEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -90,30 +113,18 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           updateNodePosition(change.id, change.position);
         }
       });
-      
-      // Also sync the current state to store for other types of changes
-      setFlowNodes((currentNodes) => {
-        const updatedNodes = [...currentNodes];
-        setNodes(updatedNodes);
-        return updatedNodes;
-      });
     },
-    [onNodesChange, updateNodePosition, setNodes, setFlowNodes]
+    [onNodesChange, updateNodePosition]
   );
 
   const onEdgesChangeHandler = useCallback(
     (changes: any[]) => {
       onEdgesChange(changes);
       
-      // Auto-save edges when they change
-      setFlowEdges((currentEdges) => {
-        const updatedEdges = [...currentEdges];
-        setEdges(updatedEdges);
-        saveWorkflowToStorage();
-        return updatedEdges;
-      });
+      // Auto-save when edges change
+      saveWorkflowToStorage();
     },
-    [onEdgesChange, setEdges, setFlowEdges, saveWorkflowToStorage]
+    [onEdgesChange, saveWorkflowToStorage]
   );
 
   const onNodeClick = useCallback(
@@ -212,9 +223,6 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       transition={{ duration: 0.5 }}
       className="h-full w-full relative"
       style={{ backgroundColor: '#333446' }}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
     >
       <CanvasToolbar 
         onClearSelection={handleClearSelection}
@@ -235,37 +243,44 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         />
       )}
       
-      <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
-        onNodesChange={onNodesChangeHandler}
-        onEdgesChange={onEdgesChangeHandler}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onSelectionChange={onSelectionChange}
-        nodeTypes={nodeTypes}
-        connectionMode={ConnectionMode.Loose}
-        selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
-        multiSelectionKeyCode="Shift"
-        fitView
-        style={{ backgroundColor: '#333446' }}
-        colorMode="system"
+      <div 
+        className="h-full w-full"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
       >
-        <Background
-          color="rgba(255, 255, 255, 0.3)"
-          gap={20}
-          size={2}
-          variant={BackgroundVariant.Dots}
-        />
-        <Controls
-          className="bg-card border border-border shadow-lg"
-        />
-        <MiniMap
-          className="bg-card border border-border shadow-lg"
-          nodeColor="hsl(var(--primary))"
-          maskColor="hsl(var(--muted))"
-        />
-      </ReactFlow>
+        <ReactFlow
+          nodes={flowNodes}
+          edges={flowEdges}
+          onNodesChange={onNodesChangeHandler}
+          onEdgesChange={onEdgesChangeHandler}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          onSelectionChange={onSelectionChange}
+          nodeTypes={nodeTypes}
+          connectionMode={ConnectionMode.Loose}
+          selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
+          multiSelectionKeyCode="Shift"
+          fitView
+          style={{ backgroundColor: '#333446' }}
+          colorMode="system"
+        >
+          <Background
+            color="rgba(255, 255, 255, 0.3)"
+            gap={20}
+            size={2}
+            variant={BackgroundVariant.Dots}
+          />
+          <Controls
+            className="bg-card border border-border shadow-lg"
+          />
+          <MiniMap
+            className="bg-card border border-border shadow-lg"
+            nodeColor="hsl(var(--primary))"
+            maskColor="hsl(var(--muted))"
+          />
+        </ReactFlow>
+      </div>
     </motion.div>
   );
 }

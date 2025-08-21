@@ -4,6 +4,7 @@ import { Zap, Menu, User, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { useProjectStore } from "@/stores/project-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ interface NavigationProps {
 
 export function Navigation({ className }: NavigationProps) {
   const { user, signOut, loading } = useAuth();
+  const { setCurrentProject } = useProjectStore();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -43,7 +45,7 @@ export function Navigation({ className }: NavigationProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className={cn("flex items-center justify-between p-6 bg-background/80 backdrop-blur-lg border-b border-border", className)}
+      className={cn("flex items-center justify-between w-full p-6 bg-background/80 backdrop-blur-lg border-b border-border", className)}
     >
       <div className="flex items-center space-x-8">
         <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
@@ -56,18 +58,43 @@ export function Navigation({ className }: NavigationProps) {
         </Link>
         
         <div className="hidden md:flex items-center space-x-6">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/workflow">Workflows</Link>
-          </Button>
-          <Button variant="ghost" size="sm">
-            Frameworks
-          </Button>
-          <Button variant="ghost" size="sm">
-            Library
-          </Button>
-          <Button variant="ghost" size="sm">
-            Projects
-          </Button>
+          {user ? (
+            // Navigation for logged-in users
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/workflow">Workflows</Link>
+              </Button>
+              <Button variant="ghost" size="sm">
+                Frameworks
+              </Button>
+              <Button variant="ghost" size="sm">
+                Library
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setCurrentProject(null);
+                  navigate('/workflow');
+                }}
+              >
+                Projects
+              </Button>
+            </>
+          ) : (
+            // Navigation for non-logged-in users
+            <>
+              <Button variant="ghost" size="sm">
+                Features
+              </Button>
+              <Button variant="ghost" size="sm">
+                Pricing
+              </Button>
+              <Button variant="ghost" size="sm">
+                About
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

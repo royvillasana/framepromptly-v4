@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -166,6 +166,7 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
             size="sm"
             variant="ghost"
             className="w-8 h-8 p-0 hover:bg-accent"
+            onClick={(e) => e.stopPropagation()}
           >
             <Settings className="w-3 h-3" />
           </Button>
@@ -203,6 +204,9 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Modify {nodeType.charAt(0).toUpperCase() + nodeType.slice(1)}</DialogTitle>
+            <DialogDescription>
+              Update the properties and configuration of this workflow node.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -258,6 +262,9 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Link to Knowledge Base</DialogTitle>
+            <DialogDescription>
+              Connect this node to knowledge entries to provide context for AI prompt generation.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -281,11 +288,18 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
                     onClick={() => handleLinkToKnowledge(entry.id)}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{entry.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {entry.content.substring(0, 100)}...
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate">{entry.title}</h4>
+                        <div className="text-xs text-muted-foreground mt-1 max-h-8 overflow-hidden">
+                          <p className="break-words" style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {entry.content.substring(0, 100)}...
+                          </p>
+                        </div>
                       </div>
                       <Badge variant="secondary" className="ml-2 text-xs">
                         {entry.type}

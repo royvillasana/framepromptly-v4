@@ -123,10 +123,23 @@ export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
                       </div>
                     </div>
 
-                    {/* Preview */}
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                      {prompt.content.substring(0, 100)}...
-                    </p>
+                    {/* Prompt Content Preview */}
+                    <div className="bg-muted/30 p-2 rounded text-xs mb-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileText className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-muted-foreground font-medium">Prompt Content</span>
+                      </div>
+                      <div className="max-h-20 overflow-y-auto">
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                          {prompt.content.length > 200 ? `${prompt.content.substring(0, 200)}...` : prompt.content}
+                        </pre>
+                      </div>
+                      {prompt.content.length > 200 && (
+                        <p className="text-xs text-muted-foreground italic mt-1">
+                          +{prompt.content.length - 200} more characters
+                        </p>
+                      )}
+                    </div>
 
                     {/* Footer */}
                     <div className="flex items-center justify-between">
@@ -139,6 +152,7 @@ export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
                           size="sm"
                           variant="ghost"
                           className="h-6 w-6 p-0"
+                          title="Copy prompt to clipboard"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleCopyPrompt(prompt);
@@ -151,6 +165,7 @@ export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
                           size="sm"
                           variant="ghost"
                           className="h-6 w-6 p-0"
+                          title="Execute prompt with AI"
                           disabled={isGenerating}
                           onClick={(e) => {
                             e.stopPropagation();
