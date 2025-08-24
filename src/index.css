@@ -163,3 +163,19 @@ All colors MUST be HSL.
       linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
   }
 }
+
+/* React Flow Edge Customization */
+.react-flow__edge.animated path.react-flow__edge-interaction {
+  stroke: white !important;
+  stroke-width: 2px !important;
+}
+
+.react-flow__edge path {
+  stroke: white !important;
+  stroke-width: 2px !important;
+}
+
+.react-flow__edge.animated path {
+  stroke: white !important;
+  stroke-width: 2px !important;
+}

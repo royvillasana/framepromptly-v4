@@ -112,7 +112,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         id: `edge-${params.source}-${params.target}`,
         type: 'smoothstep',
         animated: true,
-        style: { stroke: 'hsl(var(--primary))' },
+        style: { stroke: 'white', strokeWidth: 2 },
       } as Edge;
       
       setFlowEdges((eds) => addEdge(newEdge, eds));
@@ -321,6 +321,11 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           fitView
           style={{ backgroundColor: '#333446' }}
           colorMode="system"
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            animated: true,
+            style: { stroke: 'white', strokeWidth: 2 }
+          }}
         >
           <Background
             color="rgba(255, 255, 255, 0.3)"

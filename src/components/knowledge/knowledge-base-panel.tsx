@@ -29,6 +29,18 @@ export const KnowledgeBasePanel = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
+  
+  // Clean up content for display (remove special characters, formatting, etc.)
+  const cleanContent = (content: string): string => {
+    if (!content) return '';
+    return content
+      .replace(/[%&<>{}\\\/\[\]@#$^*+=|~`]/g, ' ') // Remove PDF/formatting characters
+      .replace(/[^\w\s.,!?()-]/g, ' ') // Remove other special characters except basic punctuation
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .replace(/^\s*[\d\s]*obj\s*/gi, '') // Remove PDF object references
+      .replace(/endstream|endobj|stream/gi, '') // Remove PDF keywords
+      .trim();
+  };
   const [textTitle, setTextTitle] = useState('');
   const [textContent, setTextContent] = useState('');
   const [uploadTitle, setUploadTitle] = useState('');
@@ -132,7 +144,8 @@ export const KnowledgeBasePanel = () => {
   }
 
   return (
-    <Card className="p-6" style={{ flexDirection: 'column' }}>
+    <div className="h-full overflow-hidden flex flex-col">
+      <Card className="p-6 flex-1 flex flex-col overflow-hidden">
       <div className="mb-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Project Knowledge Base</h3>
@@ -235,7 +248,7 @@ export const KnowledgeBasePanel = () => {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
         {isLoading && entries.length === 0 && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">Loading knowledge base...</p>
@@ -252,64 +265,68 @@ export const KnowledgeBasePanel = () => {
 
         {entries.map((entry) => (
           <Card key={entry.id} className="p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3 flex-1">
-                {getFileIcon(entry.type)}
-                <div className="flex-1 min-w-0">
-                  {editingEntry === entry.id ? (
-                    <EditEntryForm 
-                      entry={entry}
-                      onSave={(title, content) => handleEditEntry(entry.id, title, content)}
-                      onCancel={() => setEditingEntry(null)}
-                    />
-                  ) : (
-                    <>
-                      <h4 className="font-medium truncate">{entry.title}</h4>
-                      <div className="text-sm text-muted-foreground mt-1 max-h-16 overflow-hidden">
-                        <p className="break-words" style={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
-                        }}>
-                          {entry.content}
-                        </p>
-                      </div>
-                      {entry.file_name && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          File: {entry.file_name}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(entry.created_at).toLocaleDateString()}
+            {editingEntry === entry.id ? (
+              <EditEntryForm 
+                entry={entry}
+                onSave={(title, content) => handleEditEntry(entry.id, title, content)}
+                onCancel={() => setEditingEntry(null)}
+              />
+            ) : (
+              <div className="space-y-3">
+                {/* Content Section */}
+                <div className="flex items-start gap-3">
+                  {getFileIcon(entry.type)}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium truncate">{entry.title}</h4>
+                    <div className="text-sm text-muted-foreground mt-1 max-h-12 overflow-hidden">
+                      <p className="break-words line-clamp-2">
+                        {(() => {
+                          const cleaned = cleanContent(entry.content || '');
+                          return cleaned.length > 80 
+                            ? `${cleaned.substring(0, 80).trim()}...`
+                            : cleaned;
+                        })()}
                       </p>
-                    </>
-                  )}
+                    </div>
+                    {entry.file_name && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        File: {entry.file_name}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(entry.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Action Buttons Section */}
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditingEntry(entry.id)}
+                    className="text-xs"
+                  >
+                    <Edit3 className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteEntry(entry.id)}
+                    className="text-xs text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </Button>
                 </div>
               </div>
-              {editingEntry !== entry.id && (
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingEntry(entry.id)}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDeleteEntry(entry.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
+            )}
           </Card>
         ))}
       </div>
     </Card>
+    </div>
   );
 };
 
