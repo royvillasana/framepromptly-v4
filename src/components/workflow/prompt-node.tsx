@@ -3,12 +3,13 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand, Minimize2 } from 'lucide-react';
+import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand } from 'lucide-react';
 import { GeneratedPrompt, usePromptStore } from '@/stores/prompt-store';
 import { useToast } from '@/hooks/use-toast';
 import { NodeActionsMenu } from './node-actions-menu';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
+import { ExpandedPromptOverlay } from './expanded-prompt-overlay';
 
 interface PromptNodeData {
   prompt: GeneratedPrompt;
@@ -29,6 +30,11 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   const { prompt, isActive, onSwitchToPromptTab, sourceToolName } = data;
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
+  // Get the latest AI response from conversation or fallback to original output
+  const latestAIResponse = prompt.conversation && prompt.conversation.length > 0 
+    ? prompt.conversation.filter(msg => msg.type === 'ai').pop()?.content 
+    : prompt.output;
+  
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleExpand = () => {
@@ -42,12 +48,12 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   };
 
   const handleCopy = () => {
-    const contentToCopy = prompt.output || prompt.content;
+    const contentToCopy = latestAIResponse || prompt.content;
     
     navigator.clipboard.writeText(contentToCopy);
     toast({
       title: "Copied to clipboard",
-      description: prompt.output 
+      description: latestAIResponse 
         ? "AI response has been copied to your clipboard."
         : "Prompt content has been copied to your clipboard."
     });
@@ -62,13 +68,13 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   };
 
   const handleExport = () => {
-    const exportContent = prompt.output 
+    const exportContent = latestAIResponse 
       ? `Generated Prompt for ${prompt.context.tool.name}\n` +
         `Framework: ${prompt.context.framework.name}\n` +
         `Stage: ${prompt.context.stage.name}\n` +
         `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n\n` +
         `PROMPT:\n${'-'.repeat(50)}\n${prompt.content}\n\n` +
-        `AI RESPONSE:\n${'-'.repeat(50)}\n${prompt.output}`
+        `AI RESPONSE:\n${'-'.repeat(50)}\n${latestAIResponse}`
       : `Generated Prompt for ${prompt.context.tool.name}\n` +
         `Framework: ${prompt.context.framework.name}\n` +
         `Stage: ${prompt.context.stage.name}\n` +
@@ -86,161 +92,20 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
     URL.revokeObjectURL(url);
   };
 
-  const expandedOverlay = isExpanded ? (
-    <div
-      className="fixed bg-background/95 backdrop-blur-sm"
-      style={{ 
-        position: 'fixed',
-        zIndex: 999999,
-        top: '48px', // Below header (h-12 = 48px)  
-        left: '320px', // After sidebar (w-80 = 320px)
-        right: '0px',
-        bottom: '0px',
-        width: 'calc(100vw - 320px)',
-        height: 'calc(100vh - 48px)',
-        minWidth: 'calc(100vw - 320px)',
-        minHeight: 'calc(100vh - 48px)',
-        maxWidth: 'calc(100vw - 320px)',
-        maxHeight: 'calc(100vh - 48px)'
-      }}
-    >
-      <div className="w-full h-full p-4">
-        <Card className="w-full h-full shadow-2xl border-none" style={{ width: '100%', height: '100%' }}>
-          <div className="h-full flex flex-col">
-            {/* Expanded Header */}
-            <div className="flex items-start justify-between p-6 border-b">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <Sparkles className="w-6 h-6 text-primary" />
-                  <h3 className="font-bold text-xl">AI Generated Prompt</h3>
-                  {prompt.output && <Bot className="w-6 h-6 text-success" />}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {sourceToolName || prompt.context.tool.name} • {prompt.context.stage.name}
-                  {prompt.timestamp && (
-                    <span className="ml-2 text-xs opacity-70">
-                      {new Date(prompt.timestamp).toLocaleString()}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleContract}
-                className="ml-4"
-                title="Contract to normal size"
-              >
-                <Minimize2 className="w-4 h-4 mr-2" />
-                Contract
-              </Button>
-            </div>
-
-            {/* Expanded Content */}
-            <div className="flex-1 p-6 overflow-hidden">
-              <div className="h-full space-y-6">
-                {/* Framework → Stage → Tool Info */}
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-sm px-3 py-1">
-                    {prompt.context.framework.name}
-                  </Badge>
-                  <Badge variant="secondary" className="text-sm px-3 py-1">
-                    {prompt.context.stage.name}
-                  </Badge>
-                  <Badge variant="default" className="text-sm px-3 py-1">
-                    {prompt.context.tool.name}
-                  </Badge>
-                </div>
-
-                {/* Side-by-Side Layout */}
-                <div className="flex-1 grid grid-cols-2 gap-6 h-full min-h-0">
-                  {/* Left Side - Prompt Content */}
-                  <div className="bg-muted/50 p-4 rounded text-sm flex flex-col min-h-0">
-                    <div className="flex items-center gap-3 mb-3">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-semibold text-muted-foreground">Prompt Content</span>
-                    </div>
-                    <div className="flex-1 overflow-y-auto min-h-0">
-                      <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-                        {prompt.content}
-                      </pre>
-                    </div>
-                  </div>
-
-                  {/* Right Side - AI Response */}
-                  {prompt.output ? (
-                    <div className="bg-success/10 border border-success/20 p-4 rounded text-sm flex flex-col min-h-0">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Bot className="w-4 h-4 text-success" />
-                        <span className="font-semibold text-success">AI Response</span>
-                        <Badge variant="default" className="text-sm bg-success px-3 py-1">
-                          Generated
-                        </Badge>
-                      </div>
-                      <div className="flex-1 overflow-y-auto min-h-0">
-                        <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                          {prompt.output}
-                        </pre>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-muted/20 border-2 border-dashed border-muted p-8 rounded text-sm flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="font-medium">No AI Response Yet</p>
-                        <p className="text-xs mt-1">Generate a prompt to see AI response here</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Expanded Actions */}
-                <div className="flex items-center gap-3 pt-4 border-t">
-                  <Button
-                    size="default"
-                    variant="outline"
-                    onClick={handleView}
-                    className="h-10 text-sm"
-                    title="View full prompt details"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
-                  
-                  <Button
-                    size="default"
-                    variant="outline"
-                    onClick={handleCopy}
-                    className="h-10 px-4"
-                    title="Copy prompt and response"
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy
-                  </Button>
-
-                  <Button
-                    size="default"
-                    variant="outline"
-                    onClick={handleExport}
-                    className="h-10 px-4"
-                    title="Export as file"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  ) : null;
 
   // Normal node state
   return (
     <>
-      {expandedOverlay}
+      {isExpanded && (
+        <ExpandedPromptOverlay
+          prompt={prompt}
+          sourceToolName={sourceToolName}
+          onContract={handleContract}
+          onCopy={handleCopy}
+          onView={handleView}
+          onExport={handleExport}
+        />
+      )}
       <ResizableNode 
       selected={selected} 
       minWidth={200} 
@@ -274,7 +139,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
         w-full h-full p-6 transition-all duration-200 relative
         ${selected ? 'ring-2 ring-primary shadow-lg border-2 border-primary' : 'hover:shadow-md'}
         ${isActive ? 'border-primary bg-primary/5' : ''}
-        ${prompt.output ? 'border-solid border-success bg-gradient-to-br from-primary/5 to-success/5' : 'border-dashed border-2'}
+        ${latestAIResponse ? 'border-solid border-success bg-gradient-to-br from-primary/5 to-success/5' : 'border-dashed border-2'}
         shadow-xl
       `}>
         {/* Expand Button */}
@@ -295,7 +160,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
               <div className="flex items-center gap-3 mb-2">
                 <Sparkles className="w-6 h-6 text-primary" />
                 <h3 className="font-bold text-lg">AI Generated Prompt</h3>
-                {prompt.output && <Bot className="w-6 h-6 text-success" />}
+                {latestAIResponse && <Bot className="w-6 h-6 text-success" />}
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {sourceToolName || prompt.context.tool.name} • {prompt.context.stage.name}
@@ -335,18 +200,18 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           </div>
 
           {/* AI Output Section */}
-          {prompt.output && (
+          {latestAIResponse && (
             <div className="bg-success/10 border border-success/20 p-4 rounded text-sm space-y-3">
               <div className="flex items-center gap-3 mb-3">
                 <Bot className="w-4 h-4 text-success" />
                 <span className="font-semibold text-success">AI Response</span>
                 <Badge variant="default" className="text-sm bg-success px-3 py-1">
-                  Generated
+                  {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
                 </Badge>
               </div>
               <div className="max-h-96 overflow-y-auto">
                 <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {prompt.output}
+                  {latestAIResponse}
                 </pre>
               </div>
             </div>

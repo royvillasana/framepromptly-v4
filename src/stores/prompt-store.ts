@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { UXFramework, UXStage, UXTool } from './workflow-store';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface ConversationMessage {
+  id: string;
+  type: 'user' | 'ai';
+  content: string;
+  timestamp: Date;
+}
+
 export interface PromptTemplate {
   id: string;
   framework: string;
@@ -34,6 +41,7 @@ export interface GeneratedPrompt {
   };
   variables: Record<string, string>;
   output?: string;
+  conversation?: ConversationMessage[];
   timestamp: number;
 }
 
@@ -50,6 +58,8 @@ export interface PromptState {
   updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
   setCurrentPrompt: (prompt: GeneratedPrompt | null) => void;
   addPromptOutput: (promptId: string, output: string) => void;
+  updatePromptConversation: (promptId: string, messages: ConversationMessage[]) => void;
+  addConversationMessage: (promptId: string, message: ConversationMessage) => void;
   initializeTemplates: () => void;
   clearProjectPrompts: () => void;
 }
@@ -867,6 +877,30 @@ ${enhancedTemplate}`;
       prompts: state.prompts.map(p =>
         p.id === promptId ? { ...p, output } : p
       )
+    }));
+  },
+
+  updatePromptConversation: (promptId, messages) => {
+    set(state => ({
+      prompts: state.prompts.map(p =>
+        p.id === promptId ? { ...p, conversation: messages } : p
+      ),
+      currentPrompt: state.currentPrompt?.id === promptId 
+        ? { ...state.currentPrompt, conversation: messages }
+        : state.currentPrompt
+    }));
+  },
+
+  addConversationMessage: (promptId, message) => {
+    set(state => ({
+      prompts: state.prompts.map(p =>
+        p.id === promptId 
+          ? { ...p, conversation: [...(p.conversation || []), message] }
+          : p
+      ),
+      currentPrompt: state.currentPrompt?.id === promptId 
+        ? { ...state.currentPrompt, conversation: [...(state.currentPrompt.conversation || []), message] }
+        : state.currentPrompt
     }));
   },
 
