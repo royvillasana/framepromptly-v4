@@ -44,6 +44,7 @@ function WorkflowWithProject() {
     selectedFramework, 
     selectedStage,
     selectedNode,
+    expandedPromptId,
     selectFramework, 
     selectStage, 
     frameworks, 
@@ -203,13 +204,14 @@ function WorkflowWithProject() {
       </div>
       
       <div className="flex-1 flex w-full">
-        {/* Left Panel */}
-        <motion.div
-          initial={{ x: -400, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-80 border-r border-border bg-card flex-shrink-0"
-        >
+        {/* Left Panel - Hidden when prompt is expanded */}
+        {!expandedPromptId && (
+          <motion.div
+            initial={{ x: -400, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="w-80 border-r border-border bg-card flex-shrink-0"
+          >
           {/* Framework Selector Header */}
           <div className="border-b border-border p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -484,7 +486,8 @@ function WorkflowWithProject() {
               <KnowledgeBasePanel />
             </TabsContent>
           </Tabs>
-        </motion.div>
+          </motion.div>
+        )}
         
         {/* Canvas */}
         <div className="flex-1 overflow-hidden">

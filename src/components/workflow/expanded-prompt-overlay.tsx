@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Bot, Copy, Download, Eye, Minimize2, Send, MessageSquare, Edit3, Save, X } from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
+import { useKnowledgeStore } from '@/stores/knowledge-store';
+import { useProjectStore } from '@/stores/project-store';
+import { useWorkflowStore } from '@/stores/workflow-store';
+import { supabase } from '@/integrations/supabase/client';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExpandedPromptOverlayProps {
   prompt: GeneratedPrompt;
@@ -26,12 +31,17 @@ export function ExpandedPromptOverlay({
   onExport 
 }: ExpandedPromptOverlayProps) {
   const { updatePromptConversation, addConversationMessage } = usePromptStore();
+  const { entries } = useKnowledgeStore();
+  const { currentProject } = useProjectStore();
+  const { expandedPromptId } = useWorkflowStore();
   
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>(() => {
-    // Initialize from stored conversation or create initial message
+    // Initialize from stored conversation (loaded from database)
     if (prompt.conversation && prompt.conversation.length > 0) {
+      console.log('Loading conversation from database:', prompt.conversation.length, 'messages');
       return prompt.conversation;
     } else if (prompt.output) {
+      // Create initial message from existing AI response
       return [{
         id: 'initial',
         type: 'ai',
@@ -45,10 +55,54 @@ export function ExpandedPromptOverlay({
   const [followUpInput, setFollowUpInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Sync conversation messages with the store
+  // Function to save conversation to database (memoized to prevent infinite loops)
+  const saveConversationToDatabase = useCallback(async (messages: ConversationMessage[]) => {
+    if (!messages.length || !prompt.id) return;
+    
+    try {
+      // Convert messages to serializable format for database storage
+      const conversationData = messages.map(msg => ({
+        id: msg.id,
+        type: msg.type,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString()
+      }));
+
+      // Store conversation in ai_response field as JSON for now (until migration is applied)
+      const conversationJson = JSON.stringify({
+        type: 'conversation',
+        messages: conversationData
+      });
+
+      const { error } = await supabase
+        .from('prompts')
+        .update({ 
+          ai_response: conversationJson,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', prompt.id);
+
+      if (error) {
+        console.error('Error saving conversation to database:', error);
+      }
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+    }
+  }, [prompt.id]);
+
+  // Sync conversation messages with the store and debounce database saves
   useEffect(() => {
     updatePromptConversation(prompt.id, conversationMessages);
-  }, [conversationMessages, prompt.id, updatePromptConversation]);
+    
+    // Debounce database saves to prevent excessive calls
+    if (conversationMessages.length > 0 && prompt.id) {
+      const saveTimer = setTimeout(() => {
+        saveConversationToDatabase(conversationMessages);
+      }, 1000); // Wait 1 second before saving
+      
+      return () => clearTimeout(saveTimer);
+    }
+  }, [conversationMessages, prompt.id, updatePromptConversation, saveConversationToDatabase]);
   
   // Prompt editing state
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
@@ -70,21 +124,46 @@ export function ExpandedPromptOverlay({
     setIsGenerating(true);
     
     try {
-      // TODO: Integrate with actual AI service
-      // For now, simulate AI response using the current prompt context
-      setTimeout(() => {
-        const aiMessage: ConversationMessage = {
-          id: `ai-${Date.now()}`,
-          type: 'ai',
-          content: `Based on your request: "${userMessage.content}" and using the current prompt context, here's my response:\n\n[Context: ${currentPromptContent.substring(0, 100)}...]\n\nI've processed your follow-up request in the context of the current prompt. This would be the actual AI response that takes into account both the original prompt and your modification request.`,
-          timestamp: new Date()
-        };
-        
-        setConversationMessages(prev => [...prev, aiMessage]);
-        setIsGenerating(false);
-      }, 2000);
+      // Call the AI conversation function
+      const { data, error } = await supabase.functions.invoke('ai-conversation', {
+        body: {
+          userMessage: userMessage.content,
+          initialPrompt: currentPromptContent,
+          conversationHistory: conversationMessages.filter(msg => msg.id !== 'initial'), // Exclude initial message
+          projectId: currentProject?.id,
+          knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id)
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to generate AI response');
+      }
+
+      const aiMessage: ConversationMessage = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: data.response,
+        timestamp: new Date()
+      };
+      
+      setConversationMessages(prev => [...prev, aiMessage]);
+      setIsGenerating(false);
     } catch (error) {
       console.error('Error generating follow-up response:', error);
+      
+      // Fallback error message
+      const errorMessage: ConversationMessage = {
+        id: `ai-error-${Date.now()}`,
+        type: 'ai',
+        content: `I apologize, but I encountered an error while processing your request. Please try again or rephrase your question.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date()
+      };
+      
+      setConversationMessages(prev => [...prev, errorMessage]);
       setIsGenerating(false);
     }
   };
@@ -120,17 +199,27 @@ export function ExpandedPromptOverlay({
   };
 
   const overlay = (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm"
       style={{
         top: '48px', // Header height
-        left: '320px', // Sidebar width
-        width: 'calc(100vw - 320px)',
+        left: '0px', // No sidebar offset since sidebar is hidden
+        width: '100vw', // Full width
         height: 'calc(100vh - 48px)',
       }}
     >
-      <div className="w-full h-full p-4">
-        <Card className="shadow-2xl border-none h-full w-full">
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="w-full h-full"
+      >
+        <Card className="shadow-2xl border-none h-full w-full rounded-none">
           <div className="h-full flex flex-col">
             {/* Expanded Header */}
             <div className="flex items-start justify-between p-6 border-b">
@@ -354,8 +443,8 @@ export function ExpandedPromptOverlay({
             </div>
           </div>
         </Card>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 
   return createPortal(overlay, document.body);

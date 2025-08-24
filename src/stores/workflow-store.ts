@@ -64,6 +64,7 @@ export interface WorkflowState {
   selectedNode: Node | null;
   nodeCustomizations: Record<string, NodeCustomization>;
   frameworks: UXFramework[];
+  expandedPromptId: string | null;
 
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
@@ -84,6 +85,7 @@ export interface WorkflowState {
   selectFramework: (framework: UXFramework) => void;
   selectStage: (stage: UXStage) => void;
   selectNode: (node: Node | null) => void;
+  setExpandedPromptId: (id: string | null) => void;
   initializeFrameworks: () => void;
 }
 
@@ -724,6 +726,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectedNode: null,
   nodeCustomizations: {},
   frameworks: [],
+  expandedPromptId: null,
 
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -864,6 +867,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectFramework: (framework) => set({ selectedFramework: framework }),
   selectStage: (stage) => set({ selectedStage: stage }),
   selectNode: (node) => set({ selectedNode: node }),
+  setExpandedPromptId: (id) => set({ expandedPromptId: id }),
   
   initializeFrameworks: () => set({ frameworks: sampleFrameworks }),
 

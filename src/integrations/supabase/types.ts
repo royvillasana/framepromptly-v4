@@ -136,6 +136,7 @@ export type Database = {
       prompts: {
         Row: {
           ai_response: string | null
+          conversation_history: Json | null
           created_at: string
           framework_name: string
           id: string
@@ -149,6 +150,7 @@ export type Database = {
         }
         Insert: {
           ai_response?: string | null
+          conversation_history?: Json | null
           created_at?: string
           framework_name: string
           id?: string
@@ -162,6 +164,7 @@ export type Database = {
         }
         Update: {
           ai_response?: string | null
+          conversation_history?: Json | null
           created_at?: string
           framework_name?: string
           id?: string

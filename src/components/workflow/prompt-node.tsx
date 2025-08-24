@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand } from 'lucide-react';
 import { GeneratedPrompt, usePromptStore } from '@/stores/prompt-store';
+import { useWorkflowStore } from '@/stores/workflow-store';
 import { useToast } from '@/hooks/use-toast';
 import { NodeActionsMenu } from './node-actions-menu';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
@@ -27,6 +28,7 @@ interface PromptNodeProps {
 export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?: string }) => {
   const { toast } = useToast();
   const { setCurrentPrompt } = usePromptStore();
+  const { expandedPromptId, setExpandedPromptId } = useWorkflowStore();
   const { prompt, isActive, onSwitchToPromptTab, sourceToolName } = data;
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
@@ -35,16 +37,16 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
     ? prompt.conversation.filter(msg => msg.type === 'ai').pop()?.content 
     : prompt.output;
   
-  const [isExpanded, setIsExpanded] = useState(false);
+  const isExpanded = expandedPromptId === prompt.id;
 
   const handleExpand = () => {
-    console.log('Expanding prompt node:', id);
-    setIsExpanded(true);
+    console.log('Expanding prompt node:', prompt.id);
+    setExpandedPromptId(prompt.id);
   };
 
   const handleContract = () => {
-    console.log('Contracting prompt node:', id);
-    setIsExpanded(false);
+    console.log('Contracting prompt node:', prompt.id);
+    setExpandedPromptId(null);
   };
 
   const handleCopy = () => {
@@ -278,6 +280,20 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
       />
     </motion.div>
     </ResizableNode>
+    
+    {/* Expanded Overlay */}
+    <AnimatePresence>
+      {isExpanded && (
+        <ExpandedPromptOverlay
+          prompt={prompt}
+          sourceToolName={sourceToolName}
+          onContract={handleContract}
+          onCopy={handleCopy}
+          onView={handleView}
+          onExport={handleExport}
+        />
+      )}
+    </AnimatePresence>
     </>
   );
 });
