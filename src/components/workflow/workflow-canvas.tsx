@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -7,12 +7,14 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   Node,
   Edge,
   Connection,
   ConnectionMode,
   BackgroundVariant,
   SelectionMode,
+  ViewportChangeEvent,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -42,12 +44,19 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     setEdges, 
     addEdge: addStoreEdge, 
     selectNode, 
+    selectedNode,
     updateNodePosition,
+    updateNodeDimensions,
     saveWorkflowToStorage 
   } = useWorkflowStore();
+  
+  // We'll get the ReactFlow instance after the component mounts
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const updateRef = useRef(false);
 
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [isMarqueeMode, setIsMarqueeMode] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const [marqueeRect, setMarqueeRect] = useState<{
     startX: number;
     startY: number;
@@ -62,13 +71,19 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     tool: ToolNode,
   }), []);
   
-  // Add onSwitchToPromptTab to tool nodes
+  // Add onSwitchToPromptTab to tool nodes and selected state to all nodes
   const enhancedNodes = useMemo(() => 
-    nodes.map(node => 
-      node.type === 'tool' 
-        ? { ...node, data: { ...node.data, onSwitchToPromptTab } }
-        : node
-    ), [nodes, onSwitchToPromptTab]
+    nodes.map(node => {
+      const isSelected = selectedNode?.id === node.id;
+      return {
+        ...node,
+        selected: isSelected,
+        data: { 
+          ...node.data, 
+          ...(node.type === 'tool' ? { onSwitchToPromptTab } : {})
+        }
+      };
+    }), [nodes, onSwitchToPromptTab, selectedNode]
   );
 
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(enhancedNodes);
@@ -76,7 +91,11 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   // Sync store nodes with flow nodes when store nodes change
   useEffect(() => {
-    console.log('Store nodes changed, updating flow nodes:', enhancedNodes.length);
+    if (updateRef.current) {
+      updateRef.current = false;
+      return;
+    }
+    // console.log('Store nodes changed, updating flow nodes:', enhancedNodes.length);
     setFlowNodes(enhancedNodes);
   }, [enhancedNodes, setFlowNodes]);
 
@@ -104,17 +123,22 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const onNodesChangeHandler = useCallback(
     (changes: any[]) => {
+      updateRef.current = true;
       onNodesChange(changes);
       
-      // Handle position changes and auto-save
+      // Handle position and dimension changes with auto-save
       changes.forEach((change) => {
         if (change.type === 'position' && change.position && change.id) {
           // Update position in store and auto-save
           updateNodePosition(change.id, change.position);
         }
+        if (change.type === 'dimensions' && change.dimensions && change.id) {
+          // Update dimensions in store and auto-save
+          updateNodeDimensions(change.id, change.dimensions);
+        }
       });
     },
-    [onNodesChange, updateNodePosition]
+    [onNodesChange, updateNodePosition, updateNodeDimensions]
   );
 
   const onEdgesChangeHandler = useCallback(
@@ -137,9 +161,37 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes }: { nodes: Node[] }) => {
       setSelectedNodes(selectedNodes.map(node => node.id));
+      
+      // Clear selectedNode in store if no nodes are selected
+      if (selectedNodes.length === 0) {
+        selectNode(null);
+      }
+    },
+    [selectNode]
+  );
+
+  const onViewportChange = useCallback(
+    (viewport: ViewportChangeEvent) => {
+      setZoom(viewport.zoom);
     },
     []
   );
+
+  const onInit = useCallback((reactFlowInstance: any) => {
+    setReactFlowInstance(reactFlowInstance);
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    reactFlowInstance?.zoomIn();
+  }, [reactFlowInstance]);
+
+  const handleZoomOut = useCallback(() => {
+    reactFlowInstance?.zoomOut();
+  }, [reactFlowInstance]);
+
+  const handleFitView = useCallback(() => {
+    reactFlowInstance?.fitView();
+  }, [reactFlowInstance]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedNodes([]);
@@ -256,11 +308,16 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           onEdgesChange={onEdgesChangeHandler}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onPaneClick={() => selectNode(null)}
           onSelectionChange={onSelectionChange}
+          onViewportChange={onViewportChange}
+          onInit={onInit}
           nodeTypes={nodeTypes}
           connectionMode={ConnectionMode.Loose}
           selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
           multiSelectionKeyCode="Shift"
+          minZoom={0.1}
+          maxZoom={4}
           fitView
           style={{ backgroundColor: '#333446' }}
           colorMode="system"
@@ -271,9 +328,6 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
             size={2}
             variant={BackgroundVariant.Dots}
           />
-          <Controls
-            className="bg-card border border-border shadow-lg"
-          />
           <MiniMap
             className="bg-card border border-border shadow-lg"
             nodeColor="hsl(var(--primary))"
@@ -281,6 +335,21 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           />
         </ReactFlow>
       </div>
+
+      {/* Zoom Indicator */}
+      <div className="absolute bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium">
+        {Math.round(zoom * 100)}%
+      </div>
+
+      <CanvasToolbar
+        onClearSelection={handleClearSelection}
+        isMarqueeMode={isMarqueeMode}
+        onToggleMarqueeMode={toggleMarqueeMode}
+        zoom={zoom}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onFitView={handleFitView}
+      />
     </motion.div>
   );
 }

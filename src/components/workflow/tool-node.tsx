@@ -1,5 +1,4 @@
 import { memo, useState } from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +13,8 @@ import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
 import { NodeActionsMenu } from './node-actions-menu';
 import { KnowledgeSelectionDialog } from './knowledge-selection-dialog';
+import { DraggableHandle, useDraggableHandles } from './draggable-handle';
+import { ResizableNode } from './resizable-node';
 import { toast } from 'sonner';
 
 interface ToolNodeData {
@@ -36,7 +37,9 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const { addNode, addEdge, nodes, updateNode } = useWorkflowStore();
   const { currentProject } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
-  const { tool, framework, stage, isActive, isCompleted, linkedKnowledge = [], onSwitchToPromptTab } = data;
+  const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab } = data;
+  const linkedKnowledge = Array.isArray(rawLinkedKnowledge) ? rawLinkedKnowledge : [];
+  const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
   const [showProgress, setShowProgress] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -222,28 +225,39 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   };
 
   return (
-    <>
+    <ResizableNode 
+      selected={selected} 
+      minWidth={250} 
+      minHeight={200}
+      maxWidth={400}
+      maxHeight={500}
+    >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.2 }}
+        whileHover={selected ? {} : { scale: 1.02 }}
       >
-      {/* Connection Handles - 4 points */}
-      <Handle
+      {/* Draggable Connection Handles */}
+      <DraggableHandle
+        id="target-1"
         type="target"
-        position={Position.Top}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['target-1'] || 'left'}
+        onPositionChange={(position) => updateHandlePosition('target-1', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="target-2"
         type="target"
-        position={Position.Left}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['target-2'] || 'top'}
+        onPositionChange={(position) => updateHandlePosition('target-2', position)}
+        nodeId={id}
       />
       
       <Card 
         className={`
-          w-64 p-4 transition-all duration-200
-          ${selected ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'}
+          w-full h-full p-4 transition-all duration-200
+          ${selected ? 'ring-2 ring-primary shadow-lg border-2 border-primary' : 'hover:shadow-md border'}
           ${isActive ? 'border-primary bg-primary/5' : ''}
           ${isCompleted ? 'border-success bg-success/5' : ''}
         `}
@@ -363,15 +377,19 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         </div>
       </Card>
 
-      <Handle
+      <DraggableHandle
+        id="source-1"
         type="source"
-        position={Position.Right}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['source-1'] || 'right'}
+        onPositionChange={(position) => updateHandlePosition('source-1', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="source-2"
         type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['source-2'] || 'bottom'}
+        onPositionChange={(position) => updateHandlePosition('source-2', position)}
+        nodeId={id}
       />
       </motion.div>
       
@@ -389,6 +407,6 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         toolName={tool.name}
         toolId={id}
       />
-    </>
+    </ResizableNode>
   );
 });

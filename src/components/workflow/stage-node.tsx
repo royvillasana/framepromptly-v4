@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,8 @@ import { Play, Settings, MoreVertical, Plus } from 'lucide-react';
 import { UXStage, UXTool, UXFramework, useWorkflowStore } from '@/stores/workflow-store';
 import { NodeActionsMenu } from './node-actions-menu';
 import { getSmartPosition } from '@/utils/node-positioning';
+import { DraggableHandle, useDraggableHandles } from './draggable-handle';
+import { ResizableNode } from './resizable-node';
 
 interface StageNodeData {
   stage: UXStage;
@@ -24,6 +25,7 @@ interface StageNodeProps {
 export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: string }) => {
   const { stage, framework, isActive, isCompleted } = data;
   const { addNode, addEdge, nodes } = useWorkflowStore();
+  const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
 
   const handleAddTool = (tool: UXTool) => {
     // Use smart positioning to avoid overlaps
@@ -107,28 +109,39 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
   };
 
   return (
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      whileHover={{ scale: 1.02 }}
+    <ResizableNode 
+      selected={selected} 
+      minWidth={250} 
+      minHeight={180}
+      maxWidth={400}
+      maxHeight={450}
     >
-      {/* Connection Handles - 4 points */}
-      <Handle
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        whileHover={selected ? {} : { scale: 1.02 }}
+      >
+      {/* Draggable Connection Handles */}
+      <DraggableHandle
+        id="target-1"
         type="target"
-        position={Position.Top}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['target-1'] || 'top'}
+        onPositionChange={(position) => updateHandlePosition('target-1', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="target-2"
         type="target"
-        position={Position.Left}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['target-2'] || 'left'}
+        onPositionChange={(position) => updateHandlePosition('target-2', position)}
+        nodeId={id}
       />
       
       <Card className={`
-        w-64 p-4 border transition-all duration-300 shadow-lg hover:shadow-xl
-        ${selected ? 'ring-2 ring-primary ring-offset-2' : ''}
-        ${isActive ? 'border-primary bg-primary-light' : 'border-border'}
+        w-full h-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl
+        ${selected ? 'ring-2 ring-primary ring-offset-2 border-2 border-primary' : 'border border-border'}
+        ${isActive ? 'border-primary bg-primary-light' : ''}
         ${isCompleted ? 'border-success bg-success/5' : ''}
       `}>
         <div className="flex items-center justify-between mb-3">
@@ -188,17 +201,22 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
         </div>
       </Card>
 
-      <Handle
+      <DraggableHandle
+        id="source-1"
         type="source"
-        position={Position.Right}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['source-1'] || 'right'}
+        onPositionChange={(position) => updateHandlePosition('source-1', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="source-2"
         type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['source-2'] || 'bottom'}
+        onPositionChange={(position) => updateHandlePosition('source-2', position)}
+        nodeId={id}
       />
     </motion.div>
+    </ResizableNode>
   );
 });
 

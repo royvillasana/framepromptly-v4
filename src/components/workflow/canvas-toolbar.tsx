@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Grid3x3, Layers, MousePointer2 } from 'lucide-react';
+import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { Toolbar, ToolbarButton, ToolbarSeparator } from '@/components/ui/toolbar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { autoLayoutNodes, getSmartPosition } from '@/utils/node-positioning';
@@ -15,9 +15,21 @@ interface CanvasToolbarProps {
   onClearSelection?: () => void;
   isMarqueeMode?: boolean;
   onToggleMarqueeMode?: () => void;
+  zoom?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onFitView?: () => void;
 }
 
-export function CanvasToolbar({ onClearSelection, isMarqueeMode, onToggleMarqueeMode }: CanvasToolbarProps) {
+export function CanvasToolbar({ 
+  onClearSelection, 
+  isMarqueeMode, 
+  onToggleMarqueeMode, 
+  zoom, 
+  onZoomIn, 
+  onZoomOut, 
+  onFitView 
+}: CanvasToolbarProps) {
   const { nodes, setNodes, addNode, frameworks } = useWorkflowStore();
 
   const handleRearrangeNodes = () => {
@@ -71,6 +83,30 @@ export function CanvasToolbar({ onClearSelection, isMarqueeMode, onToggleMarquee
   return (
     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
       <Toolbar className="bg-card/95 backdrop-blur-sm">
+        {/* Zoom Controls */}
+        <ToolbarButton
+          onClick={onZoomOut}
+          title="Zoom out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={onZoomIn}
+          title="Zoom in"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarButton
+          onClick={onFitView}
+          title="Fit view"
+        >
+          <Maximize className="h-4 w-4" />
+        </ToolbarButton>
+        
+        <ToolbarSeparator />
+        
         <ToolbarButton
           onClick={handleRearrangeNodes}
           title="Rearrange nodes automatically"

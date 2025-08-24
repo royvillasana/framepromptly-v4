@@ -72,6 +72,7 @@ export interface WorkflowState {
   loadCanvasData: (canvasData: any) => void;
   updateNode: (id: string, data: any) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  updateNodeDimensions: (id: string, dimensions: { width: number; height: number }) => void;
   saveWorkflowToStorage: () => void;
   loadWorkflowFromStorage: () => void;
   updateNodeCustomization: (nodeId: string, customization: Partial<NodeCustomization>) => void;
@@ -82,7 +83,7 @@ export interface WorkflowState {
   };
   selectFramework: (framework: UXFramework) => void;
   selectStage: (stage: UXStage) => void;
-  selectNode: (node: Node) => void;
+  selectNode: (node: Node | null) => void;
   initializeFrameworks: () => void;
 }
 
@@ -783,6 +784,20 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set((state) => {
       const updatedNodes = state.nodes.map(node => 
         node.id === id ? { ...node, position } : node
+      );
+      
+      // Auto-save to localStorage
+      localStorage.setItem('workflow-nodes', JSON.stringify(updatedNodes));
+      localStorage.setItem('workflow-edges', JSON.stringify(state.edges));
+      
+      return { nodes: updatedNodes };
+    });
+  },
+
+  updateNodeDimensions: (id, dimensions) => {
+    set((state) => {
+      const updatedNodes = state.nodes.map(node => 
+        node.id === id ? { ...node, width: dimensions.width, height: dimensions.height } : node
       );
       
       // Auto-save to localStorage

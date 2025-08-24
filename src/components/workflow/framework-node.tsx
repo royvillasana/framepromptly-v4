@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,8 @@ import { Layers, Settings, MoreVertical, Plus } from 'lucide-react';
 import { UXFramework, UXStage, useWorkflowStore } from '@/stores/workflow-store';
 import { NodeActionsMenu } from './node-actions-menu';
 import { getSmartPosition } from '@/utils/node-positioning';
+import { DraggableHandle, useDraggableHandles } from './draggable-handle';
+import { ResizableNode } from './resizable-node';
 
 interface FrameworkNodeData {
   framework: UXFramework;
@@ -22,6 +23,7 @@ interface FrameworkNodeProps {
 export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & { id?: string }) => {
   const { framework, isSelected } = data;
   const { addNode, addEdge, nodes } = useWorkflowStore();
+  const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
 
   const handleAddStage = (stage: UXStage) => {
     // Use smart positioning to avoid overlaps
@@ -93,15 +95,22 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
   };
 
   return (
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      whileHover={{ scale: 1.02 }}
+    <ResizableNode 
+      selected={selected || isSelected} 
+      minWidth={300} 
+      minHeight={250}
+      maxWidth={500}
+      maxHeight={600}
     >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        whileHover={selected || isSelected ? {} : { scale: 1.02 }}
+      >
       <Card className={`
-        w-80 p-6 border transition-all duration-300 shadow-lg hover:shadow-xl
-        ${selected || isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}
+        w-full h-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl
+        ${selected || isSelected ? 'ring-2 ring-primary ring-offset-2 border-2 border-primary' : 'border'}
         bg-gradient-to-br from-card to-primary-light/10
       `}>
         <div className="flex items-center justify-between mb-4">
@@ -170,28 +179,37 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         </div>
       </Card>
 
-      {/* Connection Handles - 4 points */}
-      <Handle
+      {/* Draggable Connection Handles */}
+      <DraggableHandle
+        id="target-1"
         type="target"
-        position={Position.Top}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['target-1'] || 'top'}
+        onPositionChange={(position) => updateHandlePosition('target-1', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="target-2"
         type="target"
-        position={Position.Left}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['target-2'] || 'left'}
+        onPositionChange={(position) => updateHandlePosition('target-2', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="source-1"
         type="source"
-        position={Position.Right}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['source-1'] || 'right'}
+        onPositionChange={(position) => updateHandlePosition('source-1', position)}
+        nodeId={id}
       />
-      <Handle
+      <DraggableHandle
+        id="source-2"
         type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-primary border-2 border-background"
+        initialPosition={handlePositions['source-2'] || 'bottom'}
+        onPositionChange={(position) => updateHandlePosition('source-2', position)}
+        nodeId={id}
       />
     </motion.div>
+    </ResizableNode>
   );
 });
 
