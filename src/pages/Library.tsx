@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Navigation } from '@/components/ui/navigation';
@@ -26,6 +27,9 @@ interface LibraryPrompt {
   created_at: string;
   updated_at: string;
   ai_response?: string;
+  isVersion?: boolean;
+  versionTitle?: string;
+  originalPromptId?: string;
 }
 
 export default function Library() {
@@ -35,6 +39,7 @@ export default function Library() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFramework, setSelectedFramework] = useState<string>('all');
   const [selectedStage, setSelectedStage] = useState<string>('all');
+  const [showVersionsOnly, setShowVersionsOnly] = useState<boolean>(false);
   const [expandedPrompt, setExpandedPrompt] = useState<GeneratedPrompt | null>(null);
 
   const loadLibraryPrompts = async () => {
@@ -52,23 +57,30 @@ export default function Library() {
 
       if (error) throw error;
 
-      // Filter and transform library prompts
+      // Filter and transform library prompts and prompt versions
       console.log('All prompts loaded:', data?.length || 0);
       const libraryData: LibraryPrompt[] = (data || [])
         .filter(prompt => {
           const variables = prompt.variables as any;
           const isLibraryPrompt = variables && variables._isLibraryPrompt === true;
-          if (isLibraryPrompt) {
-            console.log('Found library prompt:', prompt.tool_name, variables);
+          const isPromptVersion = variables && variables._isPromptVersion === true;
+          if (isLibraryPrompt || isPromptVersion) {
+            console.log('Found library prompt or version:', prompt.tool_name, variables);
           }
-          return isLibraryPrompt;
+          return isLibraryPrompt || isPromptVersion;
         })
         .map(prompt => {
           const variables = prompt.variables as any;
+          const isPromptVersion = variables && variables._isPromptVersion === true;
+          
           return {
             id: prompt.id,
-            title: variables._libraryTitle || `${prompt.tool_name} - ${prompt.stage_name}`,
-            description: variables._libraryDescription || `Generated prompt for ${prompt.tool_name}`,
+            title: isPromptVersion 
+              ? (variables._versionTitle || `Version - ${prompt.tool_name}`)
+              : (variables._libraryTitle || `${prompt.tool_name} - ${prompt.stage_name}`),
+            description: isPromptVersion 
+              ? (variables._versionDescription || `Prompt version for ${prompt.tool_name}`)
+              : (variables._libraryDescription || `Generated prompt for ${prompt.tool_name}`),
             content: prompt.prompt_content,
             framework: prompt.framework_name,
             stage: prompt.stage_name,
@@ -76,7 +88,10 @@ export default function Library() {
             variables: Object.keys(variables).filter(key => !key.startsWith('_')),
             created_at: prompt.created_at,
             updated_at: prompt.updated_at,
-            ai_response: prompt.ai_response
+            ai_response: prompt.ai_response,
+            isVersion: isPromptVersion,
+            versionTitle: variables._versionTitle,
+            originalPromptId: variables._originalPromptId
           };
         });
 
@@ -119,8 +134,13 @@ export default function Library() {
       filtered = filtered.filter(prompt => prompt.stage === selectedStage);
     }
 
+    // Version filter
+    if (showVersionsOnly) {
+      filtered = filtered.filter(prompt => prompt.isVersion === true);
+    }
+
     setFilteredPrompts(filtered);
-  }, [searchQuery, selectedFramework, selectedStage, libraryPrompts]);
+  }, [searchQuery, selectedFramework, selectedStage, showVersionsOnly, libraryPrompts]);
 
   const handleCopyPrompt = (prompt: LibraryPrompt) => {
     navigator.clipboard.writeText(prompt.content);
@@ -158,25 +178,116 @@ export default function Library() {
 
     // Parse AI response if it exists
     if (libraryPrompt.ai_response) {
+      console.log('Raw AI response from library:', {
+        type: typeof libraryPrompt.ai_response,
+        sample: libraryPrompt.ai_response.substring(0, 200) + '...',
+        isJSON: libraryPrompt.ai_response.trim().startsWith('{') || libraryPrompt.ai_response.trim().startsWith('[')
+      });
+
       try {
+        // Try parsing as JSON first (for structured conversation data)
         const parsedResponse = JSON.parse(libraryPrompt.ai_response);
-        if (parsedResponse.type === 'conversation' && parsedResponse.messages) {
+        console.log('Parsed AI response structure:', {
+          type: typeof parsedResponse,
+          hasType: 'type' in parsedResponse,
+          hasMessages: 'messages' in parsedResponse,
+          keys: typeof parsedResponse === 'object' ? Object.keys(parsedResponse) : [],
+          isArray: Array.isArray(parsedResponse)
+        });
+        
+        if (parsedResponse.type === 'conversation' && Array.isArray(parsedResponse.messages)) {
           // Convert stored conversation back to ConversationMessage format
           conversation = parsedResponse.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
+            id: msg.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: msg.type || 'ai',
+            content: msg.content || '',
+            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
           }));
+          console.log('Converted conversation messages:', conversation.length);
+        } else if (Array.isArray(parsedResponse)) {
+          // If it's just an array of messages (alternative format)
+          conversation = parsedResponse.map((msg: any, index: number) => ({
+            id: msg.id || `msg-${Date.now()}-${index}`,
+            type: msg.type || (index % 2 === 0 ? 'user' : 'ai'),
+            content: msg.content || (typeof msg === 'string' ? msg : JSON.stringify(msg)),
+            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(Date.now() - (parsedResponse.length - index) * 1000)
+          }));
+          console.log('Converted array to conversation:', conversation.length);
         } else if (typeof parsedResponse === 'string') {
           // Simple string response
           output = parsedResponse;
-        } else {
-          // Fallback: use the raw response as output
-          output = libraryPrompt.ai_response;
+          console.log('Using parsed string as output');
+        } else if (parsedResponse && typeof parsedResponse === 'object') {
+          // If it's an object but not a conversation, try to extract meaningful content
+          if (parsedResponse.content) {
+            output = parsedResponse.content;
+          } else if (parsedResponse.response) {
+            output = parsedResponse.response;
+          } else if (parsedResponse.text) {
+            output = parsedResponse.text;
+          } else {
+            output = JSON.stringify(parsedResponse, null, 2);
+          }
+          console.log('Using object content as output');
         }
       } catch (error) {
-        // If parsing fails, treat as plain text output
+        // If parsing fails, treat as plain text output (most common case)
         output = libraryPrompt.ai_response;
+        console.log('Using AI response as plain text output (parse error):', error);
       }
+    }
+
+    console.log('Converting library prompt to generated prompt:', {
+      hasAiResponse: !!libraryPrompt.ai_response,
+      hasConversation: conversation.length > 0,
+      hasOutput: !!output,
+      responseLength: libraryPrompt.ai_response?.length || 0,
+      conversationSample: conversation.length > 0 ? conversation[0] : null
+    });
+
+    // If we have a conversation but no user message with the original prompt, add it
+    // This ensures the conversation shows the full context when opened from library
+    if (conversation.length > 0) {
+      const hasOriginalPrompt = conversation.some(msg => 
+        msg.type === 'user' && (
+          msg.content === libraryPrompt.content ||
+          msg.content.includes(libraryPrompt.content.substring(0, Math.min(50, libraryPrompt.content.length))) ||
+          libraryPrompt.content.includes(msg.content.substring(0, Math.min(50, msg.content.length)))
+        )
+      );
+      
+      if (!hasOriginalPrompt) {
+        const userMessage = {
+          id: 'library-user-msg',
+          type: 'user' as const,
+          content: libraryPrompt.content,
+          timestamp: new Date(libraryPrompt.created_at)
+        };
+        conversation.unshift(userMessage);
+        console.log('Added original prompt as user message to conversation');
+      } else {
+        console.log('Original prompt already found in conversation');
+      }
+    }
+    
+    // If we have no conversation but have output, create a simple conversation
+    if (conversation.length === 0 && output) {
+      conversation = [
+        {
+          id: 'library-user-msg',
+          type: 'user' as const,
+          content: libraryPrompt.content,
+          timestamp: new Date(libraryPrompt.created_at)
+        },
+        {
+          id: 'library-ai-msg',
+          type: 'ai' as const,
+          content: output,
+          timestamp: new Date(libraryPrompt.updated_at || libraryPrompt.created_at)
+        }
+      ];
+      output = undefined; // Clear output since it's now in conversation
+      console.log('Created conversation from output');
     }
 
     return {
@@ -319,6 +430,21 @@ export default function Library() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Version filter checkbox */}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="show-versions" 
+                  checked={showVersionsOnly}
+                  onCheckedChange={(checked) => setShowVersionsOnly(checked as boolean)}
+                />
+                <label 
+                  htmlFor="show-versions" 
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Show versions only
+                </label>
+              </div>
             </div>
           </Card>
 
@@ -360,9 +486,16 @@ export default function Library() {
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm truncate mb-1">
-                              {prompt.title}
-                            </h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-sm truncate">
+                                {prompt.title}
+                              </h3>
+                              {prompt.isVersion && (
+                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                                  Version
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground line-clamp-2">
                               {prompt.description}
                             </p>
