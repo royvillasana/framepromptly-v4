@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand } from 'lucide-react';
 import { GeneratedPrompt, usePromptStore } from '@/stores/prompt-store';
-import { useWorkflowStore } from '@/stores/workflow-store';
 import { useToast } from '@/hooks/use-toast';
 import { NodeActionsMenu } from './node-actions-menu';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
@@ -28,7 +27,6 @@ interface PromptNodeProps {
 export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?: string }) => {
   const { toast } = useToast();
   const { setCurrentPrompt } = usePromptStore();
-  const { expandedPromptId, setExpandedPromptId } = useWorkflowStore();
   const { prompt, isActive, onSwitchToPromptTab, sourceToolName } = data;
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
@@ -37,16 +35,16 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
     ? prompt.conversation.filter(msg => msg.type === 'ai').pop()?.content 
     : prompt.output;
   
-  const isExpanded = expandedPromptId === prompt.id;
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleExpand = () => {
-    console.log('Expanding prompt node:', prompt.id);
-    setExpandedPromptId(prompt.id);
+    console.log('Expanding prompt node:', id);
+    setIsExpanded(true);
   };
 
   const handleContract = () => {
-    console.log('Contracting prompt node:', prompt.id);
-    setExpandedPromptId(null);
+    console.log('Contracting prompt node:', id);
+    setIsExpanded(false);
   };
 
   const handleCopy = () => {
@@ -120,7 +118,6 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.2 }}
         whileHover={selected ? {} : { scale: 1.02 }}
-        style={{ width: '100%', height: '100%' }}
       >
       {/* Draggable Connection Handles */}
       <DraggableHandle
@@ -139,6 +136,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
       />
       
       <Card className={`
+      
         w-full h-full p-6 transition-all duration-200 relative
         ${selected ? 'ring-2 ring-primary shadow-lg border-2 border-primary' : 'hover:shadow-md'}
         ${isActive ? 'border-primary bg-primary/5' : ''}
@@ -156,9 +154,9 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           <Expand className="w-4 h-4" />
         </Button>
 
-        <div className="h-full flex flex-col">
+        <div className="space-y-3">
           {/* Header */}
-          <div className="flex items-start justify-between mb-3 flex-shrink-0">
+          <div className="flex items-start justify-between">
             <div className="flex-1 mr-10">
               <div className="flex items-center gap-3 mb-2">
                 <Sparkles className="w-6 h-6 text-primary" />
@@ -177,7 +175,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           </div>
 
           {/* Framework → Stage → Tool Info */}
-          <div className="flex items-center gap-3 mb-3 flex-shrink-0">
+          <div className="flex items-center gap-3">
             <Badge variant="outline" className="text-sm px-3 py-1">
               {prompt.context.framework.name}
             </Badge>
@@ -189,42 +187,39 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
             </Badge>
           </div>
 
-          {/* Content Area - Scrollable */}
-          <div className="flex-1 flex flex-col min-h-0 space-y-3 mb-3">
-            {/* Content Preview - Fixed smaller size */}
-            <div className="bg-muted/50 p-4 rounded text-sm flex flex-col flex-shrink-0" style={{ maxHeight: '150px' }}>
-              <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-muted-foreground">Prompt Content</span>
+          {/* Content Preview */}
+          <div className="bg-muted/50 p-4 rounded text-sm space-y-3">
+            <div className="flex items-center gap-3 mb-3">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <span className="font-semibold text-muted-foreground">Prompt Content</span>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                {prompt.content}
+              </pre>
+            </div>
+          </div>
+
+          {/* AI Output Section */}
+          {latestAIResponse && (
+            <div className="bg-success/10 border border-success/20 p-4 rounded text-sm space-y-3">
+              <div className="flex items-center gap-3 mb-3">
+                <Bot className="w-4 h-4 text-success" />
+                <span className="font-semibold text-success">AI Response</span>
+                <Badge variant="default" className="text-sm bg-success px-3 py-1">
+                  {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
+                </Badge>
               </div>
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-                  {prompt.content}
+              <div className="max-h-96 overflow-y-auto">
+                <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                  {latestAIResponse}
                 </pre>
               </div>
             </div>
-
-            {/* AI Output Section - Takes remaining space */}
-            {latestAIResponse && (
-              <div className="flex-1 bg-success/10 border border-success/20 p-4 rounded text-sm flex flex-col min-h-0">
-                <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-                  <Bot className="w-4 h-4 text-success" />
-                  <span className="font-semibold text-success">AI Response</span>
-                  <Badge variant="default" className="text-sm bg-success px-3 py-1">
-                    {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
-                  </Badge>
-                </div>
-                <div className="flex-1 overflow-y-auto min-h-0">
-                  <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                    {latestAIResponse}
-                  </pre>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3">
             <Button
               size="default"
               variant="outline"
@@ -284,20 +279,6 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
       />
     </motion.div>
     </ResizableNode>
-    
-    {/* Expanded Overlay */}
-    <AnimatePresence>
-      {isExpanded && (
-        <ExpandedPromptOverlay
-          prompt={prompt}
-          sourceToolName={sourceToolName}
-          onContract={handleContract}
-          onCopy={handleCopy}
-          onView={handleView}
-          onExport={handleExport}
-        />
-      )}
-    </AnimatePresence>
     </>
   );
 });
