@@ -572,8 +572,16 @@ if (typeof window !== 'undefined') {
       (event.lineno === 0 && event.colno === 0 && !event.error)
     );
 
-    // Skip logging generic script errors in development
-    if (isGenericScriptError && process.env.NODE_ENV === 'development') {
+    // Filter out SES (Secure EcmaScript) errors from browser extensions like MetaMask
+    // These are security sandbox errors that don't affect the application
+    const isSESError = (
+      event.message?.includes('SES_UNCAUGHT_EXCEPTION') ||
+      (event.filename && event.filename.includes('lockdown-install.js')) ||
+      (event.error === null && event.message?.includes('SES'))
+    );
+
+    // Skip logging generic script errors and SES errors in development
+    if ((isGenericScriptError || isSESError) && process.env.NODE_ENV === 'development') {
       return;
     }
 
@@ -584,10 +592,11 @@ if (typeof window !== 'undefined') {
         lineno: event.lineno,
         colno: event.colno,
         message: event.message,
-        isGenericScriptError
+        isGenericScriptError,
+        isSESError
       }
     }, { 
-      silent: isGenericScriptError // Don't show toast for generic errors
+      silent: isGenericScriptError || isSESError // Don't show toast for generic errors or SES errors
     });
   });
 

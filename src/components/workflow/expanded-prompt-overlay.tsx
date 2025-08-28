@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,7 @@ interface ExpandedPromptOverlayProps {
   onExport: () => void;
 }
 
-export function ExpandedPromptOverlay({ 
+function ExpandedPromptOverlayComponent({ 
   prompt, 
   sourceToolName, 
   onContract, 
@@ -61,6 +61,7 @@ export function ExpandedPromptOverlay({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastConversationLengthRef = useRef<number>(0);
   
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>(() => {
     // Initialize from stored conversation (loaded from database)
@@ -90,6 +91,13 @@ export function ExpandedPromptOverlay({
   const [editedPromptContent, setEditedPromptContent] = useState(prompt.content);
   const [currentPromptContent, setCurrentPromptContent] = useState(prompt.content);
   
+  // Memoize truncated prompt content to prevent re-calculation on every render
+  const displayPromptContent = useMemo(() => {
+    return currentPromptContent.length > 200 
+      ? `${currentPromptContent.slice(0, 200)}...`
+      : currentPromptContent;
+  }, [currentPromptContent]);
+
   // Saved prompt versions state
   const [savedPromptVersions, setSavedPromptVersions] = useState<SavedPromptVersion[]>([
     {
@@ -245,26 +253,32 @@ export function ExpandedPromptOverlay({
     });
   }, [savedPromptVersions]);
 
-  // Sync conversation messages with the store and update active version
+  // Sync conversation messages with the store and update active version (optimized)
   useEffect(() => {
-    updatePromptConversation(prompt.id, conversationMessages);
-    
-    // Update active version's conversation
-    setSavedPromptVersions(prev => 
-      prev.map(v => 
-        v.isActive 
-          ? { ...v, conversation: [...conversationMessages] }
-          : v
-      )
-    );
-    
-    // Debounce database saves to prevent excessive calls
-    if (conversationMessages.length > 0 && prompt.id) {
-      const saveTimer = setTimeout(() => {
-        saveConversationToDatabase(conversationMessages);
-      }, 1000); // Wait 1 second before saving
+    // Only update if conversation has actually changed
+    if (lastConversationLengthRef.current !== conversationMessages.length || 
+        conversationMessages.length === 0) {
+      lastConversationLengthRef.current = conversationMessages.length;
       
-      return () => clearTimeout(saveTimer);
+      updatePromptConversation(prompt.id, conversationMessages);
+      
+      // Update active version's conversation
+      setSavedPromptVersions(prev => 
+        prev.map(v => 
+          v.isActive 
+            ? { ...v, conversation: [...conversationMessages] }
+            : v
+        )
+      );
+      
+      // Debounce database saves to prevent excessive calls
+      if (conversationMessages.length > 0 && prompt.id) {
+        const saveTimer = setTimeout(() => {
+          saveConversationToDatabase(conversationMessages);
+        }, 1000); // Wait 1 second before saving
+        
+        return () => clearTimeout(saveTimer);
+      }
     }
   }, [conversationMessages, prompt.id, updatePromptConversation, saveConversationToDatabase]);
 
@@ -511,8 +525,8 @@ export function ExpandedPromptOverlay({
     }
   };
   
-  // Message component for better reusability
-  const MessageBubble = ({ message }: { message: ConversationMessage }) => {
+  // Message component for better reusability (memoized to prevent re-renders)
+  const MessageBubble = memo(({ message }: { message: ConversationMessage }) => {
     const isUser = message.type === 'user';
     const isTyping = message.content === '...' && message.id === 'typing-indicator';
     
@@ -606,7 +620,7 @@ export function ExpandedPromptOverlay({
         )}
       </motion.div>
     );
-  };
+  });
 
   const overlay = (
     <motion.div
@@ -781,10 +795,7 @@ export function ExpandedPromptOverlay({
                                   </Badge>
                                 </div>
                                 <div className="bg-background rounded-lg p-3 text-sm font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                  {currentPromptContent.length > 200 
-                                    ? `${currentPromptContent.slice(0, 200)}...`
-                                    : currentPromptContent
-                                  }
+                                  {displayPromptContent}
                                 </div>
                               </div>
                             </div>
@@ -1042,3 +1053,5 @@ export function ExpandedPromptOverlay({
 
   return createPortal(overlay, document.body);
 }
+
+export const ExpandedPromptOverlay = memo(ExpandedPromptOverlayComponent);
