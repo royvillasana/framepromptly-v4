@@ -9,6 +9,13 @@ import {
   IntegratedContextRequest, 
   IntegratedContextResponse 
 } from '@/lib/enhanced-context-integration-service';
+import { 
+  DestinationType, 
+  AIProviderType, 
+  DestinationContext, 
+  TailoredOutput 
+} from '@/lib/destination-driven-tailoring';
+import { destinationTailoringService } from '@/lib/destination-tailoring-service';
 
 export interface ConversationMessage {
   id: string;
@@ -64,6 +71,16 @@ export interface GeneratedPrompt {
   qualityScore?: QualityValidationResult;
   templateVersion?: string;
   industry?: string;
+  // Destination-driven tailoring properties
+  destination?: {
+    type: DestinationType;
+    aiProvider?: AIProviderType;
+    userIntent?: string;
+    tailoredPrompt?: string;
+    tailoredOutput?: TailoredOutput;
+    displayContent?: string;
+    integrationPayload?: any;
+  };
 }
 
 export interface PromptState {
@@ -73,6 +90,7 @@ export interface PromptState {
   currentPrompt: GeneratedPrompt | null;
   isGenerating: boolean;
   isValidating: boolean;
+  isTailoring: boolean;
   
   // Actions
   loadProjectPrompts: (projectId: string) => Promise<void>;
@@ -93,6 +111,12 @@ export interface PromptState {
   generateEnhancedContextPrompt: (request: IntegratedContextRequest) => Promise<IntegratedContextResponse>;
   recordWorkflowOutput: (projectId: string, output: GeneratedPrompt, decisions?: any[], nextStageId?: string) => Promise<void>;
   getWorkflowAnalytics: (projectId: string) => Promise<any>;
+  
+  // Destination-driven tailoring actions
+  tailorPromptForDestination: (promptId: string, destinationContext: DestinationContext) => Promise<{ success: boolean; errors?: string[]; clarifyingQuestions?: string[] }>;
+  getSupportedDestinations: () => DestinationType[];
+  getSupportedAIProviders: () => AIProviderType[];
+  clearDestination: (promptId: string) => void;
 }
 
 // Framework-level instructions for prompt generation
@@ -723,6 +747,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
   currentPrompt: null,
   isGenerating: false,
   isValidating: false,
+  isTailoring: false,
 
   loadProjectPrompts: async (projectId: string) => {
     try {
@@ -1255,5 +1280,136 @@ ${processedTemplate}`;
       console.error('Error getting workflow analytics:', error);
       return null;
     }
+  },
+
+  // Destination-driven tailoring methods
+  tailorPromptForDestination: async (promptId: string, destinationContext: DestinationContext) => {
+    console.log('💾 Store: Starting tailoring for prompt:', promptId);
+    console.log('💾 Store: Destination context:', destinationContext);
+    
+    set({ isTailoring: true });
+    
+    try {
+      const prompt = get().prompts.find(p => p.id === promptId);
+      if (!prompt) {
+        console.error('💾 Store: Prompt not found:', promptId);
+        throw new Error('Prompt not found');
+      }
+      
+      console.log('💾 Store: Found prompt:', prompt.id, prompt.content.substring(0, 100));
+
+      // Create full context if not provided
+      const fullContext = {
+        ...destinationContext,
+        originalPrompt: prompt.content,
+        variables: prompt.variables,
+        metadata: {
+          ...destinationContext.metadata,
+          framework: prompt.context.framework.name,
+          stage: prompt.context.stage.name,
+          tool: prompt.context.tool.name,
+          industry: prompt.industry,
+          teamSize: prompt.context.enhancedContext?.teamSize,
+          timeConstraints: prompt.context.enhancedContext?.timeConstraints,
+          experience: prompt.context.enhancedContext?.experience
+        }
+      };
+
+      // Tailor the prompt
+      console.log('💾 Store: Calling destination tailoring service with context:', fullContext);
+      const tailoringResponse = await destinationTailoringService.tailorPromptForDestination({
+        context: fullContext,
+        enforceValidation: true,
+        maxRetries: 3
+      });
+      console.log('💾 Store: Tailoring response:', tailoringResponse);
+
+      if (tailoringResponse.success) {
+        // Route the output to get display content and integration payload
+        console.log('💾 Store: Routing output for:', tailoringResponse.expectedOutput);
+        const routedOutput = destinationTailoringService.routeOutput(tailoringResponse.expectedOutput);
+        console.log('💾 Store: Routed output:', routedOutput);
+        
+        // Update the prompt with destination information
+        console.log('💾 Store: Updating prompt with destination info');
+        
+        const destinationInfo = {
+          type: fullContext.destination,
+          aiProvider: fullContext.aiProvider,
+          userIntent: fullContext.userIntent,
+          tailoredPrompt: tailoringResponse.tailoredPrompt,
+          tailoredOutput: tailoringResponse.expectedOutput,
+          displayContent: routedOutput.displayContent,
+          integrationPayload: routedOutput.integrationPayload
+        };
+        
+        console.log('💾 Store: Destination info to set:', destinationInfo);
+        
+        set(state => {
+          const updatedPrompts = state.prompts.map(p => 
+            p.id === promptId 
+              ? {
+                  ...p,
+                  destination: destinationInfo
+                }
+              : p
+          );
+          
+          const updatedPrompt = updatedPrompts.find(p => p.id === promptId);
+          console.log('💾 Store: Updated prompt after setting destination:', updatedPrompt?.destination);
+          
+          return {
+            prompts: updatedPrompts,
+            currentPrompt: state.currentPrompt?.id === promptId 
+              ? {
+                  ...state.currentPrompt,
+                  destination: destinationInfo
+                }
+              : state.currentPrompt
+          };
+        });
+
+        return {
+          success: true,
+          errors: tailoringResponse.validationErrors,
+          clarifyingQuestions: tailoringResponse.clarifyingQuestions
+        };
+      } else {
+        return {
+          success: false,
+          errors: ['Tailoring failed'],
+          clarifyingQuestions: tailoringResponse.clarifyingQuestions
+        };
+      }
+    } catch (error) {
+      console.error('Error tailoring prompt for destination:', error);
+      return {
+        success: false,
+        errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+      };
+    } finally {
+      set({ isTailoring: false });
+    }
+  },
+
+  getSupportedDestinations: () => {
+    return destinationTailoringService.getSupportedDestinations();
+  },
+
+  getSupportedAIProviders: () => {
+    return destinationTailoringService.getSupportedAIProviders();
+  },
+
+  clearDestination: (promptId: string) => {
+    set(state => ({
+      prompts: state.prompts.map(p => 
+        p.id === promptId 
+          ? { ...p, destination: undefined }
+          : p
+      ),
+      currentPrompt: state.currentPrompt?.id === promptId 
+        ? { ...state.currentPrompt, destination: undefined }
+        : state.currentPrompt
+    }));
   }
 }));

@@ -186,6 +186,7 @@ function WorkflowWithProject() {
     toast.success('Prompt copied to clipboard');
   };
 
+
   const extractVariables = (content: string): string[] => {
     const matches = content.match(/{{(\w+)}}/g);
     return matches ? matches.map(match => match.slice(2, -2)) : [];
@@ -477,6 +478,7 @@ function WorkflowWithProject() {
             <TabsContent value="knowledge" className="m-0 h-[calc(100vh-320px)]">
               <KnowledgeBasePanel />
             </TabsContent>
+
           </Tabs>
           </motion.div>
         )}

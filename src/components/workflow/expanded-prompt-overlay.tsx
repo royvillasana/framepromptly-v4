@@ -11,7 +11,8 @@ import {
   FileText, Bot, Copy, Download, Eye, Minimize2, Send, MessageSquare, 
   Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw, 
   ChevronLeft, ChevronRight, Loader2, User, Sparkles,
-  Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock
+  Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock,
+  Target
 } from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
@@ -23,6 +24,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { getFrameworkColors, getFrameworkTailwindClasses } from '@/lib/framework-colors';
 import { cn } from '@/lib/utils';
+import { DestinationSelector } from './destination-selector';
+import { DestinationType, DestinationContext } from '@/lib/destination-driven-tailoring';
 
 interface SavedPromptVersion {
   id: string;
@@ -50,7 +53,11 @@ function ExpandedPromptOverlayComponent({
   onView, 
   onExport 
 }: ExpandedPromptOverlayProps) {
-  const { updatePromptConversation, addConversationMessage } = usePromptStore();
+  const { 
+    updatePromptConversation,
+    clearDestination,
+    tailorPromptForDestination
+  } = usePromptStore();
   const { entries } = useKnowledgeStore();
   const { currentProject } = useProjectStore();
   const { expandedPromptId } = useWorkflowStore();
@@ -110,6 +117,9 @@ function ExpandedPromptOverlayComponent({
     }
   ]);
   const [activeVersionId, setActiveVersionId] = useState('original');
+  const [showDestinationSidebar, setShowDestinationSidebar] = useState(false);
+  const [isTailoring, setIsTailoring] = useState(false);
+  
   
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -252,6 +262,152 @@ function ExpandedPromptOverlayComponent({
       description: 'Chat history and prompt content updated'
     });
   }, [savedPromptVersions]);
+
+  const handleClearDestination = useCallback(() => {
+    clearDestination(prompt.id);
+    toast.success('Destination cleared', {
+      description: 'Prompt is now in default format'
+    });
+  }, [prompt.id, clearDestination]);
+
+  const handleShowDestinationSelector = useCallback(() => {
+    setShowDestinationSidebar(true);
+  }, []);
+
+  const handleDestinationSelect = useCallback(async (destinationContext: DestinationContext) => {
+    setIsTailoring(true);
+    
+    try {
+      console.log('🚀 Starting tailoring process for:', destinationContext);
+      const result = await tailorPromptForDestination(prompt.id, destinationContext);
+      console.log('📋 Tailoring result:', result);
+      
+      if (result.success) {
+        // Wait a bit longer and try multiple times to get the updated prompt
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        const checkForUpdatedPrompt = async () => {
+          attempts++;
+          console.log(`🔄 Attempt ${attempts}: Checking for updated prompt`);
+          
+          // Get fresh prompt data directly from store
+          const storeState = usePromptStore.getState();
+          const updatedPrompt = storeState.prompts.find(p => p.id === prompt.id);
+          console.log('🎯 Updated prompt:', updatedPrompt);
+          console.log('🎯 Destination data:', updatedPrompt?.destination);
+          
+          if (updatedPrompt?.destination?.tailoredPrompt || attempts >= maxAttempts) {
+            // We have the tailored prompt or we've tried enough times
+            const tailoredPromptToUse = updatedPrompt?.destination?.tailoredPrompt;
+            console.log('🎯 Tailored prompt to use:', tailoredPromptToUse?.substring(0, 100));
+            
+            if (tailoredPromptToUse) {
+              console.log('✅ Starting AI conversation with tailored prompt');
+              // Show typing indicator
+            const typingIndicator: ConversationMessage = {
+              id: 'tailoring-typing',
+              type: 'ai',
+              content: '...',
+              timestamp: new Date()
+            };
+            
+            setConversationMessages(prev => [...prev, typingIndicator]);
+            
+            try {
+              // Call AI with the tailored prompt to get a real detailed response
+              console.log('🤖 Calling supabase AI function...');
+              const { data, error } = await supabase.functions.invoke('ai-conversation', {
+                body: {
+                  userMessage: tailoredPromptToUse,
+                  initialPrompt: prompt.content, // Original prompt as context
+                  conversationHistory: [], // Start fresh for tailored response
+                  projectId: currentProject?.id,
+                  knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
+                  promptContext: {
+                    framework: prompt.context.framework.name,
+                    stage: prompt.context.stage.name,
+                    tool: prompt.context.tool.name,
+                    industry: prompt.industry,
+                    destination: destinationContext.destination,
+                    userIntent: destinationContext.userIntent
+                  }
+                }
+              });
+
+              console.log('🤖 AI function response:', { data, error });
+              
+              // Remove typing indicator
+              setConversationMessages(prev => prev.filter(msg => msg.id !== 'tailoring-typing'));
+
+              if (error) {
+                console.error('🚨 AI function error:', error);
+                throw new Error(error.message || 'AI response failed');
+              }
+
+              console.log('✅ AI response received, creating message...');
+              // Add the AI's detailed response as a new message (no extra wrapper text)
+              const tailoredResponseMessage: ConversationMessage = {
+                id: `tailored-response-${Date.now()}`,
+                type: 'ai',
+                content: data.response, // Direct AI response content
+                timestamp: new Date()
+              };
+              
+              setConversationMessages(prev => [...prev, tailoredResponseMessage]);
+              
+            } catch (aiError) {
+              console.error('AI response failed:', aiError);
+              
+              // Remove typing indicator
+              setConversationMessages(prev => prev.filter(msg => msg.id !== 'tailoring-typing'));
+              
+              // Show error message and retry prompt
+              toast.error('Failed to generate tailored response', {
+                description: 'Please try again or check your connection'
+              });
+            }
+          } else {
+            // If no tailored prompt available, show error
+            toast.error('Tailoring data not available', {
+              description: 'Please try the tailoring process again'
+            });
+          }
+            
+            // Auto-scroll to show the new message
+            setTimeout(scrollToBottom, 100);
+          } else if (attempts < maxAttempts) {
+            // Try again after a short delay
+            setTimeout(checkForUpdatedPrompt, 300);
+          } else {
+            // Max attempts reached, show error
+            toast.error('Failed to retrieve tailored prompt', {
+              description: 'Please try the tailoring process again'
+            });
+          }
+        };
+        
+        // Start checking for updated prompt
+        setTimeout(checkForUpdatedPrompt, 200);
+        
+        toast.success(`Generating tailored response for ${destinationContext.destination}...`);
+        setShowDestinationSidebar(false);
+      } else {
+        toast.error('Failed to tailor prompt for destination', {
+          description: result.errors?.join(', ') || 'Unknown error occurred'
+        });
+      }
+    } catch (error) {
+      console.error('Destination tailoring failed:', error);
+      toast.error('Failed to tailor prompt for destination');
+    } finally {
+      setIsTailoring(false);
+    }
+  }, [prompt.id, prompt.content, tailorPromptForDestination, setConversationMessages, scrollToBottom, currentProject?.id, entries, prompt.context, prompt.industry]);
+
+  const handleCancelDestinationSelection = useCallback(() => {
+    setShowDestinationSidebar(false);
+  }, []);
 
   // Sync conversation messages with the store and update active version (optimized)
   useEffect(() => {
@@ -646,7 +802,9 @@ function ExpandedPromptOverlayComponent({
         className="w-full h-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="h-full flex flex-col bg-background">
+        <div className="h-full flex bg-background">
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col">
             {/* Chat Header */}
             <div 
               className={cn(
@@ -854,6 +1012,39 @@ function ExpandedPromptOverlayComponent({
                         <Copy className="w-3 h-3 mr-1" />
                         Copy
                       </Button>
+                      
+                      {/* Choose Destination Button */}
+                      <Button
+                        size="sm"
+                        variant={prompt.destination ? "default" : "ghost"}
+                        onClick={handleShowDestinationSelector}
+                        disabled={isTailoring}
+                        className="text-xs"
+                      >
+                        {isTailoring ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <Target className="w-3 h-3 mr-1" />
+                        )}
+                        {prompt.destination 
+                          ? `${prompt.destination.type}` 
+                          : 'Choose Destination'
+                        }
+                      </Button>
+                      
+                      {/* Clear Destination Button (when tailored) */}
+                      {prompt.destination && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleClearDestination}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Clear
+                        </Button>
+                      )}
+                      
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1046,6 +1237,64 @@ function ExpandedPromptOverlayComponent({
                 )}
               </AnimatePresence>
             </div>
+          </div>
+          
+          {/* Right Sidebar for Destination Selector */}
+          <AnimatePresence>
+            {showDestinationSidebar && (
+              <motion.div
+                initial={{ x: 384, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 384, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="absolute right-0 top-0 w-96 h-full bg-background border-l border-border shadow-xl z-[51]"
+              >
+                <div className="h-full flex flex-col">
+                  {/* Sidebar Header */}
+                  <div className="p-4 border-b border-border">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <Target className="w-5 h-5" />
+                        Choose Destination
+                      </h2>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleCancelDestinationSelection}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Optimize this prompt for your target platform
+                    </p>
+                  </div>
+                  
+                  {/* Destination Selector Content */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <DestinationSelector
+                      onDestinationSelect={handleDestinationSelect}
+                      onCancel={handleCancelDestinationSelection}
+                      defaultContext={{
+                        originalPrompt: prompt.content,
+                        variables: prompt.variables,
+                        metadata: {
+                          framework: prompt.context.framework.name,
+                          stage: prompt.context.stage.name,
+                          tool: prompt.context.tool.name,
+                          industry: prompt.industry,
+                          teamSize: prompt.context.enhancedContext?.teamSize,
+                          timeConstraints: prompt.context.enhancedContext?.timeConstraints,
+                          experience: prompt.context.enhancedContext?.experience
+                        }
+                      }}
+                      isLoading={isTailoring}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </motion.div>
