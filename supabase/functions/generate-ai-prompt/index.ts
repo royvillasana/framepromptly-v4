@@ -56,9 +56,18 @@ serve(async (req) => {
     if (knowledgeContext && knowledgeContext.length > 0) {
       console.log('Processing knowledge context:', knowledgeContext.length, 'entries');
       const contextContent = knowledgeContext
-        .map((item: any) => `${item.title}:\n${item.content}`)
-        .join('\n\n');
-      processedPrompt = `Project Knowledge Base:\n${contextContent}\n\n${processedPrompt}`;
+        .map((item: any) => `**${item.title}:**\n${item.content}`)
+        .join('\n\n---\n\n');
+      processedPrompt = `=== PROJECT KNOWLEDGE BASE ===
+The following knowledge base contains critical project context. You MUST integrate this information into your instructions:
+
+${contextContent}
+
+=== END KNOWLEDGE BASE ===
+
+Based on the above project knowledge, generate customized instructions for:
+
+${processedPrompt}`;
       console.log('Final prompt length with context:', processedPrompt.length);
     } else {
       console.log('No knowledge context provided');
@@ -112,7 +121,15 @@ FORBIDDEN PHRASES/PATTERNS:
 - "**bold text**"
 - Any explanatory paragraphs
 
-Generate direct AI instructions for ${toolName} in ${stageName} stage of ${frameworkName} framework. Use project knowledge base context if provided.`
+IMPORTANT KNOWLEDGE BASE INTEGRATION:
+When a Project Knowledge Base section is provided in the prompt, you MUST:
+- Analyze the knowledge content thoroughly
+- Tailor ALL instructions to align with the project's specific context, goals, and constraints
+- Reference specific details from the knowledge base in your instructions
+- Adapt generic methodologies to fit the project's unique requirements
+- Ensure deliverables reflect the project's domain, users, and objectives
+
+Generate direct AI instructions for ${toolName} in ${stageName} stage of ${frameworkName} framework. If project knowledge base context is provided, customize ALL instructions to be specific to that project context.`
             },
             { role: 'user', content: processedPrompt }
           ],

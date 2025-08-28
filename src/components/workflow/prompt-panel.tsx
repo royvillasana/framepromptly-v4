@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { 
@@ -72,8 +72,8 @@ export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
         </div>
       </div>
       
-      <div className="flex-1">
-        <ScrollArea className="h-full">
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full w-full" style={{ '--scrollbar-size': '8px' } as React.CSSProperties}>
           <div className="space-y-3 p-3">
             {prompts.length === 0 ? (
               <div className="text-center py-8">
@@ -181,6 +181,10 @@ export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
               ))
             )}
           </div>
+          <ScrollBar 
+            orientation="vertical" 
+            className="w-3 border-l border-l-transparent p-[2px]"
+          />
         </ScrollArea>
       </div>
     </div>

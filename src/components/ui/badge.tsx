@@ -15,6 +15,15 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // High contrast variants for gradient backgrounds
+        "glass-dark":
+          "bg-slate-900/85 text-white border-white/50 font-medium shadow-sm backdrop-blur-sm hover:bg-slate-900/90",
+        "glass-light": 
+          "bg-white/95 text-slate-900 border-black/10 font-medium shadow-sm backdrop-blur-sm hover:bg-white/98",
+        "glass-brand":
+          "bg-blue-600/90 text-white border-white/30 font-medium shadow-sm backdrop-blur-sm hover:bg-blue-600/95",
+        "glass-gradient":
+          "bg-gradient-to-r from-slate-900/85 to-slate-600/85 text-white border-white/40 font-medium shadow-sm backdrop-blur-sm hover:from-slate-900/90 hover:to-slate-600/90",
       },
     },
     defaultVariants: {

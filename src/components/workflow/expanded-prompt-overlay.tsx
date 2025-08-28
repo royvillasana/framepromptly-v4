@@ -1,10 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Bot, Copy, Download, Eye, Minimize2, Send, MessageSquare, Edit3, Save, X } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  FileText, Bot, Copy, Download, Eye, Minimize2, Send, MessageSquare, 
+  Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw, 
+  ChevronLeft, ChevronRight, Loader2, User, Sparkles,
+  Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock
+} from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -12,6 +20,18 @@ import { useWorkflowStore } from '@/stores/workflow-store';
 import { supabase } from '@/integrations/supabase/client';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { getFrameworkColors, getFrameworkTailwindClasses } from '@/lib/framework-colors';
+import { cn } from '@/lib/utils';
+
+interface SavedPromptVersion {
+  id: string;
+  title: string;
+  content: string;
+  timestamp: Date;
+  conversation: ConversationMessage[];
+  isActive?: boolean;
+}
 
 interface ExpandedPromptOverlayProps {
   prompt: GeneratedPrompt;
@@ -35,6 +55,13 @@ export function ExpandedPromptOverlay({
   const { currentProject } = useProjectStore();
   const { expandedPromptId } = useWorkflowStore();
   
+  // Get framework colors for theming
+  const frameworkColors = getFrameworkColors(prompt.context.framework.id || 'design-thinking');
+  const frameworkClasses = getFrameworkTailwindClasses(prompt.context.framework.id || 'design-thinking', 'framework');
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>(() => {
     // Initialize from stored conversation (loaded from database)
     if (prompt.conversation && prompt.conversation.length > 0) {
@@ -54,6 +81,36 @@ export function ExpandedPromptOverlay({
   
   const [followUpInput, setFollowUpInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showPromptPanel, setShowPromptPanel] = useState(true);
+  
+  // Prompt editing state
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [editedPromptContent, setEditedPromptContent] = useState(prompt.content);
+  const [currentPromptContent, setCurrentPromptContent] = useState(prompt.content);
+  
+  // Saved prompt versions state
+  const [savedPromptVersions, setSavedPromptVersions] = useState<SavedPromptVersion[]>([
+    {
+      id: 'original',
+      title: 'Original Prompt',
+      content: prompt.content,
+      timestamp: new Date(prompt.timestamp),
+      conversation: conversationMessages,
+      isActive: true
+    }
+  ]);
+  const [activeVersionId, setActiveVersionId] = useState('original');
+  
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversationMessages, scrollToBottom]);
 
   // Function to save conversation to database (memoized to prevent infinite loops)
   const saveConversationToDatabase = useCallback(async (messages: ConversationMessage[]) => {
@@ -90,9 +147,116 @@ export function ExpandedPromptOverlay({
     }
   }, [prompt.id]);
 
-  // Sync conversation messages with the store and debounce database saves
+  // Function to save prompt version
+  const savePromptVersion = useCallback(async () => {
+    if (!currentProject || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const versionTitle = `Version ${savedPromptVersions.length}`;
+      const newVersion: SavedPromptVersion = {
+        id: `version-${Date.now()}`,
+        title: versionTitle,
+        content: currentPromptContent,
+        timestamp: new Date(),
+        conversation: [...conversationMessages],
+        isActive: false
+      };
+
+      // Add to saved versions
+      setSavedPromptVersions(prev => {
+        const updated = prev.map(v => ({ ...v, isActive: false }));
+        return [...updated, { ...newVersion, isActive: true }];
+      });
+      
+      setActiveVersionId(newVersion.id);
+
+      // Create a library entry with the current prompt content
+      const libraryPrompt = {
+        title: versionTitle,
+        content: currentPromptContent,
+        framework: prompt.context.framework.name,
+        stage: prompt.context.stage.name,
+        tool: prompt.context.tool.name,
+        variables: Object.keys(prompt.variables),
+        description: `Saved version of ${prompt.context.tool.name} prompt`,
+        project_id: currentProject.id,
+        created_at: new Date().toISOString()
+      };
+
+      // Save to database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const promptData = {
+        project_id: currentProject.id,
+        user_id: user.id,
+        framework_name: libraryPrompt.framework,
+        stage_name: libraryPrompt.stage,
+        tool_name: libraryPrompt.tool,
+        prompt_content: libraryPrompt.content,
+        variables: { 
+          ...prompt.variables, 
+          _isPromptVersion: true,
+          _versionTitle: libraryPrompt.title,
+          _versionDescription: libraryPrompt.description,
+          _originalPromptId: prompt.id
+        }
+      };
+      
+      const { error } = await supabase
+        .from('prompts')
+        .insert(promptData);
+
+      if (error) throw error;
+      
+      toast.success('Prompt version saved!', {
+        description: `"${versionTitle}" has been saved and is now active`
+      });
+      
+    } catch (error) {
+      console.error('Failed to save prompt version:', error);
+      toast.error('Failed to save prompt version', {
+        description: error instanceof Error ? error.message : 'An unexpected error occurred'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentProject, currentPromptContent, prompt, isSaving, conversationMessages, savedPromptVersions]);
+
+  // Function to switch to a different prompt version
+  const switchToVersion = useCallback((versionId: string) => {
+    const version = savedPromptVersions.find(v => v.id === versionId);
+    if (!version) return;
+
+    // Update active version
+    setSavedPromptVersions(prev => 
+      prev.map(v => ({ ...v, isActive: v.id === versionId }))
+    );
+    setActiveVersionId(versionId);
+
+    // Update prompt content and conversation
+    setCurrentPromptContent(version.content);
+    setEditedPromptContent(version.content);
+    setConversationMessages(version.conversation);
+
+    toast.success(`Switched to ${version.title}`, {
+      description: 'Chat history and prompt content updated'
+    });
+  }, [savedPromptVersions]);
+
+  // Sync conversation messages with the store and update active version
   useEffect(() => {
     updatePromptConversation(prompt.id, conversationMessages);
+    
+    // Update active version's conversation
+    setSavedPromptVersions(prev => 
+      prev.map(v => 
+        v.isActive 
+          ? { ...v, conversation: [...conversationMessages] }
+          : v
+      )
+    );
     
     // Debounce database saves to prevent excessive calls
     if (conversationMessages.length > 0 && prompt.id) {
@@ -103,11 +267,6 @@ export function ExpandedPromptOverlay({
       return () => clearTimeout(saveTimer);
     }
   }, [conversationMessages, prompt.id, updatePromptConversation, saveConversationToDatabase]);
-  
-  // Prompt editing state
-  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
-  const [editedPromptContent, setEditedPromptContent] = useState(prompt.content);
-  const [currentPromptContent, setCurrentPromptContent] = useState(prompt.content);
 
   const handleSendFollowUp = async () => {
     if (!followUpInput.trim() || isGenerating) return;
@@ -122,6 +281,17 @@ export function ExpandedPromptOverlay({
     setConversationMessages(prev => [...prev, userMessage]);
     setFollowUpInput('');
     setIsGenerating(true);
+    setIsTyping(true);
+    
+    // Show typing indicator immediately
+    const typingIndicator: ConversationMessage = {
+      id: 'typing-indicator',
+      type: 'ai',
+      content: '...',
+      timestamp: new Date()
+    };
+    
+    setConversationMessages(prev => [...prev, typingIndicator]);
     
     try {
       // Call the AI conversation function
@@ -131,7 +301,12 @@ export function ExpandedPromptOverlay({
           initialPrompt: currentPromptContent,
           conversationHistory: conversationMessages.filter(msg => msg.id !== 'initial'), // Exclude initial message
           projectId: currentProject?.id,
-          knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id)
+          knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
+          frameworkContext: {
+            framework: prompt.context.framework.name,
+            stage: prompt.context.stage.name,
+            tool: prompt.context.tool.name
+          }
         }
       });
 
@@ -143,6 +318,9 @@ export function ExpandedPromptOverlay({
         throw new Error(data?.error || 'Failed to generate AI response');
       }
 
+      // Remove typing indicator and add real response
+      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
+      
       const aiMessage: ConversationMessage = {
         id: `ai-${Date.now()}`,
         type: 'ai',
@@ -151,9 +329,11 @@ export function ExpandedPromptOverlay({
       };
       
       setConversationMessages(prev => [...prev, aiMessage]);
-      setIsGenerating(false);
     } catch (error) {
       console.error('Error generating follow-up response:', error);
+      
+      // Remove typing indicator
+      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
       // Fallback error message
       const errorMessage: ConversationMessage = {
@@ -164,8 +344,78 @@ export function ExpandedPromptOverlay({
       };
       
       setConversationMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsGenerating(false);
+      setIsTyping(false);
+      inputRef.current?.focus();
+    }
+  };
+  
+  const handleRegenerateMessage = async (messageId: string) => {
+    const messageIndex = conversationMessages.findIndex(msg => msg.id === messageId);
+    if (messageIndex === -1) return;
+    
+    const userMessage = conversationMessages[messageIndex - 1];
+    if (!userMessage || userMessage.type !== 'user') return;
+    
+    // Remove the AI message and regenerate
+    setConversationMessages(prev => prev.filter(msg => msg.id !== messageId));
+    setIsGenerating(true);
+    
+    // Add typing indicator
+    const typingIndicator: ConversationMessage = {
+      id: 'typing-indicator',
+      type: 'ai',
+      content: '...',
+      timestamp: new Date()
+    };
+    
+    setConversationMessages(prev => [...prev, typingIndicator]);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-conversation', {
+        body: {
+          userMessage: userMessage.content,
+          initialPrompt: currentPromptContent,
+          conversationHistory: conversationMessages.slice(0, messageIndex - 1),
+          projectId: currentProject?.id,
+          knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
+          frameworkContext: {
+            framework: prompt.context.framework.name,
+            stage: prompt.context.stage.name,
+            tool: prompt.context.tool.name
+          }
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to regenerate response');
+
+      // Remove typing indicator and add new response
+      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
+      
+      const aiMessage: ConversationMessage = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: data.response,
+        timestamp: new Date()
+      };
+      
+      setConversationMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error regenerating message:', error);
+      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
+      toast.error('Failed to regenerate response', {
+        description: error instanceof Error ? error.message : 'Please try again'
+      });
+    } finally {
       setIsGenerating(false);
     }
+  };
+  
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success('Message copied to clipboard');
   };
 
   const handleEditPrompt = () => {
@@ -176,6 +426,15 @@ export function ExpandedPromptOverlay({
   const handleSavePrompt = () => {
     setCurrentPromptContent(editedPromptContent);
     setIsEditingPrompt(false);
+    
+    // Update the active version with the new content
+    setSavedPromptVersions(prev => 
+      prev.map(v => 
+        v.isActive 
+          ? { ...v, content: editedPromptContent, timestamp: new Date() }
+          : v
+      )
+    );
     
     // Clear conversation and show updated context message
     setConversationMessages([]);
@@ -198,19 +457,172 @@ export function ExpandedPromptOverlay({
     setIsEditingPrompt(false);
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onContract();
+    }
+  };
+
+  // Handle escape key and keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onContract();
+      }
+      // Focus input on any key press (except special keys)
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+        inputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      // Ensure proper cleanup
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+    };
+  }, [onContract]);
+
+  // Additional cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Use setTimeout to allow React to complete its own cleanup first
+      setTimeout(() => {
+        // Force cleanup on unmount
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+        // Only remove orphaned backdrops (not managed by React)
+        const existingBackdrops = document.querySelectorAll('[data-modal="expanded-prompt-overlay"]');
+        existingBackdrops.forEach(backdrop => {
+          // Check if the backdrop is actually orphaned (not connected to React fiber)
+          if (!backdrop.closest('[data-react-root]') && backdrop.parentElement === document.body) {
+            backdrop.remove();
+          }
+        });
+      }, 0);
+    };
+  }, []);
+  
+  // Handle input submission
+  const handleInputSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendFollowUp();
+    }
+  };
+  
+  // Message component for better reusability
+  const MessageBubble = ({ message }: { message: ConversationMessage }) => {
+    const isUser = message.type === 'user';
+    const isTyping = message.content === '...' && message.id === 'typing-indicator';
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className={cn(
+          "group flex gap-3 py-4 px-6",
+          isUser ? "justify-end" : "justify-start"
+        )}
+      >
+        {!isUser && (
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+            frameworkClasses[0]
+          )}>
+            <Bot className="w-4 h-4 text-white" />
+          </div>
+        )}
+        
+        <div className={cn(
+          "max-w-[70%] rounded-2xl px-4 py-3 shadow-sm",
+          isUser 
+            ? "bg-primary text-primary-foreground ml-auto" 
+            : "bg-muted"
+        )}>
+          {isTyping ? (
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-current animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-current animate-pulse" style={{ animationDelay: '0.2s' }} />
+              <div className="w-2 h-2 rounded-full bg-current animate-pulse" style={{ animationDelay: '0.4s' }} />
+            </div>
+          ) : (
+            <>
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <pre className="whitespace-pre-wrap font-sans leading-relaxed">
+                  {message.content}
+                </pre>
+              </div>
+              
+              {/* Message Actions */}
+              <div className={cn(
+                "flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity",
+                isUser ? "justify-start" : "justify-end"
+              )}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleCopyMessage(message.content)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Copy message</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                {!isUser && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRegenerateMessage(message.id)}
+                          disabled={isGenerating}
+                          className="h-6 w-6 p-0"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Regenerate response</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+        
+        {isUser && (
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1">
+            <User className="w-4 h-4 text-primary-foreground" />
+          </div>
+        )}
+      </motion.div>
+    );
+  };
+
   const overlay = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm"
+      className="fixed z-50 bg-background/95 backdrop-blur-sm"
+      data-modal="expanded-prompt-overlay"
       style={{
-        top: '48px', // Header height
+        top: '86px', // Precise height for Index/Library pages (p-6 = 24px*2 + ~48px content)
         left: '0px', // No sidebar offset since sidebar is hidden
         width: '100vw', // Full width
-        height: 'calc(100vh - 48px)',
+        height: 'calc(100vh - 86px)', // Account for header height
       }}
+      onClick={handleBackdropClick}
     >
       <motion.div 
         initial={{ scale: 0.95, opacity: 0 }}
@@ -218,231 +630,412 @@ export function ExpandedPromptOverlay({
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="w-full h-full"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Card className="shadow-2xl border-none h-full w-full rounded-none">
-          <div className="h-full flex flex-col">
-            {/* Expanded Header */}
-            <div className="flex items-start justify-between p-6 border-b">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="w-6 h-6 text-primary">✨</span>
-                  <h3 className="font-bold text-xl">AI Generated Prompt</h3>
-                  {prompt.output && <Bot className="w-6 h-6 text-success" />}
+        <div className="h-full flex flex-col bg-background">
+            {/* Chat Header */}
+            <div 
+              className={cn(
+                "flex items-center justify-between p-4 border-b",
+                frameworkClasses[0].replace('bg-', 'border-')
+              )}
+              style={{
+                background: `linear-gradient(135deg, ${frameworkColors.background.primary} 0%, ${frameworkColors.background.secondary} 100%)`
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  frameworkClasses[0]
+                )}>
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {sourceToolName || prompt.context.tool.name} • {prompt.context.stage.name}
-                  {prompt.timestamp && (
-                    <span className="ml-2 text-xs opacity-70">
-                      {new Date(prompt.timestamp).toLocaleString()}
-                    </span>
-                  )}
-                </p>
+                
+                <div>
+                  <h3 className="font-semibold text-lg text-white">
+                    AI Chat Assistant
+                  </h3>
+                  <p className="text-sm text-white/80">
+                    {prompt.context.framework.name} • {prompt.context.stage.name} • {prompt.context.tool.name}
+                  </p>
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onContract}
-                className="ml-4"
-                title="Contract to normal size"
-              >
-                <Minimize2 className="w-4 h-4 mr-2" />
-                Contract
-              </Button>
+              
+              <div className="flex items-center gap-2">
+                {/* Framework Context Badges */}
+                <div className="hidden md:flex items-center gap-2">
+                  <Badge variant="glass-dark">
+                    {prompt.context.framework.name}
+                  </Badge>
+                  <Badge variant="glass-dark">
+                    {prompt.context.stage.name}
+                  </Badge>
+                  <Badge variant="glass-dark">
+                    {prompt.context.tool.name}
+                  </Badge>
+                </div>
+                
+                <Separator orientation="vertical" className="h-6 bg-white/20" />
+                
+                {/* Toggle Prompt Panel */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowPromptPanel(!showPromptPanel)}
+                        className="text-white hover:bg-white/20"
+                      >
+                        {showPromptPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {showPromptPanel ? 'Hide' : 'Show'} prompt versions
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                {/* Close Button */}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onContract}
+                  className="text-white hover:bg-white/20"
+                  title="Close chat"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
-            {/* Expanded Content */}
-            <div className="flex-1 p-6 overflow-hidden flex flex-col">
-              {/* Framework → Stage → Tool Info */}
-              <div className="flex items-center gap-3 mb-6">
-                <Badge variant="outline" className="text-sm px-3 py-1">
-                  {prompt.context.framework.name}
-                </Badge>
-                <Badge variant="secondary" className="text-sm px-3 py-1">
-                  {prompt.context.stage.name}
-                </Badge>
-                <Badge variant="default" className="text-sm px-3 py-1">
-                  {prompt.context.tool.name}
-                </Badge>
-              </div>
+            {/* Main Chat Area */}
+            <div className="flex-1 flex min-h-0">
 
-              {/* Side-by-Side Layout - 60% AI Conversation, 40% Prompt Context */}
-              <div className="flex-1 flex gap-6 min-h-0 mb-6">
-                {/* Left Side - AI Conversation - 60% */}
-                <div className="w-[60%] bg-success/10 border border-success/20 p-4 rounded text-sm flex flex-col min-h-0">
-                  <div className="flex items-center gap-3 mb-3">
-                    <MessageSquare className="w-4 h-4 text-success" />
-                    <span className="font-semibold text-success">AI Conversation</span>
-                    <Badge variant="default" className="text-sm bg-success px-3 py-1">
-                      Interactive
-                    </Badge>
-                  </div>
-                  
-                  {/* Conversation Messages */}
-                  <div className="flex-1 overflow-y-auto min-h-0 mb-3 space-y-3">
+              {/* Chat Messages Area */}
+              <div className={cn(
+                "flex flex-col min-h-0 transition-all duration-300",
+                showPromptPanel ? "flex-1" : "w-full"
+              )}>
+                {/* Messages Container */}
+                <ScrollArea className="flex-1 px-0">
+                  <div className="min-h-full flex flex-col justify-end">
                     {conversationMessages.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-muted-foreground">
-                          <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p className="font-medium">No AI Response Yet</p>
-                          <p className="text-xs mt-1">Generate a prompt to start the conversation</p>
+                      <div className="flex items-center justify-center h-full py-20">
+                        <div className="text-center text-muted-foreground max-w-md">
+                          <div className={cn(
+                            "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
+                            frameworkClasses[1]
+                          )}>
+                            <Bot className={cn("w-8 h-8", frameworkClasses[2])} />
+                          </div>
+                          <h4 className="font-semibold mb-2">Ready to chat!</h4>
+                          <p className="text-sm leading-relaxed">
+                            Your {prompt.context.tool.name} prompt is ready. Start a conversation to refine and improve it.
+                          </p>
+                          <div className="flex flex-wrap gap-2 justify-center mt-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setFollowUpInput("Can you make this more detailed?")}
+                              className="text-xs"
+                            >
+                              Make it more detailed
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setFollowUpInput("Simplify this for beginners")}
+                              className="text-xs"
+                            >
+                              Simplify for beginners
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setFollowUpInput("Add more examples")}
+                              className="text-xs"
+                            >
+                              Add examples
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ) : (
-                      conversationMessages.map((message) => (
-                        <div key={message.id} className={`p-3 rounded ${
-                          message.type === 'ai' 
-                            ? 'bg-background/50 border-l-2 border-success' 
-                            : 'bg-primary/10 border-l-2 border-primary ml-4'
-                        }`}>
-                          <div className="flex items-center gap-2 mb-1">
-                            {message.type === 'ai' ? (
-                              <Bot className="w-3 h-3 text-success" />
-                            ) : (
-                              <span className="w-3 h-3 rounded-full bg-primary" />
-                            )}
-                            <span className="text-xs font-medium">
-                              {message.type === 'ai' ? 'AI Assistant' : 'You'}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {message.timestamp.toLocaleTimeString()}
-                            </span>
+                      <div className="space-y-0">
+                        {/* Initial Prompt Message */}
+                        {!conversationMessages.some(msg => msg.id === 'initial') && (
+                          <div className="bg-muted/50 border-b px-6 py-4">
+                            <div className="flex items-start gap-3">
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                                frameworkClasses[0]
+                              )}>
+                                <FileText className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-semibold text-sm">Initial Prompt</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {prompt.context.tool.name}
+                                  </Badge>
+                                </div>
+                                <div className="bg-background rounded-lg p-3 text-sm font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                  {currentPromptContent.length > 200 
+                                    ? `${currentPromptContent.slice(0, 200)}...`
+                                    : currentPromptContent
+                                  }
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <pre className="text-sm whitespace-pre-wrap leading-relaxed">
-                            {message.content}
-                          </pre>
-                        </div>
-                      ))
-                    )}
-                    
-                    {isGenerating && (
-                      <div className="p-3 rounded bg-background/50 border-l-2 border-success">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Bot className="w-3 h-3 text-success animate-pulse" />
-                          <span className="text-xs font-medium">AI Assistant</span>
-                          <span className="text-xs text-muted-foreground">thinking...</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground animate-pulse">
-                          Generating response...
-                        </div>
+                        )}
+                        
+                        {/* Chat Messages */}
+                        {conversationMessages.map((message) => (
+                          <MessageBubble key={message.id} message={message} />
+                        ))}
+                        
+                        <div ref={messagesEndRef} />
                       </div>
                     )}
                   </div>
-                  
-                  {/* Follow-up Input */}
-                  <div className="flex gap-2 mt-auto">
-                    <Input
-                      placeholder="Ask AI to modify the response..."
-                      value={followUpInput}
-                      onChange={(e) => setFollowUpInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendFollowUp()}
-                      disabled={isGenerating}
-                      className="flex-1 text-xs"
-                    />
+                </ScrollArea>
+
+                
+                {/* Chat Input */}
+                <div className="p-4 border-t bg-background">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <Input
+                        ref={inputRef}
+                        placeholder="Ask AI to refine, expand, or modify the prompt..."
+                        value={followUpInput}
+                        onChange={(e) => setFollowUpInput(e.target.value)}
+                        onKeyDown={handleInputSubmit}
+                        disabled={isGenerating}
+                        className="min-h-[44px] text-sm resize-none"
+                      />
+                    </div>
                     <Button
-                      size="sm"
                       onClick={handleSendFollowUp}
                       disabled={!followUpInput.trim() || isGenerating}
-                      className="px-3"
+                      className={cn("h-11 w-11 p-0", frameworkClasses[0])}
+                      title="Send message"
                     >
-                      <Send className="w-3 h-3" />
+                      {isGenerating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
-                </div>
-
-                {/* Right Side - Prompt Content - 40% */}
-                <div className="w-[40%] bg-muted/50 p-4 rounded text-sm flex flex-col min-h-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-semibold text-muted-foreground">Prompt Content</span>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={onCopy}
+                        className="text-xs"
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={onExport}
+                        className="text-xs"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Export
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={savePromptVersion}
+                        disabled={isSaving}
+                        className="text-xs"
+                      >
+                        <BookmarkPlus className="w-3 h-3 mr-1" />
+                        {isSaving ? 'Saving...' : 'Save Version'}
+                      </Button>
                     </div>
-                    <div className="flex gap-2">
-                      {isEditingPrompt ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleCancelEdit}
-                            className="h-6 px-2 text-xs"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleSavePrompt}
-                            className="h-6 px-2 text-xs"
-                          >
-                            <Save className="w-3 h-3" />
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleEditPrompt}
-                          className="h-6 px-2 text-xs"
-                          title="Edit prompt content"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                        </Button>
-                      )}
+                    
+                    <div className="text-xs text-muted-foreground">
+                      Press Enter to send • Shift+Enter for new line
                     </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto min-h-0">
-                    {isEditingPrompt ? (
-                      <Textarea
-                        value={editedPromptContent}
-                        onChange={(e) => setEditedPromptContent(e.target.value)}
-                        className="w-full h-full resize-none border-none p-0 text-sm font-mono leading-relaxed bg-transparent focus:ring-0"
-                        placeholder="Edit your prompt content..."
-                      />
-                    ) : (
-                      <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-                        {currentPromptContent}
-                      </pre>
-                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Expanded Actions */}
-              <div className="flex items-center gap-3 pt-4 border-t flex-shrink-0">
-                <Button
-                  size="default"
-                  variant="outline"
-                  onClick={onView}
-                  className="h-10 text-sm"
-                  title="View full prompt details"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Details
-                </Button>
-                
-                <Button
-                  size="default"
-                  variant="outline"
-                  onClick={onCopy}
-                  className="h-10 px-4"
-                  title="Copy prompt and response"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy
-                </Button>
-
-                <Button
-                  size="default"
-                  variant="outline"
-                  onClick={onExport}
-                  className="h-10 px-4"
-                  title="Export as file"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-              </div>
+              
+              {/* Prompt Versions Panel */}
+              <AnimatePresence>
+                {showPromptPanel && (
+                  <motion.div
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: '400px', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="border-l bg-muted/50 flex flex-col min-h-0"
+                  >
+                    <div className="p-4 border-b">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <History className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-semibold text-sm">Prompt Versions</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {savedPromptVersions.length}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <ScrollArea className="flex-1 p-4">
+                      <div className="space-y-3">
+                        {savedPromptVersions.map((version) => (
+                          <Card 
+                            key={version.id}
+                            className={cn(
+                              "p-3 cursor-pointer transition-all duration-200 hover:shadow-md",
+                              version.isActive 
+                                ? "ring-2 ring-offset-2 border-2" 
+                                : "hover:border-muted-foreground/30"
+                            )}
+                            style={{
+                              backgroundColor: version.isActive ? frameworkColors.background.tertiary : 'transparent',
+                              borderColor: version.isActive ? frameworkColors.border.primary : undefined,
+                              ...(version.isActive && {
+                                '--tw-ring-color': frameworkColors.border.primary,
+                                '--tw-ring-offset-shadow': `0 0 0 2px ${frameworkColors.background.tertiary}`,
+                                '--tw-ring-shadow': `0 0 0 calc(2px + 2px) ${frameworkColors.border.primary}`
+                              })
+                            }}
+                            onClick={() => switchToVersion(version.id)}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-2 h-2 rounded-full"
+                                  style={{
+                                    backgroundColor: version.isActive ? frameworkColors.background.primary : '#94a3b8'
+                                  }}
+                                />
+                                <span 
+                                  className="font-medium text-sm"
+                                  style={{ color: version.isActive ? frameworkColors.text.secondary : undefined }}
+                                >
+                                  {version.title}
+                                </span>
+                              </div>
+                              {version.isActive && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-xs"
+                                  style={{
+                                    backgroundColor: frameworkColors.background.primary,
+                                    color: frameworkColors.text.primary
+                                  }}
+                                >
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              <span>{version.timestamp.toLocaleString()}</span>
+                              {version.conversation.length > 0 && (
+                                <>
+                                  <Separator orientation="vertical" className="h-3" />
+                                  <MessageSquare className="w-3 h-3" />
+                                  <span>{version.conversation.length} messages</span>
+                                </>
+                              )}
+                            </div>
+                            
+                            <div className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                              {version.content.length > 120 
+                                ? `${version.content.slice(0, 120)}...`
+                                : version.content
+                              }
+                            </div>
+                            
+                            {version.isActive && (
+                              <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                                {isEditingPrompt ? (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelEdit();
+                                      }}
+                                      className="h-6 px-2 text-xs"
+                                    >
+                                      <X className="w-3 h-3 mr-1" />
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSavePrompt();
+                                      }}
+                                      className="h-6 px-2 text-xs"
+                                      style={{
+                                        backgroundColor: frameworkColors.background.primary,
+                                        color: frameworkColors.text.primary
+                                      }}
+                                    >
+                                      <Save className="w-3 h-3 mr-1" />
+                                      Save
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditPrompt();
+                                    }}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    <Edit3 className="w-3 h-3 mr-1" />
+                                    Edit
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Card>
+                        ))}
+                        
+                        {/* Edit Area for Active Version */}
+                        {isEditingPrompt && (
+                          <Card className="p-3">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Edit3 className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-medium text-sm">Edit Active Prompt</span>
+                            </div>
+                            <Textarea
+                              value={editedPromptContent}
+                              onChange={(e) => setEditedPromptContent(e.target.value)}
+                              className="w-full min-h-[200px] resize-none text-sm font-mono leading-relaxed"
+                              placeholder="Edit your prompt content..."
+                            />
+                          </Card>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-        </Card>
+        </div>
       </motion.div>
     </motion.div>
   );

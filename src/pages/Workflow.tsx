@@ -57,7 +57,6 @@ function WorkflowWithProject() {
   } = useWorkflowStore();
   const { initializeTemplates, loadProjectPrompts, clearProjectPrompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating, updatePromptVariables } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
   const [variables, setVariables] = useState<Record<string, string>>({});
   const [testClicks, setTestClicks] = useState(0);
@@ -124,6 +123,8 @@ function WorkflowWithProject() {
       id: `framework-${framework.id}`,
       type: 'framework',
       position: { x: 100, y: 100 },
+      width: 300,
+      height: 250,
       data: { framework, isSelected: true },
     };
     console.log('Creating framework node:', newNode);
@@ -136,6 +137,8 @@ function WorkflowWithProject() {
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
       position: { x: 300, y: 200 },
+      width: 250,
+      height: 180,
       data: { stage, isActive: true },
     };
     addNode(newNode);
@@ -146,6 +149,8 @@ function WorkflowWithProject() {
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: { x: 500, y: 300 },
+      width: 250,
+      height: 200,
       data: { tool, framework, stage, isActive: true },
     };
     addNode(newNode);
@@ -188,20 +193,7 @@ function WorkflowWithProject() {
 
   return (
     <div className="h-screen bg-background flex flex-col w-full">
-      {/* Header */}
-      <div className="h-12 flex items-center justify-between border-b bg-card px-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="mr-2"
-        >
-          <Layers className="w-4 h-4" />
-        </Button>
-        <div className="flex-1">
-          <Navigation className="p-0" />
-        </div>
-      </div>
+      <Navigation />
       
       <div className="flex-1 flex w-full">
         {/* Left Panel - Hidden when prompt is expanded */}
@@ -291,7 +283,7 @@ function WorkflowWithProject() {
               </TabsList>
             </div>
             
-            <TabsContent value="canvas" className="m-0 h-[calc(100vh-280px)]">
+            <TabsContent value="canvas" className="m-0 h-[calc(100vh-320px)]">
               <div className="p-4 space-y-4 h-full overflow-y-auto">
                 {selectedNode ? (
                   // Node Details View
@@ -478,11 +470,11 @@ function WorkflowWithProject() {
               </div>
             </TabsContent>
             
-            <TabsContent value="prompts" className="m-0 h-[calc(100vh-280px)]">
+            <TabsContent value="prompts" className="m-0 h-[calc(100vh-320px)]">
               <PromptPanel onPromptView={() => setActivePanel('canvas')} />
             </TabsContent>
             
-            <TabsContent value="knowledge" className="m-0 h-[calc(100vh-280px)]">
+            <TabsContent value="knowledge" className="m-0 h-[calc(100vh-320px)]">
               <KnowledgeBasePanel />
             </TabsContent>
           </Tabs>

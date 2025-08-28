@@ -19,7 +19,13 @@ export const ResizableNode = ({
   maxHeight = 800 
 }: ResizableNodeProps) => {
   return (
-    <>
+    <div style={{ 
+      width: '100%', 
+      height: '100%', 
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       <NodeResizer
         color={selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
         isVisible={selected}
@@ -27,14 +33,29 @@ export const ResizableNode = ({
         minHeight={minHeight}
         maxWidth={maxWidth}
         maxHeight={maxHeight}
-        handleClassName="w-4 h-4 border-2 border-primary bg-background hover:bg-primary hover:border-primary-foreground transition-colors rounded-sm shadow-md"
-        lineClassName="border-2 border-primary"
-        shouldResize={(event, params) => {
-          // Allow resize from all directions
-          return true;
+        handleStyle={{
+          backgroundColor: 'hsl(var(--background))',
+          border: '2px solid hsl(var(--primary))',
+          borderRadius: '2px',
+          width: '8px',
+          height: '8px'
         }}
+        lineStyle={{
+          borderColor: 'hsl(var(--primary))',
+          borderWidth: '2px'
+        }}
+        keepAspectRatio={false}
       />
-      {children}
-    </>
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '0',
+        flex: '1'
+      }}>
+        {children}
+      </div>
+    </div>
   );
 };

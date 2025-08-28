@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { UXFramework, UXStage, UXTool } from './workflow-store';
 import { supabase } from '@/integrations/supabase/client';
+import { getEnhancedTemplateById, getAllEnhancedTemplates, EnhancedToolPromptTemplate, validateTemplateVariables, getIndustryAdaptation } from '@/lib/tool-templates-enhanced';
+import { promptQualityValidator, QualityValidationResult } from '@/lib/prompt-quality-validator';
+import { getEnhancedInstructions } from '@/lib/enhanced-tool-instructions';
+import { 
+  enhancedContextIntegrationService, 
+  IntegratedContextRequest, 
+  IntegratedContextResponse 
+} from '@/lib/enhanced-context-integration-service';
 
 export interface ConversationMessage {
   id: string;
@@ -22,6 +30,15 @@ export interface PromptTemplate {
   toolInstructions?: string;
 }
 
+export interface EnhancedPromptContext {
+  industry?: string;
+  customizations?: Record<string, any>;
+  qualityLevel?: 'basic' | 'intermediate' | 'advanced';
+  timeConstraints?: 'flexible' | 'standard' | 'tight';
+  teamSize?: number;
+  experience?: 'beginner' | 'intermediate' | 'expert';
+}
+
 export interface GeneratedPrompt {
   id: string;
   workflowId: string;
@@ -38,22 +55,30 @@ export interface GeneratedPrompt {
     };
     nodeCustomizations?: Record<string, any>;
     previousOutputs?: string[];
+    enhancedContext?: EnhancedPromptContext;
   };
   variables: Record<string, string>;
   output?: string;
   conversation?: ConversationMessage[];
   timestamp: number;
+  qualityScore?: QualityValidationResult;
+  templateVersion?: string;
+  industry?: string;
 }
 
 export interface PromptState {
   prompts: GeneratedPrompt[];
   templates: PromptTemplate[];
+  enhancedTemplates: EnhancedToolPromptTemplate[];
   currentPrompt: GeneratedPrompt | null;
   isGenerating: boolean;
+  isValidating: boolean;
   
   // Actions
   loadProjectPrompts: (projectId: string) => Promise<void>;
-  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string) => Promise<string>;
+  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext) => Promise<string>;
+  generateEnhancedPrompt: (templateId: string, variables: Record<string, any>, enhancedContext?: EnhancedPromptContext) => Promise<GeneratedPrompt>;
+  validatePromptQuality: (promptId: string) => Promise<QualityValidationResult>;
   executePrompt: (promptId: string) => Promise<void>;
   updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
   setCurrentPrompt: (prompt: GeneratedPrompt | null) => void;
@@ -61,7 +86,13 @@ export interface PromptState {
   updatePromptConversation: (promptId: string, messages: ConversationMessage[]) => void;
   addConversationMessage: (promptId: string, message: ConversationMessage) => void;
   initializeTemplates: () => void;
+  initializeEnhancedTemplates: () => void;
   clearProjectPrompts: () => void;
+  getEnhancedTemplate: (toolId: string) => EnhancedToolPromptTemplate | undefined;
+  validateTemplateVariables: (templateId: string, variables: Record<string, any>) => { isValid: boolean; errors: string[] };
+  generateEnhancedContextPrompt: (request: IntegratedContextRequest) => Promise<IntegratedContextResponse>;
+  recordWorkflowOutput: (projectId: string, output: GeneratedPrompt, decisions?: any[], nextStageId?: string) => Promise<void>;
+  getWorkflowAnalytics: (projectId: string) => Promise<any>;
 }
 
 // Framework-level instructions for prompt generation
@@ -688,8 +719,10 @@ Design triggers that motivate action without causing notification fatigue.`,
 export const usePromptStore = create<PromptState>((set, get) => ({
   prompts: [],
   templates: [],
+  enhancedTemplates: [],
   currentPrompt: null,
   isGenerating: false,
+  isValidating: false,
 
   loadProjectPrompts: async (projectId: string) => {
     try {
@@ -765,12 +798,67 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     }
   },
 
-  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string) => {
+  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext) => {
+    // Try to use enhanced template first
+    const enhancedTemplate = get().enhancedTemplates.find(t => t.id === tool.id);
+    
+    if (enhancedTemplate) {
+      // Provide meaningful defaults for enhanced template variables
+      const defaultVariables: Record<string, any> = {
+        projectName: 'Current Project',
+        framework: framework.name,
+        stage: stage.name,
+        tool: tool.name,
+        ...nodeCustomizations
+      };
+
+      // Add specific defaults for common template variables
+      enhancedTemplate.variables.forEach(variable => {
+        if (variable.required && !defaultVariables[variable.id]) {
+          switch (variable.type) {
+            case 'number':
+              if (variable.id === 'sampleSize') {
+                defaultVariables[variable.id] = 15;
+              } else {
+                defaultVariables[variable.id] = variable.validation?.min || 1;
+              }
+              break;
+            case 'select':
+              defaultVariables[variable.id] = variable.options?.[0] || '';
+              break;
+            case 'textarea':
+              if (variable.id === 'dataSources') {
+                defaultVariables[variable.id] = 'User interviews, surveys, analytics data, support tickets';
+              } else if (variable.id === 'researchMethods') {
+                defaultVariables[variable.id] = 'User interviews, behavioral analytics, survey data, usability testing';
+              } else if (variable.id === 'primaryGoal') {
+                defaultVariables[variable.id] = 'Complete the main task efficiently and successfully';
+              } else {
+                defaultVariables[variable.id] = `Default ${variable.name.toLowerCase()}`;
+              }
+              break;
+            case 'text':
+              if (variable.id === 'personaName') {
+                defaultVariables[variable.id] = 'Primary User';
+              } else {
+                defaultVariables[variable.id] = `Default ${variable.name.toLowerCase()}`;
+              }
+              break;
+            default:
+              defaultVariables[variable.id] = `Default ${variable.name.toLowerCase()}`;
+          }
+        }
+      });
+
+      return get().generateEnhancedPrompt(enhancedTemplate.id, defaultVariables, enhancedContext);
+    }
+    
+    // Fallback to legacy template system
     const template = get().templates.find(
       t => t.framework === framework.id && t.stage === stage.id && t.tool === tool.id
     );
 
-    let enhancedTemplate = '';
+    let processedTemplate = '';
     
     if (template) {
       // Combine instructions from framework, stage, and tool levels
@@ -780,14 +868,14 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         template.toolInstructions && `Tool Guidance: ${template.toolInstructions}`,
       ].filter(Boolean).join('\n\n');
       
-      enhancedTemplate = instructions ? `${instructions}\n\n${template.template}` : template.template;
+      processedTemplate = instructions ? `${instructions}\n\n${template.template}` : template.template;
       
       // Add knowledge context if provided
       if (knowledgeContext) {
-        enhancedTemplate = `Project Knowledge Base:
+        processedTemplate = `Project Knowledge Base:
 ${knowledgeContext}
 
-${enhancedTemplate}`;
+${processedTemplate}`;
       }
     } else {
       // Fallback with general instructions
@@ -801,14 +889,14 @@ ${enhancedTemplate}`;
         toolInstruction && `Tool Guidance: ${toolInstruction}`,
       ].filter(Boolean).join('\n\n');
       
-      enhancedTemplate = `${instructions}\n\nCreate ${tool.name} deliverable for ${stage.name} stage using ${framework.name} framework. Generate actionable outputs for immediate practitioner use.`;
+      processedTemplate = `${instructions}\n\nCreate ${tool.name} deliverable for ${stage.name} stage using ${framework.name} framework. Generate actionable outputs for immediate practitioner use.`;
       
       // Add knowledge context if provided
       if (knowledgeContext) {
-        enhancedTemplate = `Project Knowledge Base:
+        processedTemplate = `Project Knowledge Base:
 ${knowledgeContext}
 
-${enhancedTemplate}`;
+${processedTemplate}`;
       }
     }
 
@@ -817,7 +905,7 @@ ${enhancedTemplate}`;
       id: `prompt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       workflowId: 'current-workflow',
       projectId,
-      content: enhancedTemplate,
+      content: processedTemplate,
       context: {
         framework,
         stage,
@@ -846,7 +934,7 @@ ${enhancedTemplate}`;
           framework_name: framework.name,
           stage_name: stage.name,
           tool_name: tool.name,
-          prompt_content: enhancedTemplate,
+          prompt_content: processedTemplate,
           variables: prompt.variables
         });
 
@@ -860,7 +948,140 @@ ${enhancedTemplate}`;
       currentPrompt: prompt
     }));
 
-    return enhancedTemplate;
+    return processedTemplate;
+  },
+
+  generateEnhancedPrompt: async (templateId: string, variables: Record<string, any>, enhancedContext?: EnhancedPromptContext) => {
+    set({ isGenerating: true });
+    
+    try {
+      const template = getEnhancedTemplateById(templateId);
+      if (!template) {
+        throw new Error(`Enhanced template ${templateId} not found`);
+      }
+
+      // Validate variables - add safety checks
+      const validation = validateTemplateVariables(templateId, variables || {});
+      if (!validation || !validation.isValid) {
+        const errors = validation?.errors || ['Unknown validation error'];
+        throw new Error(`Variable validation failed: ${errors.join(', ')}`);
+      }
+
+      // Get industry-specific adaptations if applicable
+      let finalTemplate = template.template || '';
+      let instructions = [...(template.instructions || [])];
+      
+      if (enhancedContext?.industry) {
+        const industryAdaptation = getIndustryAdaptation(templateId, enhancedContext.industry);
+        if (industryAdaptation) {
+          finalTemplate = industryAdaptation.template || finalTemplate;
+          instructions = [...instructions, ...(industryAdaptation.instructions || [])];
+        }
+      }
+
+      // Apply customizations
+      if (enhancedContext?.customizations && template.customizationOptions) {
+        template.customizationOptions.forEach(option => {
+          const value = enhancedContext.customizations![option.id];
+          if (value !== undefined) {
+            // Apply customization to template
+            finalTemplate = finalTemplate.replace(
+              new RegExp(`{{${option.id}}}`, 'g'), 
+              String(value)
+            );
+          }
+        });
+      }
+
+      // Replace template variables
+      let processedTemplate = finalTemplate;
+      Object.entries(variables || {}).forEach(([key, value]) => {
+        if (key && value !== undefined && value !== null) {
+          const regex = new RegExp(`{{${key}}}`, 'g');
+          processedTemplate = processedTemplate.replace(regex, String(value));
+        }
+      });
+
+      // Add enhanced instructions
+      const enhancedInstructions = getEnhancedInstructions(templateId, enhancedContext?.industry) || [];
+      const instructionText = [...instructions, ...enhancedInstructions].join('\n- ');
+      
+      const finalPromptContent = `# Enhanced UX Tool Guidance
+
+## Instructions
+- ${instructionText}
+
+## Template Output
+
+${processedTemplate}`;
+
+      // Create enhanced prompt object
+      const prompt: GeneratedPrompt = {
+        id: `enhanced-prompt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        workflowId: 'current-workflow',
+        projectId: 'current-project', // This should come from context
+        content: finalPromptContent,
+        context: {
+          framework: { id: 'enhanced', name: 'Enhanced Template' } as UXFramework,
+          stage: { id: 'enhanced', name: 'Enhanced Stage' } as UXStage,
+          tool: { id: templateId, name: template.name } as UXTool,
+          enhancedContext
+        },
+        variables: variables as Record<string, string>,
+        timestamp: Date.now(),
+        templateVersion: '2.0',
+        industry: enhancedContext?.industry
+      };
+
+      // Add to prompts list
+      set(state => ({
+        prompts: [...state.prompts, prompt],
+        currentPrompt: prompt
+      }));
+
+      return finalPromptContent;
+    } catch (error) {
+      console.error('Error generating enhanced prompt:', error);
+      throw error;
+    } finally {
+      set({ isGenerating: false });
+    }
+  },
+
+  validatePromptQuality: async (promptId: string) => {
+    set({ isValidating: true });
+    
+    try {
+      const prompt = get().prompts.find(p => p.id === promptId);
+      if (!prompt) {
+        throw new Error('Prompt not found');
+      }
+
+      const qualityResult = await promptQualityValidator.validatePrompt(
+        prompt.content,
+        prompt.context.tool.id,
+        prompt.industry
+      );
+
+      // Update prompt with quality score
+      set(state => ({
+        prompts: state.prompts.map(p => 
+          p.id === promptId 
+            ? { ...p, qualityScore: qualityResult }
+            : p
+        ),
+        currentPrompt: state.currentPrompt?.id === promptId
+          ? { ...state.currentPrompt, qualityScore: qualityResult }
+          : state.currentPrompt
+      }));
+
+      return qualityResult;
+    } catch (error) {
+      console.error('Error validating prompt quality:', error);
+      throw error;
+    } finally {
+      set({ isValidating: false });
+    }
   },
 
   executePrompt: async (promptId: string) => {
@@ -945,5 +1166,94 @@ ${enhancedTemplate}`;
     set({ prompts: [], currentPrompt: null });
   },
 
-  initializeTemplates: () => set({ templates: promptTemplates })
+  initializeTemplates: () => set({ templates: promptTemplates }),
+
+  initializeEnhancedTemplates: () => set({ enhancedTemplates: getAllEnhancedTemplates() }),
+
+  getEnhancedTemplate: (toolId: string) => {
+    const templates = get().enhancedTemplates;
+    return templates.find(template => template.id === toolId);
+  },
+
+  validateTemplateVariables: (templateId: string, variables: Record<string, any>) => {
+    return validateTemplateVariables(templateId, variables);
+  },
+
+  // Enhanced context integration methods
+  generateEnhancedContextPrompt: async (request: IntegratedContextRequest) => {
+    set({ isGenerating: true });
+    try {
+      const response = await enhancedContextIntegrationService.processIntegratedContext(request);
+      
+      // Create a new GeneratedPrompt from the integrated response
+      const generatedPrompt: GeneratedPrompt = {
+        id: `enhanced_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        workflowId: 'enhanced-context',
+        projectId: request.projectId,
+        content: response.synthesizedPrompt,
+        context: {
+          framework: request.framework,
+          stage: request.stage,
+          tool: request.tool,
+          enhancedContext: {
+            industry: request.userPreferences.industryFocus,
+            qualityLevel: request.userPreferences.outputDetailLevel,
+            customizations: {
+              accessibilityLevel: request.userPreferences.accessibilityLevel,
+              includeResearchBacking: request.userPreferences.includeResearchBacking,
+              communicationStyle: request.userPreferences.communicationStyle
+            }
+          }
+        },
+        variables: request.userInputs,
+        timestamp: Date.now(),
+        qualityScore: {
+          overallScore: Math.round(response.qualityMetrics.overallQuality * 100),
+          category: response.qualityMetrics.overallQuality > 0.8 ? 'excellent' :
+                   response.qualityMetrics.overallQuality > 0.6 ? 'good' :
+                   response.qualityMetrics.overallQuality > 0.4 ? 'fair' : 'needs_improvement',
+          summary: {
+            strengths: [
+              response.qualityMetrics.contextRichness > 0.7 ? 'Rich contextual information' : null,
+              response.qualityMetrics.variableCompleteness > 0.8 ? 'Complete variable processing' : null,
+              response.qualityMetrics.accessibilityCompliance > 0.7 ? 'Strong accessibility compliance' : null,
+              response.qualityMetrics.workflowConsistency > 0.7 ? 'Good workflow consistency' : null
+            ].filter(Boolean) as string[],
+            recommendations: response.recommendations.slice(0, 3),
+            issues: response.warnings
+          }
+        }
+      };
+
+      // Add to store
+      set(state => ({
+        prompts: [generatedPrompt, ...state.prompts],
+        currentPrompt: generatedPrompt,
+        isGenerating: false
+      }));
+
+      return response;
+    } catch (error) {
+      console.error('Enhanced context prompt generation failed:', error);
+      set({ isGenerating: false });
+      throw error;
+    }
+  },
+
+  recordWorkflowOutput: async (projectId: string, output: GeneratedPrompt, decisions: any[] = [], nextStageId?: string) => {
+    try {
+      await enhancedContextIntegrationService.recordWorkflowOutput(projectId, output, decisions, nextStageId);
+    } catch (error) {
+      console.error('Error recording workflow output:', error);
+    }
+  },
+
+  getWorkflowAnalytics: async (projectId: string) => {
+    try {
+      return await enhancedContextIntegrationService.getWorkflowAnalytics(projectId);
+    } catch (error) {
+      console.error('Error getting workflow analytics:', error);
+      return null;
+    }
+  }
 }));

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Zap, Menu, User, LogOut } from "lucide-react";
+import { Zap, Menu, User, LogOut, BarChart, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
@@ -64,11 +64,14 @@ export function Navigation({ className }: NavigationProps) {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/workflow">Workflows</Link>
               </Button>
-              <Button variant="ghost" size="sm">
-                Frameworks
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/frameworks" className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Frameworks
+                </Link>
               </Button>
-              <Button variant="ghost" size="sm">
-                Library
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/library">Library</Link>
               </Button>
               <Button 
                 variant="ghost" 
@@ -79,6 +82,12 @@ export function Navigation({ className }: NavigationProps) {
                 }}
               >
                 Projects
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/metrics" className="flex items-center gap-2">
+                  <BarChart className="w-4 h-4" />
+                  Metrics
+                </Link>
               </Button>
             </>
           ) : (

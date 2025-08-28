@@ -3,6 +3,7 @@ import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Sparkles, Brain, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ProgressStep {
   id: string;
@@ -69,45 +70,55 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
     }
   }, [currentStep, totalSteps, onComplete]);
 
-  return (
+  // Cleanup effect to ensure proper portal cleanup
+  useEffect(() => {
+    return () => {
+      // Restore body scroll and pointer events
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+    };
+  }, []);
+
+  return createPortal(
     <AnimatePresence>
       {isVisible && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", duration: 0.5 }}
+            className="w-full max-w-2xl"
           >
-            <Card className="w-96 p-6 shadow-2xl">
+            <Card className="p-8 shadow-2xl bg-white/95 backdrop-blur-sm border-0">
               <div className="space-y-6">
                 {/* Header */}
                 <div className="text-center">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3"
+                    className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 mb-4 border border-blue-200/50"
                   >
-                    <Sparkles className="w-6 h-6 text-primary" />
+                    <Sparkles className="w-8 h-8 text-blue-600" />
                   </motion.div>
-                  <h3 className="text-lg font-semibold">Generating AI Prompt</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Creating intelligent prompts for your UX workflow
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Generating AI Prompt</h3>
+                  <p className="text-base text-gray-600">
+                    Creating intelligent prompts for your UX workflow using advanced AI methodologies
                   </p>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">{Math.round(progress)}%</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-base">
+                    <span className="text-gray-600 font-medium">Progress</span>
+                    <span className="font-bold text-blue-600">{Math.round(progress)}%</span>
                   </div>
-                  <Progress value={progress} className="h-2" />
+                  <Progress value={progress} className="h-3 bg-gray-100" />
                 </div>
 
                 {/* Steps */}
@@ -181,6 +192,7 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

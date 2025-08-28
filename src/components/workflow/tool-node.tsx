@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { Play, Settings, Sparkles, BookOpen, AlertCircle } from 'lucide-react';
+import { Play, Settings, Sparkles, BookOpen, AlertCircle, Zap, Star } from 'lucide-react';
 import { UXTool, useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -13,8 +13,10 @@ import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
 import { NodeActionsMenu } from './node-actions-menu';
 import { KnowledgeSelectionDialog } from './knowledge-selection-dialog';
+import { EnhancedPromptPanel } from './enhanced-prompt-panel';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
+import { getFrameworkColors } from '@/lib/framework-colors';
 import { toast } from 'sonner';
 
 interface ToolNodeData {
@@ -33,7 +35,7 @@ interface ToolNodeProps {
 }
 
 export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
-  const { generatePrompt, setCurrentPrompt } = usePromptStore();
+  const { generatePrompt, setCurrentPrompt, getEnhancedTemplate, generateEnhancedPrompt } = usePromptStore();
   const { addNode, addEdge, nodes, updateNode } = useWorkflowStore();
   const { currentProject } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
@@ -41,10 +43,17 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const linkedKnowledge = Array.isArray(rawLinkedKnowledge) ? rawLinkedKnowledge : [];
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
+  // Get framework colors, fallback to design-thinking if no framework
+  const colors = getFrameworkColors(framework?.id || 'design-thinking');
+  
   const [showProgress, setShowProgress] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
+  const [showEnhancedPanel, setShowEnhancedPanel] = useState(false);
   const totalSteps = 4;
+  
+  // Check if enhanced template is available
+  const enhancedTemplate = getEnhancedTemplate(tool.id);
 
   const handleGeneratePrompt = async () => {
     if (!framework || !stage || !currentProject) {
@@ -105,10 +114,22 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         .filter(entry => linkedKnowledge.includes(entry.id))
         .map(entry => ({ id: entry.id, title: entry.title, content: entry.content }));
       
+      console.log('Knowledge Base Integration Debug:', {
+        totalEntries: entries.length,
+        linkedKnowledgeIds: linkedKnowledge,
+        filteredKnowledgeCount: knowledgeData.length,
+        knowledgeData: knowledgeData.map(k => ({ 
+          id: k.id, 
+          title: k.title, 
+          contentLength: k.content.length,
+          contentPreview: k.content.substring(0, 100) + '...'
+        }))
+      });
+      
       console.log('Sending to API:', {
         promptContent: promptContent.substring(0, 200) + '...',
         knowledgeCount: knowledgeData.length,
-        knowledgeData: knowledgeData.map(k => ({ title: k.title, contentLength: k.content.length }))
+        hasKnowledgeContext: knowledgeData.length > 0
       });
       
       const { data, error } = await supabase.functions.invoke('generate-ai-prompt', {
@@ -224,6 +245,30 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
     }
   };
 
+  const handleEnhancedGenerate = (variables: Record<string, any>, enhancedContext: any) => {
+    console.log('handleEnhancedGenerate called with:');
+    console.log('Tool ID:', tool.id);
+    console.log('Variables:', variables);
+    console.log('Enhanced Context:', enhancedContext);
+    
+    generateEnhancedPrompt(tool.id, variables, enhancedContext)
+      .then((promptContent) => {
+        toast.success('Enhanced prompt generated successfully!');
+        setShowEnhancedPanel(false);
+        
+        // Switch to prompt tab if callback is provided
+        if (onSwitchToPromptTab) {
+          setTimeout(() => {
+            onSwitchToPromptTab();
+          }, 500);
+        }
+      })
+      .catch((error) => {
+        toast.error('Failed to generate enhanced prompt: ' + error.message);
+        console.error('Enhanced prompt generation error:', error);
+      });
+  };
+
   return (
     <ResizableNode 
       selected={selected} 
@@ -237,6 +282,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.2 }}
         whileHover={selected ? {} : { scale: 1.02 }}
+        style={{ width: '100%', height: '100%' }}
       >
       {/* Draggable Connection Handles */}
       <DraggableHandle
@@ -255,30 +301,55 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       />
       
       <Card 
-        className={`
-          w-full h-full p-4 transition-all duration-200
-          ${selected ? 'ring-2 ring-primary shadow-lg border-2 border-primary' : 'hover:shadow-md border'}
-          ${isActive ? 'border-primary bg-primary/5' : ''}
-          ${isCompleted ? 'border-success bg-success/5' : ''}
-        `}
+        className={`w-full h-full p-4 transition-all duration-200 flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''} hover:shadow-md`}
+        style={{
+          backgroundColor: isActive ? colors.background.hover : colors.background.tertiary,
+          borderTopWidth: '2px',
+          borderRightWidth: '2px',
+          borderBottomWidth: '2px',
+          borderLeftWidth: '3px',
+          borderTopColor: selected ? colors.border.primary : isCompleted ? '#10B981' : colors.border.tertiary,
+          borderRightColor: selected ? colors.border.primary : isCompleted ? '#10B981' : colors.border.tertiary,
+          borderBottomColor: selected ? colors.border.primary : isCompleted ? '#10B981' : colors.border.tertiary,
+          borderLeftColor: colors.border.tertiary,
+          borderStyle: 'solid',
+          ...(selected && {
+            '--tw-ring-color': colors.border.primary,
+            '--tw-ring-offset-shadow': `0 0 0 2px ${colors.background.tertiary}`,
+            '--tw-ring-shadow': `0 0 0 calc(2px + 2px) ${colors.border.primary}`
+          })
+        }}
       >
-        <div className="space-y-3">
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Header */}
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between mb-3 flex-shrink-0">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold text-sm">{tool.name}</h3>
+                <Sparkles className="w-4 h-4" style={{ color: colors.text.secondary }} />
+                <h3 className="font-semibold text-sm" style={{ color: colors.text.secondary }}>{tool.name}</h3>
+                {enhancedTemplate && (
+                  <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                    <Star className="w-2 h-2 mr-1" />
+                    Enhanced
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs leading-relaxed" style={{ color: colors.text.light }}>
                 {tool.description}
               </p>
             </div>
           </div>
 
           {/* Category Badge */}
-          <div className="flex items-center justify-between">
-            <Badge variant="secondary" className="text-xs">
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
+            <Badge 
+              className="text-xs font-medium" 
+              style={{ 
+                backgroundColor: colors.background.secondary, 
+                color: colors.text.secondary,
+                borderColor: colors.border.secondary
+              }}
+            >
               {tool.category}
             </Badge>
             
@@ -289,7 +360,13 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
                 </Badge>
               )}
               {isActive && (
-                <Badge variant="default" className="text-xs bg-primary">
+                <Badge 
+                  className="text-xs" 
+                  style={{ 
+                    backgroundColor: colors.background.primary, 
+                    color: colors.text.primary 
+                  }}
+                >
                   Active
                 </Badge>
               )}
@@ -297,12 +374,12 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           </div>
 
           {/* Knowledge Status */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
+          <div className="flex-1 flex flex-col min-h-0 mb-3">
+            <div className="flex items-center gap-2 flex-shrink-0 mb-2">
               {linkedKnowledge.length > 0 ? (
                 <>
-                  <BookOpen className="w-3 h-3 text-primary" />
-                  <span className="text-xs text-muted-foreground">
+                  <BookOpen className="w-3 h-3" style={{ color: colors.text.secondary }} />
+                  <span className="text-xs" style={{ color: colors.text.light }}>
                     {linkedKnowledge.length} knowledge {linkedKnowledge.length === 1 ? 'entry' : 'entries'} linked
                   </span>
                 </>
@@ -316,38 +393,110 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
               )}
             </div>
             {linkedKnowledge.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {entries
-                  .filter(entry => linkedKnowledge.includes(entry.id))
-                  .slice(0, 2)
-                  .map(entry => (
-                    <Badge key={entry.id} variant="outline" className="text-xs px-1 py-0 h-4">
-                      {entry.title.length > 12 ? `${entry.title.substring(0, 12)}...` : entry.title}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="flex flex-wrap gap-1">
+                  {entries
+                    .filter(entry => linkedKnowledge.includes(entry.id))
+                    .slice(0, 2)
+                    .map(entry => (
+                      <Badge 
+                        key={entry.id} 
+                        className="text-xs px-1 py-0 h-4 flex-shrink-0" 
+                        style={{ 
+                          backgroundColor: colors.background.secondary, 
+                          color: colors.text.secondary, 
+                          borderColor: colors.border.secondary 
+                        }}
+                      >
+                        {entry.title.length > 12 ? `${entry.title.substring(0, 12)}...` : entry.title}
+                      </Badge>
+                    ))}
+                  {linkedKnowledge.length > 2 && (
+                    <Badge 
+                      className="text-xs px-1 py-0 h-4 flex-shrink-0" 
+                      style={{ 
+                        backgroundColor: colors.background.secondary, 
+                        color: colors.text.secondary, 
+                        borderColor: colors.border.secondary 
+                      }}
+                    >
+                      +{linkedKnowledge.length - 2} more
                     </Badge>
-                  ))}
-                {linkedKnowledge.length > 2 && (
-                  <Badge variant="outline" className="text-xs px-1 py-0 h-4">
-                    +{linkedKnowledge.length - 2} more
-                  </Badge>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleGeneratePrompt();
-              }}
-              className="flex-1 h-8 text-xs"
-              disabled={!framework || !stage || !currentProject || showProgress}
-            >
-              <Play className="w-3 h-3 mr-1" />
-              {showProgress ? 'Generating...' : 'Generate Prompt'}
-            </Button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {enhancedTemplate ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowEnhancedPanel(true);
+                  }}
+                  className="flex-1 h-8 text-xs bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  disabled={showProgress}
+                >
+                  <Zap className="w-3 h-3 mr-1" />
+                  Enhanced Prompt
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGeneratePrompt();
+                  }}
+                  className="h-8 text-xs"
+                  style={{
+                    borderColor: colors.border.secondary,
+                    color: colors.text.secondary,
+                    backgroundColor: 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = colors.background.secondary;
+                    e.currentTarget.style.color = colors.text.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = colors.text.secondary;
+                  }}
+                  disabled={!framework || !stage || !currentProject || showProgress}
+                >
+                  <Play className="w-3 h-3" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGeneratePrompt();
+                }}
+                className="flex-1 h-8 text-xs"
+                style={{
+                  backgroundColor: colors.background.primary,
+                  color: colors.text.primary,
+                  borderColor: colors.border.primary
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = colors.background.hover;
+                  e.currentTarget.style.color = colors.text.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = colors.background.primary;
+                  e.currentTarget.style.color = colors.text.primary;
+                }}
+                disabled={!framework || !stage || !currentProject || showProgress}
+              >
+                <Play className="w-3 h-3 mr-1" />
+                {showProgress ? 'Generating...' : 'Generate Prompt'}
+              </Button>
+            )}
             
             {/* Debug Info in Development */}
             {process.env.NODE_ENV === 'development' && linkedKnowledge.length > 0 && (
@@ -407,6 +556,14 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         toolName={tool.name}
         toolId={id}
       />
+      
+      {showEnhancedPanel && enhancedTemplate && (
+        <EnhancedPromptPanel
+          template={enhancedTemplate}
+          onGenerate={handleEnhancedGenerate}
+          onClose={() => setShowEnhancedPanel(false)}
+        />
+      )}
     </ResizableNode>
   );
 });

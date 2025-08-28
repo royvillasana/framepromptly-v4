@@ -3,7 +3,7 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
+  NodeResizer,
   addEdge,
   useNodesState,
   useEdgesState,
@@ -316,6 +316,10 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           connectionMode={ConnectionMode.Loose}
           selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
           multiSelectionKeyCode="Shift"
+          nodeOrigin={[0, 0]}
+          nodesDraggable={true}
+          nodesConnectable={true}
+          elementsSelectable={true}
           minZoom={0.1}
           maxZoom={4}
           fitView
@@ -332,11 +336,6 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
             gap={20}
             size={2}
             variant={BackgroundVariant.Dots}
-          />
-          <MiniMap
-            className="bg-card border border-border shadow-lg"
-            nodeColor="hsl(var(--primary))"
-            maskColor="hsl(var(--muted))"
           />
         </ReactFlow>
       </div>

@@ -9,6 +9,7 @@ import { NodeActionsMenu } from './node-actions-menu';
 import { getSmartPosition } from '@/utils/node-positioning';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
+import { getFrameworkColors } from '@/lib/framework-colors';
 
 interface StageNodeData {
   stage: UXStage;
@@ -26,6 +27,9 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
   const { stage, framework, isActive, isCompleted } = data;
   const { addNode, addEdge, nodes } = useWorkflowStore();
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
+  
+  // Get framework colors, fallback to design-thinking if no framework
+  const colors = getFrameworkColors(framework?.id || 'design-thinking');
 
   const handleAddTool = (tool: UXTool) => {
     // Use smart positioning to avoid overlaps
@@ -38,6 +42,8 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: newPosition,
+      width: 250,
+      height: 200,
       data: {
         tool,
         stage,
@@ -82,6 +88,8 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
           id: `tool-${tool.id}-${Date.now()}-${index}`,
           type: 'tool',
           position: newPosition,
+          width: 250,
+          height: 200,
           data: {
             tool,
             stage,
@@ -121,6 +129,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3 }}
         whileHover={selected ? {} : { scale: 1.02 }}
+        style={{ width: '100%', height: '100%' }}
       >
       {/* Draggable Connection Handles */}
       <DraggableHandle
@@ -138,57 +147,113 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
         nodeId={id}
       />
       
-      <Card className={`
-        w-full h-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl
-        ${selected ? 'ring-2 ring-primary ring-offset-2 border-2 border-primary' : 'border border-border'}
-        ${isActive ? 'border-primary bg-primary-light' : ''}
-        ${isCompleted ? 'border-success bg-success/5' : ''}
-      `}>
-        <div className="flex items-center justify-between mb-3">
+      <Card 
+        className={`w-full h-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''}`}
+        style={{
+          backgroundColor: isActive ? colors.background.hover : colors.background.secondary,
+          borderTopWidth: '2px',
+          borderRightWidth: '2px',
+          borderBottomWidth: '2px',
+          borderLeftWidth: '4px',
+          borderTopColor: selected ? colors.border.primary : isCompleted ? '#10B981' : colors.border.tertiary,
+          borderRightColor: selected ? colors.border.primary : isCompleted ? '#10B981' : colors.border.tertiary,
+          borderBottomColor: selected ? colors.border.primary : isCompleted ? '#10B981' : colors.border.tertiary,
+          borderLeftColor: colors.border.secondary,
+          borderStyle: 'solid',
+          ...(selected && {
+            '--tw-ring-color': colors.border.primary,
+            '--tw-ring-offset-shadow': `0 0 0 2px ${colors.background.secondary}`,
+            '--tw-ring-shadow': `0 0 0 calc(2px + 2px) ${colors.border.primary}`
+          })
+        }}
+      >
+        <div className="flex items-center justify-between flex-shrink-0 mb-3">
           <div className="flex items-center space-x-2">
-            <div className={`
-              w-3 h-3 rounded-full
-              ${isCompleted ? 'bg-success' : isActive ? 'bg-primary' : 'bg-muted'}
-            `} />
-            <h3 className="font-semibold text-sm">{stage.name}</h3>
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{
+                backgroundColor: isCompleted ? '#10B981' : isActive ? colors.background.primary : colors.border.tertiary
+              }}
+            />
+            <h3 className="font-semibold text-sm" style={{ color: colors.text.secondary }}>{stage.name}</h3>
           </div>
           <Button variant="ghost" size="sm" className="w-6 h-6 p-0">
             <MoreVertical className="w-3 h-3" />
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+        <p className="text-xs mb-3 leading-relaxed flex-shrink-0" style={{ color: colors.text.light }}>
           {stage.description}
         </p>
 
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Tools</span>
-            <Badge variant="secondary" className="text-xs">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex items-center justify-between text-xs mb-2 flex-shrink-0">
+            <span style={{ color: colors.text.light }}>Tools</span>
+            <Badge 
+              className="text-xs font-medium" 
+              style={{ 
+                backgroundColor: colors.background.primary, 
+                color: colors.text.primary,
+                borderColor: colors.border.primary
+              }}
+            >
               {stage.tools.length}
             </Badge>
           </div>
-          <div className="space-y-1">
+          <div className="flex-1 space-y-1 overflow-y-auto min-h-0">
             {stage.tools.slice(0, 4).map((tool) => (
               <div 
                 key={tool.id}
-                className="flex items-center justify-between p-1 hover:bg-secondary/50 rounded cursor-pointer group text-xs"
+                className="flex items-center justify-between p-1 rounded cursor-pointer group text-xs flex-shrink-0 transition-colors duration-200"
+                style={{
+                  backgroundColor: colors.background.tertiary,
+                  borderLeft: `2px solid ${colors.border.tertiary}`
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = colors.background.hover;
+                  // Update text colors for a11y compliance
+                  const toolTitle = e.currentTarget.querySelector('[data-tool-item-title]');
+                  if (toolTitle) toolTitle.style.color = colors.text.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = colors.background.tertiary;
+                  // Restore original text colors
+                  const toolTitle = e.currentTarget.querySelector('[data-tool-item-title]');
+                  if (toolTitle) toolTitle.style.color = colors.text.secondary;
+                }}
                 onClick={() => handleAddTool(tool)}
               >
-                <span className="font-medium">{tool.name}</span>
-                <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span data-tool-item-title className="font-medium" style={{ color: colors.text.secondary }}>{tool.name}</span>
+                <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: colors.text.secondary }} />
               </div>
             ))}
             {stage.tools.length > 4 && (
-              <div className="text-xs text-muted-foreground p-1">
+              <div className="text-xs p-1 flex-shrink-0" style={{ color: colors.text.light }}>
                 +{stage.tools.length - 4} more tools
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Button size="sm" className="flex-1 text-xs h-7" onClick={handleRunStage}>
+        <div className="flex items-center space-x-2 mt-3 flex-shrink-0">
+          <Button 
+            size="sm" 
+            className="flex-1 text-xs h-7" 
+            style={{
+              backgroundColor: colors.background.primary,
+              color: colors.text.primary,
+              borderColor: colors.border.primary
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = colors.background.hover;
+              e.currentTarget.style.color = colors.text.hover;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = colors.background.primary;
+              e.currentTarget.style.color = colors.text.primary;
+            }}
+            onClick={handleRunStage}
+          >
             <Play className="w-3 h-3 mr-1" />
             Run Stage
           </Button>
