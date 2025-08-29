@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useProjectStore } from "@/stores/project-store";
+import logoHeader from "@/assets/logo_header.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +52,7 @@ export function Navigation({ className }: NavigationProps) {
       <div className="flex items-center space-x-8">
         <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
           <img 
-            src="/logo_header.png" 
+            src={logoHeader}
             alt="FramePromptly Logo" 
             className="h-8 w-auto"
           />

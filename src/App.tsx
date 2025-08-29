@@ -37,6 +37,7 @@ const App = () => {
       <Toaster />
       <Sonner />
       <BrowserRouter
+        basename={import.meta.env.PROD ? '/framepromptly-v4' : '/'}
         future={{
           v7_startTransition: true,
           v7_relativeSplatPath: true,
