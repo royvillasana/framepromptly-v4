@@ -45,13 +45,16 @@ export function Navigation({ className }: NavigationProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className={cn("flex items-center justify-between w-full p-6 bg-background/80 backdrop-blur-lg border-b border-border", className)}
+      className={cn("flex items-center justify-between w-full p-6 bg-background/80 backdrop-blur-lg border-b border-border relative", className)}
+      style={{ zIndex: 20 }}
     >
       <div className="flex items-center space-x-8">
         <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-            <Zap className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img 
+            src="/logo_header.png" 
+            alt="FramePromptly Logo" 
+            className="h-8 w-auto"
+          />
           <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             FramePromptly
           </span>

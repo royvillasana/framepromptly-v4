@@ -12,7 +12,7 @@ import {
   Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw, 
   ChevronLeft, ChevronRight, Loader2, User, Sparkles,
   Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock,
-  Target
+  Target, Truck, Key
 } from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
@@ -26,6 +26,8 @@ import { getFrameworkColors, getFrameworkTailwindClasses } from '@/lib/framework
 import { cn } from '@/lib/utils';
 import { DestinationSelector } from './destination-selector';
 import { DestinationType, DestinationContext } from '@/lib/destination-driven-tailoring';
+import { DeliveryDashboard } from '@/components/delivery/delivery-dashboard';
+import { OAuthConnectionManager } from '@/components/delivery/oauth-connection-manager';
 
 interface SavedPromptVersion {
   id: string;
@@ -119,6 +121,8 @@ function ExpandedPromptOverlayComponent({
   const [activeVersionId, setActiveVersionId] = useState('original');
   const [showDestinationSidebar, setShowDestinationSidebar] = useState(false);
   const [isTailoring, setIsTailoring] = useState(false);
+  const [showDeliveryDashboard, setShowDeliveryDashboard] = useState(false);
+  const [showConnectionManager, setShowConnectionManager] = useState(false);
   
   
   // Auto-scroll to bottom when new messages arrive
@@ -1054,6 +1058,29 @@ function ExpandedPromptOverlayComponent({
                         <Download className="w-3 h-3 mr-1" />
                         Export
                       </Button>
+                      
+                      {/* Delivery Dashboard Button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowDeliveryDashboard(true)}
+                        className="text-xs"
+                      >
+                        <Truck className="w-3 h-3 mr-1" />
+                        Deliver
+                      </Button>
+                      
+                      {/* Connection Manager Button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowConnectionManager(true)}
+                        className="text-xs"
+                      >
+                        <Key className="w-3 h-3 mr-1" />
+                        Connections
+                      </Button>
+                      
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1297,6 +1324,27 @@ function ExpandedPromptOverlayComponent({
           </AnimatePresence>
         </div>
       </motion.div>
+      
+      {/* Delivery Dashboard */}
+      <AnimatePresence>
+        {showDeliveryDashboard && (
+          <DeliveryDashboard
+            prompt={prompt}
+            isOpen={showDeliveryDashboard}
+            onClose={() => setShowDeliveryDashboard(false)}
+          />
+        )}
+      </AnimatePresence>
+      
+      {/* OAuth Connection Manager */}
+      <AnimatePresence>
+        {showConnectionManager && (
+          <OAuthConnectionManager
+            isOpen={showConnectionManager}
+            onClose={() => setShowConnectionManager(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 

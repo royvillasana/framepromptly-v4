@@ -1,0 +1,16 @@
+{
+  "name": "FramePromptly Import",
+  "id": "framepromptly-figjam-import",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": ["figjam"],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://*.framepromptly.com",
+      "https://*.supabase.co"
+    ]
+  }
+}

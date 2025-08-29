@@ -1132,11 +1132,69 @@ ${processedTemplate}`;
         processedContent = processedContent.replace(/{{#if previousOutputs}}(.*?){{\/if}}/gs, '');
       }
 
-      // Here you would integrate with your AI service
-      // For now, we'll simulate the response
-      const simulatedOutput = `Generated output for ${prompt.context.tool.name} in ${prompt.context.stage.name} stage:\n\n${processedContent}`;
+      // Call the AI generation service through Supabase function
+      console.log('🤖 Calling AI generation service for prompt:', promptId);
       
-      get().addPromptOutput(promptId, simulatedOutput);
+      const { data: aiResult, error: aiError } = await supabase.functions.invoke('generate-ai-prompt', {
+        body: {
+          promptContent: processedContent,
+          variables: prompt.variables,
+          projectId: prompt.projectId,
+          frameworkName: prompt.context.framework.name,
+          stageName: prompt.context.stage.name,
+          toolName: prompt.context.tool.name,
+          knowledgeContext: null // Could be enhanced with project knowledge later
+        }
+      });
+
+      if (aiError) {
+        console.error('AI generation failed:', aiError);
+        throw new Error(`AI generation failed: ${aiError.message}`);
+      }
+
+      if (!aiResult?.success) {
+        throw new Error(`AI generation failed: ${aiResult?.error || 'Unknown error'}`);
+      }
+
+      const aiResponse = aiResult.aiResponse;
+      console.log('✅ AI response generated successfully');
+      
+      // Update the prompt with the AI output and save to store
+      set(state => ({
+        prompts: state.prompts.map(p =>
+          p.id === promptId ? { 
+            ...p, 
+            output: {
+              type: 'generated',
+              content: {
+                items: [], // This will be populated by destination tailoring
+                rawOutput: aiResponse,
+                generatedAt: new Date().toISOString(),
+                model: 'gpt-4o-mini', // Default model used by the function
+                tokens: aiResponse.length // Rough estimate
+              },
+              summary: `Generated ${prompt.context.tool.name} output`,
+              metadata: {
+                framework: prompt.context.framework.name,
+                stage: prompt.context.stage.name,
+                tool: prompt.context.tool.name,
+                generatedAt: new Date().toISOString()
+              }
+            },
+            execution: {
+              status: 'completed',
+              startedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+              model: 'gpt-4o-mini',
+              usage: {
+                promptTokens: processedContent.length, // Rough estimate
+                completionTokens: aiResponse.length, // Rough estimate
+                totalTokens: processedContent.length + aiResponse.length
+              }
+            }
+          } : p
+        )
+      }));
     } catch (error) {
       console.error('Error executing prompt:', error);
     } finally {

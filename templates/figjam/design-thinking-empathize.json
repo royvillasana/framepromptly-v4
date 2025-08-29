@@ -1,0 +1,387 @@
+{
+  "metadata": {
+    "name": "Design Thinking - Empathize Phase",
+    "category": "design-thinking",
+    "phase": "empathize", 
+    "platform": "figjam",
+    "duration": "60-90min",
+    "participants": "4-8",
+    "facilitator": "required",
+    "experience": "beginner",
+    "version": "1.0.0"
+  },
+  "structure": {
+    "workshopTitle": "Design Thinking: Empathize Phase Workshop",
+    "sections": [
+      {
+        "id": "intro",
+        "name": "Workshop Introduction",
+        "x": 100,
+        "y": 100,
+        "width": 1200,
+        "height": 300,
+        "backgroundColor": "#F0F8FF",
+        "components": [
+          {
+            "type": "title",
+            "text": "🧠 Design Thinking: Empathize Phase",
+            "x": 150,
+            "y": 150,
+            "fontSize": 32,
+            "fontWeight": "bold"
+          },
+          {
+            "type": "text",
+            "text": "Duration: 90 minutes | Participants: 4-8 people | Goal: Understand user needs and pain points",
+            "x": 150,
+            "y": 200,
+            "fontSize": 16,
+            "color": "#666"
+          },
+          {
+            "type": "timer",
+            "duration": "5min",
+            "x": 1100,
+            "y": 130,
+            "purpose": "Introduction & Icebreaker"
+          }
+        ]
+      },
+      {
+        "id": "icebreaker",
+        "name": "Team Icebreaker", 
+        "x": 100,
+        "y": 450,
+        "width": 1200,
+        "height": 200,
+        "backgroundColor": "#FFF8DC",
+        "components": [
+          {
+            "type": "instruction",
+            "text": "🎯 Icebreaker: Share your biggest user frustration from this week (2 min per person)",
+            "x": 150,
+            "y": 480,
+            "fontSize": 18,
+            "fontWeight": "bold"
+          },
+          {
+            "type": "sticky-template",
+            "text": "User frustration example",
+            "x": 150,
+            "y": 520,
+            "width": 180,
+            "height": 100,
+            "backgroundColor": "#FFE066",
+            "instruction": "One frustration per sticky"
+          }
+        ]
+      },
+      {
+        "id": "user-interviews",
+        "name": "User Interview Insights",
+        "x": 100,
+        "y": 700,
+        "width": 1200, 
+        "height": 400,
+        "backgroundColor": "#F0FFF0",
+        "components": [
+          {
+            "type": "section-header",
+            "text": "👥 User Interview Insights",
+            "x": 150,
+            "y": 730,
+            "fontSize": 24,
+            "fontWeight": "bold"
+          },
+          {
+            "type": "instruction",
+            "text": "Add insights from user interviews. Focus on what users said, felt, and did.",
+            "x": 150,
+            "y": 770,
+            "fontSize": 16
+          },
+          {
+            "type": "cluster-zone",
+            "name": "What Users SAID",
+            "x": 150,
+            "y": 800,
+            "width": 350,
+            "height": 250,
+            "borderColor": "#32CD32",
+            "borderStyle": "dashed",
+            "components": [
+              {
+                "type": "sticky-template",
+                "text": "\"I wish this was easier\"",
+                "backgroundColor": "#98FB98",
+                "instruction": "Direct quotes from users"
+              }
+            ]
+          },
+          {
+            "type": "cluster-zone", 
+            "name": "What Users FELT",
+            "x": 550,
+            "y": 800,
+            "width": 350,
+            "height": 250,
+            "borderColor": "#FF6B66",
+            "borderStyle": "dashed",
+            "components": [
+              {
+                "type": "sticky-template",
+                "text": "Frustrated with complexity",
+                "backgroundColor": "#FFB6C1",
+                "instruction": "Emotions and feelings"
+              }
+            ]
+          },
+          {
+            "type": "cluster-zone",
+            "name": "What Users DID",
+            "x": 950,
+            "y": 800,
+            "width": 350,
+            "height": 250,
+            "borderColor": "#4169E1",
+            "borderStyle": "dashed",
+            "components": [
+              {
+                "type": "sticky-template",
+                "text": "Used workaround solution",
+                "backgroundColor": "#87CEEB",
+                "instruction": "Observable behaviors"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "empathy-mapping",
+        "name": "Empathy Map",
+        "x": 100,
+        "y": 1150,
+        "width": 1200,
+        "height": 600,
+        "backgroundColor": "#FFF5EE",
+        "components": [
+          {
+            "type": "section-header",
+            "text": "🎭 Empathy Map",
+            "x": 150,
+            "y": 1180,
+            "fontSize": 24,
+            "fontWeight": "bold"
+          },
+          {
+            "type": "user-circle",
+            "x": 650,
+            "y": 1400,
+            "radius": 100,
+            "text": "USER",
+            "backgroundColor": "#FFA07A"
+          },
+          {
+            "type": "empathy-quadrant",
+            "name": "THINKS & FEELS",
+            "x": 150,
+            "y": 1250,
+            "width": 450,
+            "height": 200,
+            "backgroundColor": "#E6E6FA",
+            "instruction": "Thoughts, beliefs, preoccupations, worries"
+          },
+          {
+            "type": "empathy-quadrant", 
+            "name": "SEES",
+            "x": 750,
+            "y": 1250,
+            "width": 450,
+            "height": 200,
+            "backgroundColor": "#F0E68C",
+            "instruction": "Environment, friends, market offerings"
+          },
+          {
+            "type": "empathy-quadrant",
+            "name": "SAYS & DOES", 
+            "x": 150,
+            "y": 1500,
+            "width": 450,
+            "height": 200,
+            "backgroundColor": "#98FB98",
+            "instruction": "Public behavior, appearance, attitude"
+          },
+          {
+            "type": "empathy-quadrant",
+            "name": "PAINS",
+            "x": 750,
+            "y": 1500,
+            "width": 200,
+            "height": 200,
+            "backgroundColor": "#FFB6C1",
+            "instruction": "Fears, frustrations, obstacles"
+          },
+          {
+            "type": "empathy-quadrant",
+            "name": "GAINS",
+            "x": 1000,
+            "y": 1500,
+            "width": 200,
+            "height": 200,
+            "backgroundColor": "#87CEEB", 
+            "instruction": "Wants, needs, success measures"
+          }
+        ]
+      },
+      {
+        "id": "key-insights",
+        "name": "Key Insights",
+        "x": 100,
+        "y": 1800,
+        "width": 1200,
+        "height": 300,
+        "backgroundColor": "#FFFACD",
+        "components": [
+          {
+            "type": "section-header",
+            "text": "💡 Key Insights & Patterns",
+            "x": 150,
+            "y": 1830,
+            "fontSize": 24,
+            "fontWeight": "bold"
+          },
+          {
+            "type": "instruction",
+            "text": "Synthesize your findings. What patterns emerge? What surprises did you discover?",
+            "x": 150,
+            "y": 1870,
+            "fontSize": 16
+          },
+          {
+            "type": "insight-template",
+            "text": "Most users struggle with [specific task] because [root cause]",
+            "x": 150,
+            "y": 1920,
+            "width": 300,
+            "height": 120,
+            "backgroundColor": "#FFD700",
+            "priority": "high"
+          }
+        ]
+      },
+      {
+        "id": "next-steps",
+        "name": "Next Steps",
+        "x": 100,
+        "y": 2150,
+        "width": 1200,
+        "height": 200,
+        "backgroundColor": "#E0FFFF",
+        "components": [
+          {
+            "type": "section-header",
+            "text": "🎯 Next Steps & Actions",
+            "x": 150,
+            "y": 2180,
+            "fontSize": 24,
+            "fontWeight": "bold"
+          },
+          {
+            "type": "action-item",
+            "text": "Schedule follow-up interviews with [target users]",
+            "assignee": "",
+            "deadline": "",
+            "x": 150,
+            "y": 2220,
+            "backgroundColor": "#AFEEEE"
+          }
+        ]
+      }
+    ]
+  },
+  "facilitationScript": [
+    {
+      "phase": "Setup",
+      "duration": "5 minutes",
+      "activities": [
+        "Welcome participants and introduce workshop goals",
+        "Share FigJam board and explain navigation",
+        "Set ground rules: stay in empathy mode, no solutions yet"
+      ]
+    },
+    {
+      "phase": "Icebreaker", 
+      "duration": "10 minutes",
+      "activities": [
+        "Each person shares a user frustration on a sticky",
+        "Quick clustering of similar frustrations",
+        "Identify themes to keep in mind during workshop"
+      ]
+    },
+    {
+      "phase": "User Interview Synthesis",
+      "duration": "30 minutes", 
+      "activities": [
+        "Review interview data and research findings",
+        "Extract insights using Said-Felt-Did framework",
+        "Focus on direct quotes and specific behaviors"
+      ]
+    },
+    {
+      "phase": "Empathy Mapping",
+      "duration": "25 minutes",
+      "activities": [
+        "Fill out empathy map quadrants",
+        "Focus on one primary user persona",
+        "Look for contradictions and gaps in understanding"
+      ]
+    },
+    {
+      "phase": "Synthesis",
+      "duration": "15 minutes",
+      "activities": [
+        "Identify key insights and patterns",
+        "Prioritize most important findings",
+        "Frame insights as opportunity statements"
+      ]
+    },
+    {
+      "phase": "Wrap-up",
+      "duration": "5 minutes",
+      "activities": [
+        "Recap major discoveries",
+        "Plan next steps and assign owners", 
+        "Schedule Define phase workshop"
+      ]
+    }
+  ],
+  "aiPrompts": {
+    "userInsightGeneration": "Generate realistic user insights for the {framework} {stage} phase focusing on {tool}. Create 6-8 insights that represent what users said, felt, and did during research. Each insight should be specific, actionable, and based on real user needs. Format as sticky note content (max 10 words each).",
+    "empathyMapContent": "Create empathy map content for {userPersona} related to {problemArea}. Generate 4-6 items for each quadrant: Thinks & Feels, Sees, Says & Does, Pains, and Gains. Focus on authentic user emotions and behaviors observed during research.",
+    "facilitationTips": "Provide facilitation guidance for running an empathize phase workshop with {participantCount} people for {duration} minutes. Include ice breakers, time management tips, and techniques for keeping the team focused on understanding rather than solving."
+  },
+  "tools": {
+    "voting": {
+      "enabled": true,
+      "options": ["👍", "❤️", "💡", "🤔", "⚡"]
+    },
+    "timer": {
+      "enabled": true,
+      "sessions": ["5min", "10min", "15min", "25min"]
+    },
+    "reactions": {
+      "enabled": true
+    },
+    "stamping": {
+      "enabled": true,
+      "purpose": "Priority voting on insights"
+    }
+  },
+  "qualityChecks": [
+    "Insights are specific and actionable",
+    "Content focuses on understanding, not solutions",
+    "User quotes are authentic and meaningful", 
+    "Empathy map shows deep user understanding",
+    "Next steps are clearly defined and assigned"
+  ]
+}

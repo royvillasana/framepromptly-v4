@@ -42,8 +42,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: newPosition,
-      width: 250,
-      height: 200,
+      width: 320,
       data: {
         tool,
         stage,
@@ -88,8 +87,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
           id: `tool-${tool.id}-${Date.now()}-${index}`,
           type: 'tool',
           position: newPosition,
-          width: 250,
-          height: 200,
+          width: 320,
           data: {
             tool,
             stage,
@@ -120,16 +118,15 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
     <ResizableNode 
       selected={selected} 
       minWidth={250} 
-      minHeight={180}
+      minHeight="auto"
       maxWidth={400}
-      maxHeight={450}
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3 }}
         whileHover={selected ? {} : { scale: 1.02 }}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%' }}
       >
       {/* Draggable Connection Handles */}
       <DraggableHandle
@@ -148,7 +145,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       />
       
       <Card 
-        className={`w-full h-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''}`}
+        className={`w-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''}`}
         style={{
           backgroundColor: isActive ? colors.background.hover : colors.background.secondary,
           borderTopWidth: '2px',

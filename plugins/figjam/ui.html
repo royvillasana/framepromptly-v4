@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>FramePromptly Import</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: #fff;
+            padding: 16px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #0066cc;
+            margin-bottom: 8px;
+        }
+
+        .logo svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .input-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 500;
+            color: #333;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+        }
+
+        .button {
+            width: 100%;
+            padding: 10px 16px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .button:hover {
+            background: #0052a3;
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .button.secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .button.secondary:hover {
+            background: #e5e5e5;
+        }
+
+        .divider {
+            margin: 16px 0;
+            text-align: center;
+            position: relative;
+            color: #999;
+            font-size: 11px;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #eee;
+            z-index: 1;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 12px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .status.info {
+            background: #e7f3ff;
+            color: #0066cc;
+            border: 1px solid #b3d9ff;
+        }
+
+        .status.success {
+            background: #e7f7e7;
+            color: #006600;
+            border: 1px solid #b3e6b3;
+        }
+
+        .status.error {
+            background: #ffe7e7;
+            color: #cc0000;
+            border: 1px solid #ffb3b3;
+        }
+
+        .progress {
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #eee;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #0066cc;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+            text-align: center;
+        }
+
+        .help-text {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: #0066cc;
+            border-bottom-color: #0066cc;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e3e3e3;
+            border-top: 2px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                <path d="M2 17L12 22L22 17"/>
+                <path d="M2 12L12 17L22 12"/>
+            </svg>
+            FramePromptly Import
+        </div>
+        <div class="subtitle">Import workshop content from FramePromptly</div>
+    </div>
+
+    <div class="status" id="status"></div>
+    
+    <div class="progress" id="progress">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">0 / 0 items imported</div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('url')">Import URL</div>
+        <div class="tab" onclick="switchTab('json')">Paste JSON</div>
+    </div>
+
+    <div class="input-section">
+        <!-- URL Import Tab -->
+        <div id="urlTab" class="tab-content active">
+            <div class="input-group">
+                <label for="importUrl">Import URL</label>
+                <input type="text" id="importUrl" placeholder="Paste your FramePromptly import URL here...">
+                <div class="help-text">
+                    Get this URL from the FramePromptly delivery dashboard after generating content for FigJam.
+                </div>
+            </div>
+            
+            <button class="button" id="importUrlBtn" onclick="importFromUrl()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7,10 12,15 17,10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Import from URL
+            </button>
+        </div>
+
+        <!-- JSON Import Tab -->
+        <div id="jsonTab" class="tab-content">
+            <div class="input-group">
+                <label for="importJson">JSON Content</label>
+                <textarea id="importJson" placeholder='Paste your JSON content here...
+Example:
+{
+  "success": true,
+  "data": {
+    "payload": { ... },
+    "instructions": { ... }
+  }
+}'></textarea>
+                <div class="help-text">
+                    Paste the complete JSON response from FramePromptly's import endpoint.
+                </div>
+            </div>
+            
+            <button class="button" id="importJsonBtn" onclick="importFromJson()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7,10 12,15 17,10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Import from JSON
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isProcessing = false;
+
+        // Switch between tabs
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+        }
+
+        // Import from URL
+        function importFromUrl() {
+            if (isProcessing) return;
+
+            const url = document.getElementById('importUrl').value.trim();
+            if (!url) {
+                showStatus('error', 'Please enter an import URL');
+                return;
+            }
+
+            if (!url.includes('framepromptly.com') && !url.includes('supabase.co')) {
+                showStatus('error', 'Please enter a valid FramePromptly import URL');
+                return;
+            }
+
+            setProcessing(true);
+            showStatus('info', 'Importing from URL...');
+            
+            parent.postMessage({
+                pluginMessage: {
+                    type: 'import-url',
+                    url: url
+                }
+            }, '*');
+        }
+
+        // Import from JSON
+        function importFromJson() {
+            if (isProcessing) return;
+
+            const json = document.getElementById('importJson').value.trim();
+            if (!json) {
+                showStatus('error', 'Please paste JSON content');
+                return;
+            }
+
+            // Basic JSON validation
+            try {
+                JSON.parse(json);
+            } catch (e) {
+                showStatus('error', 'Invalid JSON format. Please check your content.');
+                return;
+            }
+
+            setProcessing(true);
+            showStatus('info', 'Processing JSON...');
+            
+            parent.postMessage({
+                pluginMessage: {
+                    type: 'import-json',
+                    json: json
+                }
+            }, '*');
+        }
+
+        // Set processing state
+        function setProcessing(processing) {
+            isProcessing = processing;
+            const buttons = document.querySelectorAll('.button');
+            buttons.forEach(btn => {
+                btn.disabled = processing;
+                if (processing) {
+                    const originalContent = btn.innerHTML;
+                    btn.setAttribute('data-original-content', originalContent);
+                    btn.innerHTML = '<div class="spinner"></div> Processing...';
+                } else {
+                    const originalContent = btn.getAttribute('data-original-content');
+                    if (originalContent) {
+                        btn.innerHTML = originalContent;
+                    }
+                }
+            });
+        }
+
+        // Show status message
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Update progress
+        function updateProgress(current, total) {
+            const progressEl = document.getElementById('progress');
+            const fillEl = document.getElementById('progressFill');
+            const textEl = document.getElementById('progressText');
+            
+            if (current === 0 && total === 0) {
+                progressEl.style.display = 'none';
+                return;
+            }
+
+            progressEl.style.display = 'block';
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            fillEl.style.width = `${percentage}%`;
+            textEl.textContent = `${current} / ${total} items imported`;
+
+            if (current === total) {
+                setTimeout(() => {
+                    progressEl.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        // Handle messages from plugin code
+        window.onmessage = (event) => {
+            const { type, message, current, total, details } = event.data.pluginMessage || {};
+
+            switch (type) {
+                case 'ready':
+                    console.log('Plugin ready');
+                    break;
+
+                case 'status':
+                    showStatus('info', message);
+                    break;
+
+                case 'progress':
+                    updateProgress(current, total);
+                    break;
+
+                case 'success':
+                    setProcessing(false);
+                    showStatus('success', message);
+                    
+                    if (details) {
+                        console.log('Import details:', details);
+                        updateProgress(details.created, details.total);
+                    }
+                    
+                    // Clear inputs on success
+                    document.getElementById('importUrl').value = '';
+                    document.getElementById('importJson').value = '';
+                    break;
+
+                case 'error':
+                    setProcessing(false);
+                    showStatus('error', message);
+                    break;
+
+                default:
+                    console.log('Unknown message type:', type);
+            }
+        };
+
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                const activeTab = document.querySelector('.tab-content.active').id;
+                if (activeTab === 'urlTab') {
+                    importFromUrl();
+                } else {
+                    importFromJson();
+                }
+            }
+        });
+
+        // Auto-focus first input
+        document.getElementById('importUrl').focus();
+    </script>
+</body>
+</html>

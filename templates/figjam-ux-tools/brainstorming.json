@@ -1,0 +1,537 @@
+{
+  "metadata": {
+    "name": "Brainstorming & Ideation Workshop",
+    "tool": "Brainstorming",
+    "category": "Ideation",
+    "platform": "figjam",
+    "duration": "60-90min",
+    "participants": "5-8",
+    "facilitator": "required",
+    "experience": "beginner",
+    "version": "1.0.0"
+  },
+  "structure": {
+    "workshopTitle": "Creative Brainstorming Session",
+    "sections": [
+      {
+        "id": "workshop-setup",
+        "name": "Brainstorming Setup & Rules",
+        "x": 100,
+        "y": 100,
+        "width": 1800,
+        "height": 300,
+        "backgroundColor": "#E3F2FD",
+        "elements": ["title", "challenge-statement", "rules", "timer"]
+      },
+      {
+        "id": "crazy-eights",
+        "name": "Crazy 8s: Rapid Ideation",
+        "x": 100,
+        "y": 450,
+        "width": 1800,
+        "height": 400,
+        "backgroundColor": "#FFF3E0",
+        "elements": ["crazy8-grid", "instructions", "timer-8min"]
+      },
+      {
+        "id": "idea-expansion",
+        "name": "Idea Generation & Expansion",
+        "x": 100,
+        "y": 900,
+        "width": 1800,
+        "height": 500,
+        "backgroundColor": "#E8F5E8",
+        "elements": ["all-ideas", "build-on-ideas", "wild-ideas"]
+      },
+      {
+        "id": "clustering-voting",
+        "name": "Clustering & Dot Voting",
+        "x": 100,
+        "y": 1450,
+        "width": 1800,
+        "height": 400,
+        "backgroundColor": "#F3E5F5",
+        "elements": ["idea-clusters", "voting-dots", "top-ideas"]
+      }
+    ],
+    "items": [
+      {
+        "id": "challenge-statement",
+        "type": "text",
+        "text": "💡 How Might We: [Challenge Statement]",
+        "x": 150,
+        "y": 150,
+        "width": 700,
+        "height": 80,
+        "style": {
+          "fontSize": 20,
+          "fontWeight": "bold",
+          "backgroundColor": "#2196F3",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "rules-header",
+        "type": "text",
+        "text": "📋 Brainstorming Rules",
+        "x": 900,
+        "y": 150,
+        "width": 300,
+        "height": 50,
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "bold",
+          "backgroundColor": "#1976D2",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "rule-1",
+        "type": "sticky",
+        "text": "Defer judgment",
+        "x": 900,
+        "y": 220,
+        "width": 140,
+        "height": 60,
+        "clusterId": "rules",
+        "category": "rule",
+        "style": {
+          "backgroundColor": "#BBDEFB",
+          "fontSize": 12
+        }
+      },
+      {
+        "id": "rule-2",
+        "type": "sticky",
+        "text": "Strive for quantity",
+        "x": 1060,
+        "y": 220,
+        "width": 140,
+        "height": 60,
+        "clusterId": "rules",
+        "category": "rule",
+        "style": {
+          "backgroundColor": "#BBDEFB",
+          "fontSize": 12
+        }
+      },
+      {
+        "id": "rule-3",
+        "type": "sticky",
+        "text": "Build on ideas",
+        "x": 900,
+        "y": 300,
+        "width": 140,
+        "height": 60,
+        "clusterId": "rules",
+        "category": "rule",
+        "style": {
+          "backgroundColor": "#BBDEFB",
+          "fontSize": 12
+        }
+      },
+      {
+        "id": "rule-4",
+        "type": "sticky",
+        "text": "Be visual",
+        "x": 1060,
+        "y": 300,
+        "width": 140,
+        "height": 60,
+        "clusterId": "rules",
+        "category": "rule",
+        "style": {
+          "backgroundColor": "#BBDEFB",
+          "fontSize": 12
+        }
+      },
+      {
+        "id": "crazy8-title",
+        "type": "text",
+        "text": "🔥 Crazy 8s: 8 Ideas in 8 Minutes",
+        "x": 150,
+        "y": 500,
+        "width": 500,
+        "height": 60,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "bold",
+          "backgroundColor": "#FF9800",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "crazy8-box-1",
+        "type": "shape",
+        "text": "Idea 1",
+        "x": 150,
+        "y": 590,
+        "width": 200,
+        "height": 120,
+        "clusterId": "crazy8-grid",
+        "category": "sketch-area",
+        "style": {
+          "backgroundColor": "#FFF8E1",
+          "borderColor": "#FF8F00",
+          "borderWidth": 2,
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "crazy8-box-2",
+        "type": "shape",
+        "text": "Idea 2",
+        "x": 380,
+        "y": 590,
+        "width": 200,
+        "height": 120,
+        "clusterId": "crazy8-grid",
+        "category": "sketch-area",
+        "style": {
+          "backgroundColor": "#FFF8E1",
+          "borderColor": "#FF8F00",
+          "borderWidth": 2,
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "crazy8-box-3",
+        "type": "shape", 
+        "text": "Idea 3",
+        "x": 610,
+        "y": 590,
+        "width": 200,
+        "height": 120,
+        "clusterId": "crazy8-grid",
+        "category": "sketch-area",
+        "style": {
+          "backgroundColor": "#FFF8E1",
+          "borderColor": "#FF8F00",
+          "borderWidth": 2,
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "crazy8-box-4",
+        "type": "shape",
+        "text": "Idea 4",
+        "x": 840,
+        "y": 590,
+        "width": 200,
+        "height": 120,
+        "clusterId": "crazy8-grid",
+        "category": "sketch-area",
+        "style": {
+          "backgroundColor": "#FFF8E1",
+          "borderColor": "#FF8F00",
+          "borderWidth": 2,
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "expansion-title",
+        "type": "text",
+        "text": "💭 All Ideas Welcome - No Judgment Zone!",
+        "x": 150,
+        "y": 950,
+        "width": 600,
+        "height": 60,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "bold",
+          "backgroundColor": "#4CAF50",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "idea-1",
+        "type": "sticky",
+        "text": "Mobile app with voice commands",
+        "x": 150,
+        "y": 1040,
+        "width": 180,
+        "height": 100,
+        "clusterId": "all-ideas",
+        "category": "solution",
+        "style": {
+          "backgroundColor": "#C8E6C9",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "idea-2",
+        "type": "sticky",
+        "text": "AI-powered recommendation engine",
+        "x": 350,
+        "y": 1040,
+        "width": 180,
+        "height": 100,
+        "clusterId": "all-ideas",
+        "category": "solution",
+        "style": {
+          "backgroundColor": "#C8E6C9",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "idea-3",
+        "type": "sticky",
+        "text": "Collaborative workspace integration",
+        "x": 550,
+        "y": 1040,
+        "width": 180,
+        "height": 100,
+        "clusterId": "all-ideas",
+        "category": "solution",
+        "style": {
+          "backgroundColor": "#C8E6C9",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "idea-4",
+        "type": "sticky",
+        "text": "Gamification with progress rewards",
+        "x": 750,
+        "y": 1040,
+        "width": 180,
+        "height": 100,
+        "clusterId": "all-ideas",
+        "category": "solution",
+        "style": {
+          "backgroundColor": "#C8E6C9",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "build-idea-1",
+        "type": "sticky",
+        "text": "+ Add offline sync capability",
+        "x": 950,
+        "y": 1040,
+        "width": 180,
+        "height": 100,
+        "clusterId": "build-on-ideas",
+        "category": "enhancement",
+        "style": {
+          "backgroundColor": "#DCEDC8",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "wild-idea-1",
+        "type": "sticky",
+        "text": "Holographic interface display",
+        "x": 1150,
+        "y": 1040,
+        "width": 180,
+        "height": 100,
+        "clusterId": "wild-ideas",
+        "category": "wild",
+        "style": {
+          "backgroundColor": "#F1F8E9",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "clustering-title",
+        "type": "text",
+        "text": "🎯 Group Similar Ideas & Vote",
+        "x": 150,
+        "y": 1500,
+        "width": 500,
+        "height": 60,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "bold",
+          "backgroundColor": "#9C27B0",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "cluster-1-header",
+        "type": "text",
+        "text": "🏷️ Technology Solutions",
+        "x": 150,
+        "y": 1590,
+        "width": 300,
+        "height": 40,
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "bold",
+          "backgroundColor": "#CE93D8",
+          "color": "#4A148C"
+        }
+      },
+      {
+        "id": "top-idea-1",
+        "type": "sticky",
+        "text": "AI recommendation engine ⚫⚫⚫⚫⚫",
+        "x": 150,
+        "y": 1650,
+        "width": 200,
+        "height": 120,
+        "clusterId": "top-ideas",
+        "category": "winner",
+        "style": {
+          "backgroundColor": "#E1BEE7",
+          "fontSize": 14,
+          "fontWeight": "bold"
+        }
+      },
+      {
+        "id": "top-idea-2",
+        "type": "sticky",
+        "text": "Voice commands ⚫⚫⚫",
+        "x": 370,
+        "y": 1650,
+        "width": 200,
+        "height": 120,
+        "clusterId": "top-ideas",
+        "category": "winner",
+        "style": {
+          "backgroundColor": "#E1BEE7",
+          "fontSize": 14,
+          "fontWeight": "bold"
+        }
+      },
+      {
+        "id": "cluster-2-header",
+        "type": "text",
+        "text": "🎮 Engagement Ideas",
+        "x": 600,
+        "y": 1590,
+        "width": 300,
+        "height": 40,
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "bold",
+          "backgroundColor": "#CE93D8",
+          "color": "#4A148C"
+        }
+      },
+      {
+        "id": "top-idea-3",
+        "type": "sticky",
+        "text": "Progress gamification ⚫⚫",
+        "x": 600,
+        "y": 1650,
+        "width": 200,
+        "height": 120,
+        "clusterId": "top-ideas",
+        "category": "winner",
+        "style": {
+          "backgroundColor": "#E1BEE7",
+          "fontSize": 14
+        }
+      }
+    ],
+    "clusters": [
+      {
+        "id": "rules",
+        "name": "Brainstorming Rules",
+        "x": 900,
+        "y": 220,
+        "width": 300,
+        "height": 140,
+        "itemIds": ["rule-1", "rule-2", "rule-3", "rule-4"],
+        "criteria": "Session guidelines"
+      },
+      {
+        "id": "crazy8-grid",
+        "name": "Crazy 8s Grid",
+        "x": 150,
+        "y": 590,
+        "width": 900,
+        "height": 240,
+        "itemIds": ["crazy8-box-1", "crazy8-box-2", "crazy8-box-3", "crazy8-box-4"],
+        "criteria": "Rapid ideation sketches"
+      },
+      {
+        "id": "all-ideas",
+        "name": "All Generated Ideas",
+        "x": 150,
+        "y": 1040,
+        "width": 750,
+        "height": 300,
+        "itemIds": ["idea-1", "idea-2", "idea-3", "idea-4"],
+        "criteria": "All brainstormed solutions"
+      },
+      {
+        "id": "top-ideas",
+        "name": "Top Voted Ideas",
+        "x": 150,
+        "y": 1650,
+        "width": 650,
+        "height": 140,
+        "itemIds": ["top-idea-1", "top-idea-2", "top-idea-3"],
+        "criteria": "Highest priority solutions"
+      }
+    ],
+    "facilitationScript": [
+      {
+        "step": 1,
+        "instruction": "Set context and explain brainstorming rules",
+        "duration": "5 minutes",
+        "sectionId": "workshop-setup",
+        "materials": ["problem statement", "rules display", "timer"]
+      },
+      {
+        "step": 2,
+        "instruction": "Run Crazy 8s exercise - 8 ideas in 8 minutes",
+        "duration": "8 minutes",
+        "sectionId": "crazy-eights",
+        "materials": ["sketch templates", "8-minute timer", "pens"]
+      },
+      {
+        "step": 3,
+        "instruction": "Share Crazy 8s and expand into full ideas",
+        "duration": "15 minutes",
+        "sectionId": "idea-expansion", 
+        "materials": ["sticky notes", "sharing guidelines"]
+      },
+      {
+        "step": 4,
+        "instruction": "Continue open brainstorming - all ideas welcome",
+        "duration": "20 minutes",
+        "sectionId": "idea-expansion",
+        "materials": ["more stickies", "encouragement", "build-on prompts"]
+      },
+      {
+        "step": 5,
+        "instruction": "Group similar ideas into themed clusters",
+        "duration": "10 minutes",
+        "sectionId": "clustering-voting",
+        "materials": ["cluster headers", "grouping instructions"]
+      },
+      {
+        "step": 6,
+        "instruction": "Dot voting to prioritize top 5 ideas",
+        "duration": "8 minutes",
+        "sectionId": "clustering-voting",
+        "materials": ["voting dots", "voting rules", "results capture"]
+      }
+    ],
+    "layoutHints": {
+      "arrangement": "sectioned",
+      "spacing": 50,
+      "columns": 5,
+      "totalWidth": 2000,
+      "totalHeight": 1900
+    }
+  },
+  "aiPrompts": {
+    "ideaGeneration": "Generate 15-20 creative solution ideas for {challengeStatement}. Include practical solutions, enhanced versions of existing ideas, and 2-3 wild/unconventional ideas. Each idea should be concise (≤8 words).",
+    "ideaClustering": "Group these brainstormed ideas {ideaList} into 3-4 thematic clusters. Name each cluster and explain the grouping criteria. Identify the most promising ideas in each cluster.",
+    "votingGuidance": "Provide dot voting criteria for {ideaList} focusing on {evaluationCriteria}. Suggest which ideas deserve the most votes and why."
+  },
+  "qualityChecks": [
+    "Rules are clearly displayed and followed",
+    "Crazy 8s generates diverse rapid ideas", 
+    "Ideas build on each other progressively",
+    "No judgment or criticism during generation",
+    "Ideas are clustered logically by theme",
+    "Voting produces clear top 3-5 winners",
+    "Wild ideas are encouraged and captured"
+  ]
+}

@@ -21,6 +21,7 @@ import {
 } from './destination-tailors';
 
 import { GeneratedPrompt } from '@/stores/prompt-store';
+import { DeliveryPayload, DeliveryItem } from '@/stores/delivery-store';
 
 /**
  * Main Destination Tailoring Service
@@ -42,12 +43,18 @@ export class DestinationTailoringService {
   async tailorPromptForDestination(request: TailoringRequest): Promise<TailoringResponse> {
     try {
       // Validate destination
+      console.log(`🔍 Validating destination: '${request.context.destination}'`);
+      console.log(`Valid destinations: ['AI Provider', 'Miro', 'FigJam', 'Figma']`);
+      
       if (!isValidDestination(request.context.destination)) {
+        console.error(`❌ Destination validation failed for: '${request.context.destination}'`);
         throw new DestinationTailoringError(
           `Invalid destination: ${request.context.destination}`,
           request.context.destination as DestinationType
         );
       }
+      
+      console.log(`✅ Destination validation passed for: '${request.context.destination}'`);
 
       // Get the appropriate tailor
       const tailor = getDestinationTailor(request.context.destination);
@@ -190,6 +197,112 @@ export class DestinationTailoringService {
    */
   requiresIntegration(destination: DestinationType): boolean {
     return ['Miro', 'FigJam', 'Figma'].includes(destination);
+  }
+
+  /**
+   * Generate normalized delivery payload from tailored output
+   */
+  async generateDeliveryPayload(
+    output: TailoredOutput,
+    targetId: string,
+    sourcePrompt: string
+  ): Promise<DeliveryPayload> {
+    console.log('🏭 Starting payload generation from tailored output:', {
+      hasOutput: !!output,
+      outputType: output?.type,
+      hasContent: !!(output?.content),
+      contentType: typeof output?.content,
+      contentKeys: output?.content ? Object.keys(output.content) : []
+    });
+
+    const items = this.normalizeToDeliveryItems(output);
+    console.log(`🔄 Normalized ${items.length} delivery items from output`);
+    
+    const layoutHints = this.extractLayoutHints(output);
+    
+    const payload: DeliveryPayload = {
+      id: `payload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      destination: this.mapDestinationToDelivery(output.type),
+      targetId,
+      sourcePrompt,
+      items,
+      layoutHints,
+      summary: this.generatePayloadSummary(output, items.length),
+      itemCount: items.length,
+      createdAt: new Date()
+    };
+
+    console.log('✅ Generated delivery payload:', {
+      id: payload.id,
+      destination: payload.destination,
+      itemCount: payload.itemCount,
+      hasItems: payload.items.length > 0,
+      summary: payload.summary
+    });
+
+    return payload;
+  }
+
+  /**
+   * Validate delivery payload against destination constraints
+   */
+  async validateDeliveryPayload(payload: DeliveryPayload): Promise<{
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  }> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Basic validation
+    if (!payload.items || payload.items.length === 0) {
+      errors.push('Payload contains no items');
+    }
+
+    // Destination-specific validation
+    switch (payload.destination) {
+      case 'miro':
+        this.validateMiroPayload(payload, errors, warnings);
+        break;
+      case 'figjam':
+        this.validateFigJamPayload(payload, errors, warnings);
+        break;
+      case 'figma':
+        this.validateFigmaPayload(payload, errors, warnings);
+        break;
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * Optimize payload for destination constraints
+   */
+  async optimizePayloadForDestination(payload: DeliveryPayload): Promise<DeliveryPayload> {
+    let optimizedItems = [...payload.items];
+
+    switch (payload.destination) {
+      case 'miro':
+        optimizedItems = this.optimizeForMiro(optimizedItems);
+        break;
+      case 'figjam':
+        optimizedItems = this.optimizeForFigJam(optimizedItems);
+        break;
+      case 'figma':
+        optimizedItems = this.optimizeForFigma(optimizedItems);
+        break;
+    }
+
+    return {
+      ...payload,
+      items: optimizedItems,
+      itemCount: optimizedItems.length,
+      summary: this.generatePayloadSummary(payload, optimizedItems.length)
+    };
   }
 
   // Private helper methods
@@ -380,6 +493,330 @@ ${block.description}
         style: figmaOutput.content.contentStyle
       }
     };
+  }
+
+  // Delivery payload helper methods
+
+  private normalizeToDeliveryItems(output: TailoredOutput): DeliveryItem[] {
+    console.log(`🔄 Normalizing ${output.type} output to delivery items:`, {
+      outputType: output.type,
+      hasContent: !!output.content,
+      contentStructure: output.content ? Object.keys(output.content) : [],
+      contentItems: output.content?.items ? `${output.content.items.length} items` : 'no items property',
+      contentUiBlocks: output.content?.uiBlocks ? `${output.content.uiBlocks.length} uiBlocks` : 'no uiBlocks property',
+      fullContent: output.content
+    });
+
+    const items: DeliveryItem[] = [];
+
+    switch (output.type) {
+      case 'Miro':
+      case 'miro':
+        console.log('🎯 Routing to Miro normalization');
+        return this.normalizeMiroItems(output as any);
+      case 'FigJam':
+      case 'figjam':
+        console.log('🎯 Routing to FigJam normalization');
+        return this.normalizeFigJamItems(output as any);
+      case 'Figma':
+      case 'figma':
+        console.log('🎯 Routing to Figma normalization');
+        return this.normalizeFigmaItems(output as any);
+      default:
+        console.error(`❌ No normalization route found for output type: "${output.type}"`);
+        console.log('Available routes: Miro, miro, FigJam, figjam, Figma, figma');
+        return [];
+    }
+  }
+
+  private normalizeMiroItems(miroOutput: any): DeliveryItem[] {
+    return miroOutput.content.items.map((item: any, index: number) => ({
+      id: item.id || `miro-item-${index}`,
+      type: this.mapMiroType(item.type),
+      text: item.text,
+      x: item.position?.x || (index % 4) * 200 + 100,
+      y: item.position?.y || Math.floor(index / 4) * 150 + 100,
+      width: item.size?.width || 180,
+      height: item.size?.height || 120,
+      style: {
+        backgroundColor: item.theme || '#FFE066',
+        fontSize: 14
+      },
+      clusterId: item.cluster
+    }));
+  }
+
+  private normalizeFigJamItems(figJamOutput: any): DeliveryItem[] {
+    console.log('🎨 Normalizing FigJam items:', {
+      hasContent: !!figJamOutput.content,
+      contentKeys: figJamOutput.content ? Object.keys(figJamOutput.content) : [],
+      hasItems: !!(figJamOutput.content?.items),
+      itemsCount: figJamOutput.content?.items?.length || 0,
+      itemsStructure: figJamOutput.content?.items?.slice(0, 2)
+    });
+
+    // Log each property in the content to understand the structure
+    if (figJamOutput.content) {
+      for (const [key, value] of Object.entries(figJamOutput.content)) {
+        console.log(`📋 Content property "${key}":`, {
+          type: typeof value,
+          isArray: Array.isArray(value),
+          length: Array.isArray(value) ? value.length : 'not array',
+          sample: Array.isArray(value) ? value.slice(0, 2) : value
+        });
+      }
+    }
+
+    // Try different possible item sources
+    let items = [];
+    
+    if (figJamOutput.content?.items && figJamOutput.content.items.length > 0) {
+      items = figJamOutput.content.items;
+      console.log('✅ Using content.items');
+    } else if (figJamOutput.content?.stickies && figJamOutput.content.stickies.length > 0) {
+      items = figJamOutput.content.stickies;
+      console.log('✅ Using content.stickies');
+    } else if (figJamOutput.content?.notes && figJamOutput.content.notes.length > 0) {
+      items = figJamOutput.content.notes;
+      console.log('✅ Using content.notes');
+    } else if (figJamOutput.content?.elements && figJamOutput.content.elements.length > 0) {
+      items = figJamOutput.content.elements;
+      console.log('✅ Using content.elements');
+    } else {
+      // Try to find any array property that might contain items
+      for (const [key, value] of Object.entries(figJamOutput.content || {})) {
+        if (Array.isArray(value) && value.length > 0) {
+          items = value;
+          console.log(`✅ Using content.${key} (found ${value.length} items)`);
+          break;
+        }
+      }
+    }
+
+    if (items.length === 0) {
+      console.warn('⚠️ FigJam output has no usable items to normalize');
+      console.log('🔧 This likely means AI content generation returned empty arrays. Generating fallback demo content...');
+      
+      // Generate some demo content for testing
+      items = [
+        {
+          id: 'demo-1',
+          type: 'sticky',
+          text: 'Sample Insight: User needs better navigation',
+          category: 'insight'
+        },
+        {
+          id: 'demo-2', 
+          type: 'sticky',
+          text: 'How might we improve user onboarding?',
+          category: 'hmw'
+        },
+        {
+          id: 'demo-3',
+          type: 'sticky', 
+          text: 'Idea: Add interactive tutorial',
+          category: 'idea'
+        },
+        {
+          id: 'demo-4',
+          type: 'sticky',
+          text: 'Action: Prototype new flow',
+          category: 'action'
+        },
+        {
+          id: 'demo-5',
+          type: 'sticky',
+          text: 'Question: What metrics should we track?',
+          category: 'question'
+        }
+      ];
+      
+      console.log(`🎭 Generated ${items.length} demo items for delivery testing`);
+    }
+
+    console.log(`🔄 Converting ${items.length} items to delivery format`);
+    
+    return items.map((item: any, index: number) => ({
+      id: item.id || `figjam-item-${index}`,
+      type: this.mapFigJamType(item.type || 'sticky'),
+      text: item.text || item.content || item.description || `Item ${index + 1}`,
+      x: (index % 5) * 180 + 50,
+      y: Math.floor(index / 5) * 140 + 50,
+      width: 160,
+      height: 100,
+      style: {
+        backgroundColor: this.getFigJamColor(item.category || item.type || 'default'),
+        fontSize: 12
+      },
+      clusterId: item.category || item.cluster || item.group
+    }));
+  }
+
+  private normalizeFigmaItems(figmaOutput: any): DeliveryItem[] {
+    return figmaOutput.content.uiBlocks.map((block: any, index: number) => ({
+      id: block.id || `figma-block-${index}`,
+      type: 'frame',
+      text: block.title,
+      x: (index % 3) * 300 + 100,
+      y: Math.floor(index / 3) * 200 + 100,
+      width: block.sizing.preferredWidth || 280,
+      height: block.sizing.preferredHeight || 180,
+      style: {
+        backgroundColor: '#FFFFFF',
+        fontSize: 16
+      },
+      metadata: {
+        description: block.description,
+        copy: block.copy,
+        priority: block.priority
+      }
+    }));
+  }
+
+  private extractLayoutHints(output: TailoredOutput): any {
+    switch (output.type) {
+      case 'miro':
+        const miroOutput = output as any;
+        return {
+          columns: miroOutput.content.layout?.columns || 4,
+          spacing: miroOutput.content.layout?.spacing || 20,
+          maxItems: 50,
+          arrangement: 'clusters'
+        };
+      case 'figjam':
+        return {
+          columns: 5,
+          spacing: 20,
+          maxItems: 40,
+          arrangement: 'flow'
+        };
+      case 'figma':
+        const figmaOutput = output as any;
+        return {
+          columns: figmaOutput.content.layout?.columns || 3,
+          spacing: figmaOutput.content.layout?.spacing || 40,
+          maxItems: 20,
+          arrangement: 'grid'
+        };
+      default:
+        return {
+          columns: 4,
+          spacing: 20,
+          maxItems: 30,
+          arrangement: 'grid'
+        };
+    }
+  }
+
+  private mapDestinationToDelivery(outputType: string): 'miro' | 'figjam' | 'figma' {
+    switch (outputType) {
+      case 'miro': return 'miro';
+      case 'figjam': return 'figjam';
+      case 'figma': return 'figma';
+      default: return 'miro';
+    }
+  }
+
+  private generatePayloadSummary(output: any, itemCount: number): string {
+    if (output.content?.summary) {
+      return `${output.content.summary} (${itemCount} items)`;
+    }
+    return `Generated ${itemCount} items for delivery`;
+  }
+
+  private mapMiroType(miroType: string): 'sticky' | 'text' | 'shape' {
+    switch (miroType) {
+      case 'sticky_note': return 'sticky';
+      case 'shape': return 'shape';
+      case 'text': return 'text';
+      default: return 'sticky';
+    }
+  }
+
+  private mapFigJamType(figJamType: string): 'sticky' | 'text' | 'shape' {
+    switch (figJamType) {
+      case 'sticky': return 'sticky';
+      case 'text': return 'text';
+      case 'instruction': return 'text';
+      default: return 'sticky';
+    }
+  }
+
+  private getFigJamColor(category: string): string {
+    const colors = {
+      'idea': '#FFE066',
+      'hmw': '#FF6B66', 
+      'insight': '#66D9FF',
+      'action': '#66FF66',
+      'question': '#FF9B66'
+    };
+    return colors[category as keyof typeof colors] || '#E6E6E6';
+  }
+
+  private validateMiroPayload(payload: DeliveryPayload, errors: string[], warnings: string[]) {
+    if (payload.items.length > 50) {
+      warnings.push('Large number of items may impact Miro board performance');
+    }
+
+    payload.items.forEach((item, index) => {
+      if (item.text && item.text.length > 12 * 8) { // ~12 words
+        warnings.push(`Item ${index}: Text exceeds Miro sticky note recommended length`);
+      }
+    });
+  }
+
+  private validateFigJamPayload(payload: DeliveryPayload, errors: string[], warnings: string[]) {
+    if (payload.items.length > 40) {
+      warnings.push('Large number of items may clutter workshop interface');
+    }
+
+    const hasInstructions = payload.items.some(item => item.type === 'text');
+    if (!hasInstructions) {
+      warnings.push('No facilitation instructions found - consider adding guidance text');
+    }
+  }
+
+  private validateFigmaPayload(payload: DeliveryPayload, errors: string[], warnings: string[]) {
+    if (payload.items.length > 20) {
+      warnings.push('Too many UI blocks may overwhelm the design system');
+    }
+
+    payload.items.forEach((item, index) => {
+      if (!item.metadata?.copy) {
+        warnings.push(`Item ${index}: Missing microcopy - important for UI components`);
+      }
+    });
+  }
+
+  private optimizeForMiro(items: DeliveryItem[]): DeliveryItem[] {
+    return items.map(item => ({
+      ...item,
+      text: item.text ? this.truncateText(item.text, 80) : item.text, // ~12 words
+      width: Math.min(item.width || 180, 200),
+      height: Math.min(item.height || 120, 150)
+    })).slice(0, 50); // Max 50 items
+  }
+
+  private optimizeForFigJam(items: DeliveryItem[]): DeliveryItem[] {
+    return items.map(item => ({
+      ...item,
+      text: item.text ? this.truncateText(item.text, 100) : item.text,
+      width: Math.min(item.width || 160, 180),
+      height: Math.min(item.height || 100, 120)
+    })).slice(0, 40); // Max 40 items
+  }
+
+  private optimizeForFigma(items: DeliveryItem[]): DeliveryItem[] {
+    return items.map(item => ({
+      ...item,
+      width: Math.max(item.width || 280, 200), // Minimum viable size
+      height: Math.max(item.height || 180, 120)
+    })).slice(0, 20); // Max 20 components
+  }
+
+  private truncateText(text: string, maxLength: number): string {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
   }
 }
 

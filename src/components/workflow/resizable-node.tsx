@@ -5,7 +5,7 @@ interface ResizableNodeProps {
   children: ReactNode;
   selected?: boolean;
   minWidth?: number;
-  minHeight?: number;
+  minHeight?: number | "auto";
   maxWidth?: number;
   maxHeight?: number;
 }
@@ -18,19 +18,24 @@ export const ResizableNode = ({
   maxWidth = 1000,
   maxHeight = 800 
 }: ResizableNodeProps) => {
+  // Handle auto minHeight by not constraining height when auto
+  const shouldConstrainHeight = minHeight !== "auto";
+  const resolvedMinHeight = minHeight === "auto" ? 50 : minHeight;
+  
   return (
     <div style={{ 
       width: '100%', 
-      height: '100%', 
+      height: shouldConstrainHeight ? '100%' : 'auto',
+      minHeight: shouldConstrainHeight ? undefined : 'auto',
       position: 'relative',
       display: 'flex',
       flexDirection: 'column'
     }}>
       <NodeResizer
         color={selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
-        isVisible={selected}
+        isVisible={selected && shouldConstrainHeight}
         minWidth={minWidth}
-        minHeight={minHeight}
+        minHeight={resolvedMinHeight}
         maxWidth={maxWidth}
         maxHeight={maxHeight}
         handleStyle={{
@@ -48,11 +53,11 @@ export const ResizableNode = ({
       />
       <div style={{ 
         width: '100%', 
-        height: '100%', 
+        height: shouldConstrainHeight ? '100%' : 'auto',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '0',
-        flex: '1'
+        minHeight: shouldConstrainHeight ? '0' : 'auto',
+        flex: shouldConstrainHeight ? '1' : 'none'
       }}>
         {children}
       </div>

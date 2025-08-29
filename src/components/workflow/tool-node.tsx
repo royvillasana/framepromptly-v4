@@ -272,9 +272,9 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   return (
     <ResizableNode 
       selected={selected} 
-      minWidth={250} 
+      minWidth={320} 
       minHeight={200}
-      maxWidth={400}
+      maxWidth={450}
       maxHeight={500}
     >
       <motion.div

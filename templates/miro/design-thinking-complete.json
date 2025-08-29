@@ -1,0 +1,647 @@
+{
+  "metadata": {
+    "name": "Complete Design Thinking Workshop",
+    "category": "design-thinking",
+    "phase": "complete",
+    "platform": "miro",
+    "duration": "4-6 hours",
+    "participants": "6-12",
+    "facilitator": "required",
+    "experience": "beginner-intermediate",
+    "version": "1.0.0"
+  },
+  "structure": {
+    "boardTitle": "🧠 Design Thinking Workshop: [Project Name]",
+    "boardSummary": "A complete design thinking journey from empathy to testing, structured for collaborative innovation and user-centered problem solving.",
+    "sections": [
+      {
+        "id": "workshop-overview",
+        "name": "Workshop Overview",
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 400,
+        "backgroundColor": "#F8F9FA",
+        "items": [
+          {
+            "type": "title",
+            "text": "🧠 Design Thinking Workshop",
+            "x": 100,
+            "y": 50,
+            "width": 600,
+            "height": 80,
+            "fontSize": 36,
+            "fontWeight": "bold",
+            "theme": "blue"
+          },
+          {
+            "type": "text",
+            "text": "Duration: 6 hours | Team: {participantCount} people | Challenge: {problemStatement}",
+            "x": 100,
+            "y": 150,
+            "width": 500,
+            "height": 60,
+            "fontSize": 16,
+            "theme": "gray"
+          },
+          {
+            "type": "agenda",
+            "x": 800,
+            "y": 50,
+            "width": 700,
+            "height": 300,
+            "items": [
+              "🤗 Empathize (90min) - Understand users",
+              "🎯 Define (60min) - Frame the problem", 
+              "💡 Ideate (90min) - Generate solutions",
+              "🔨 Prototype (120min) - Build to think",
+              "✅ Test (60min) - Learn and validate"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "empathize-phase",
+        "name": "1️⃣ EMPATHIZE",
+        "x": 0,
+        "y": 500,
+        "width": 1600,
+        "height": 800,
+        "backgroundColor": "#E3F2FD",
+        "items": [
+          {
+            "type": "phase-header",
+            "text": "1️⃣ EMPATHIZE: Understand Your Users",
+            "x": 50,
+            "y": 540,
+            "width": 400,
+            "height": 60,
+            "fontSize": 24,
+            "fontWeight": "bold",
+            "theme": "blue"
+          },
+          {
+            "type": "timer-box",
+            "text": "⏰ 90 minutes",
+            "x": 500,
+            "y": 540,
+            "width": 120,
+            "height": 60,
+            "theme": "yellow"
+          },
+          {
+            "type": "cluster",
+            "name": "👥 User Personas",
+            "x": 100,
+            "y": 650,
+            "width": 350,
+            "height": 400,
+            "borderColor": "#2196F3",
+            "template": {
+              "type": "sticky",
+              "text": "Primary user: [Name]\nAge: [X]\nGoals: [Goal]\nPain points: [Pain]",
+              "theme": "blue",
+              "width": 150,
+              "height": 100
+            }
+          },
+          {
+            "type": "cluster", 
+            "name": "🎭 Empathy Map",
+            "x": 500,
+            "y": 650,
+            "width": 500,
+            "height": 400,
+            "borderColor": "#2196F3",
+            "quadrants": [
+              {
+                "name": "THINKS & FEELS",
+                "x": 520,
+                "y": 680,
+                "width": 230,
+                "height": 160,
+                "theme": "light-blue"
+              },
+              {
+                "name": "SEES",
+                "x": 770,
+                "y": 680, 
+                "width": 230,
+                "height": 160,
+                "theme": "light-blue"
+              },
+              {
+                "name": "SAYS & DOES",
+                "x": 520,
+                "y": 860,
+                "width": 230,
+                "height": 160,
+                "theme": "light-blue"
+              },
+              {
+                "name": "PAINS & GAINS",
+                "x": 770,
+                "y": 860,
+                "width": 230,
+                "height": 160,
+                "theme": "light-blue"
+              }
+            ]
+          },
+          {
+            "type": "cluster",
+            "name": "🔍 Key Insights",
+            "x": 1050,
+            "y": 650,
+            "width": 450,
+            "height": 400,
+            "borderColor": "#2196F3",
+            "template": {
+              "type": "sticky",
+              "text": "Users struggle with [specific issue] because [root cause]",
+              "theme": "blue",
+              "width": 180,
+              "height": 120
+            }
+          }
+        ]
+      },
+      {
+        "id": "define-phase",
+        "name": "2️⃣ DEFINE", 
+        "x": 0,
+        "y": 1400,
+        "width": 1600,
+        "height": 600,
+        "backgroundColor": "#FFF3E0",
+        "items": [
+          {
+            "type": "phase-header",
+            "text": "2️⃣ DEFINE: Frame the Problem",
+            "x": 50,
+            "y": 1440,
+            "width": 400,
+            "height": 60,
+            "fontSize": 24,
+            "fontWeight": "bold",
+            "theme": "orange"
+          },
+          {
+            "type": "timer-box",
+            "text": "⏰ 60 minutes",
+            "x": 500,
+            "y": 1440,
+            "width": 120,
+            "height": 60,
+            "theme": "yellow"
+          },
+          {
+            "type": "problem-statement-canvas",
+            "x": 100,
+            "y": 1550,
+            "width": 1400,
+            "height": 350,
+            "components": [
+              {
+                "type": "section",
+                "name": "Point of View Statement",
+                "text": "[User] needs [need] because [insight]",
+                "x": 120,
+                "y": 1580,
+                "width": 660,
+                "height": 120,
+                "theme": "orange"
+              },
+              {
+                "type": "section",
+                "name": "How Might We Questions",
+                "x": 800,
+                "y": 1580,
+                "width": 600,
+                "height": 290,
+                "template": {
+                  "type": "sticky",
+                  "text": "How might we...",
+                  "theme": "orange",
+                  "width": 140,
+                  "height": 80
+                }
+              },
+              {
+                "type": "section",
+                "name": "Success Metrics",
+                "x": 120,
+                "y": 1730,
+                "width": 660,
+                "height": 120,
+                "template": {
+                  "type": "sticky", 
+                  "text": "We will know we succeeded when...",
+                  "theme": "orange",
+                  "width": 200,
+                  "height": 80
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ideate-phase",
+        "name": "3️⃣ IDEATE",
+        "x": 0,
+        "y": 2100,
+        "width": 1600,
+        "height": 800,
+        "backgroundColor": "#E8F5E8",
+        "items": [
+          {
+            "type": "phase-header",
+            "text": "3️⃣ IDEATE: Generate Solutions",
+            "x": 50,
+            "y": 2140,
+            "width": 400,
+            "height": 60,
+            "fontSize": 24,
+            "fontWeight": "bold",
+            "theme": "green"
+          },
+          {
+            "type": "timer-box",
+            "text": "⏰ 90 minutes",
+            "x": 500,
+            "y": 2140,
+            "width": 120,
+            "height": 60,
+            "theme": "yellow"
+          },
+          {
+            "type": "ideation-section",
+            "name": "🧠 Brainstorming Rules",
+            "x": 100,
+            "y": 2240,
+            "width": 300,
+            "height": 150,
+            "rules": [
+              "Defer judgment",
+              "Strive for quantity", 
+              "Build on ideas",
+              "Stay focused",
+              "Be visual"
+            ]
+          },
+          {
+            "type": "cluster",
+            "name": "💡 Crazy 8s",
+            "x": 450,
+            "y": 2250,
+            "width": 350,
+            "height": 300,
+            "borderColor": "#4CAF50",
+            "instruction": "8 ideas in 8 minutes",
+            "template": {
+              "type": "sketch-box",
+              "width": 100,
+              "height": 80,
+              "theme": "green"
+            }
+          },
+          {
+            "type": "cluster",
+            "name": "🔥 All Ideas",
+            "x": 850,
+            "y": 2250,
+            "width": 650,
+            "height": 600,
+            "borderColor": "#4CAF50",
+            "instruction": "All ideas welcome - no judgment!",
+            "template": {
+              "type": "sticky",
+              "text": "Solution idea",
+              "theme": "green",
+              "width": 120,
+              "height": 80
+            }
+          },
+          {
+            "type": "cluster",
+            "name": "⭐ Prioritized Ideas",
+            "x": 100,
+            "y": 2600,
+            "width": 700,
+            "height": 250,
+            "borderColor": "#4CAF50",
+            "instruction": "Vote with dots - top 5 ideas",
+            "template": {
+              "type": "sticky",
+              "text": "Top idea with details",
+              "theme": "green",
+              "width": 200,
+              "height": 100,
+              "hasVoting": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "prototype-phase",
+        "name": "4️⃣ PROTOTYPE",
+        "x": 0,
+        "y": 3000,
+        "width": 1600,
+        "height": 1000,
+        "backgroundColor": "#F3E5F5",
+        "items": [
+          {
+            "type": "phase-header",
+            "text": "4️⃣ PROTOTYPE: Build to Think",
+            "x": 50,
+            "y": 3040,
+            "width": 400,
+            "height": 60,
+            "fontSize": 24,
+            "fontWeight": "bold",
+            "theme": "purple"
+          },
+          {
+            "type": "timer-box",
+            "text": "⏰ 120 minutes",
+            "x": 500,
+            "y": 3040,
+            "width": 120,
+            "height": 60,
+            "theme": "yellow"
+          },
+          {
+            "type": "prototype-canvas",
+            "x": 100,
+            "y": 3150,
+            "width": 1400,
+            "height": 800,
+            "sections": [
+              {
+                "name": "📱 Digital Mockups",
+                "x": 120,
+                "y": 3180,
+                "width": 400,
+                "height": 350,
+                "template": {
+                  "type": "wireframe",
+                  "width": 180,
+                  "height": 300,
+                  "theme": "purple"
+                }
+              },
+              {
+                "name": "🎭 Storyboard",
+                "x": 550,
+                "y": 3180,
+                "width": 500,
+                "height": 350,
+                "template": {
+                  "type": "story-frame",
+                  "width": 150,
+                  "height": 100,
+                  "theme": "purple",
+                  "sequence": true
+                }
+              },
+              {
+                "name": "🎪 Role Play Script",
+                "x": 1080,
+                "y": 3180,
+                "width": 400,
+                "height": 350,
+                "template": {
+                  "type": "script-card",
+                  "text": "User: [action]\nSystem: [response]",
+                  "theme": "purple",
+                  "width": 180,
+                  "height": 120
+                }
+              },
+              {
+                "name": "🔧 Physical Prototype",
+                "x": 120,
+                "y": 3580,
+                "width": 600,
+                "height": 300,
+                "instruction": "Use materials: paper, cardboard, post-its, pens"
+              },
+              {
+                "name": "📋 Prototype Assumptions",
+                "x": 750,
+                "y": 3580,
+                "width": 730,
+                "height": 300,
+                "template": {
+                  "type": "assumption-card",
+                  "text": "We assume that [assumption] because [reasoning]",
+                  "theme": "purple",
+                  "width": 200,
+                  "height": 100
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "test-phase",
+        "name": "5️⃣ TEST",
+        "x": 0,
+        "y": 4100,
+        "width": 1600,
+        "height": 700,
+        "backgroundColor": "#FFEBEE",
+        "items": [
+          {
+            "type": "phase-header",
+            "text": "5️⃣ TEST: Learn and Validate",
+            "x": 50,
+            "y": 4140,
+            "width": 400,
+            "height": 60,
+            "fontSize": 24,
+            "fontWeight": "bold",
+            "theme": "red"
+          },
+          {
+            "type": "timer-box",
+            "text": "⏰ 60 minutes",
+            "x": 500,
+            "y": 4140,
+            "width": 120,
+            "height": 60,
+            "theme": "yellow"
+          },
+          {
+            "type": "testing-framework",
+            "x": 100,
+            "y": 4250,
+            "width": 1400,
+            "height": 500,
+            "sections": [
+              {
+                "name": "📝 Test Plan",
+                "x": 120,
+                "y": 4280,
+                "width": 300,
+                "height": 400,
+                "components": [
+                  "Target users",
+                  "Test scenarios", 
+                  "Success criteria",
+                  "Questions to ask"
+                ]
+              },
+              {
+                "name": "📊 Feedback Collection",
+                "x": 450,
+                "y": 4280,
+                "width": 500,
+                "height": 400,
+                "template": {
+                  "type": "feedback-card",
+                  "text": "User feedback: [observation]\nImpact: [high/medium/low]",
+                  "theme": "red",
+                  "width": 200,
+                  "height": 120
+                }
+              },
+              {
+                "name": "🔄 Iterate & Improve",
+                "x": 980,
+                "y": 4280,
+                "width": 400,
+                "height": 400,
+                "template": {
+                  "type": "iteration-card",
+                  "text": "Change: [what to change]\nReason: [why change it]",
+                  "theme": "red", 
+                  "width": 180,
+                  "height": 100
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "next-steps",
+        "name": "🎯 NEXT STEPS",
+        "x": 0,
+        "y": 4900,
+        "width": 1600,
+        "height": 400,
+        "backgroundColor": "#F5F5F5",
+        "items": [
+          {
+            "type": "phase-header",
+            "text": "🎯 NEXT STEPS & ACTION PLAN",
+            "x": 50,
+            "y": 4940,
+            "width": 500,
+            "height": 60,
+            "fontSize": 24,
+            "fontWeight": "bold",
+            "theme": "gray"
+          },
+          {
+            "type": "action-planning",
+            "x": 100,
+            "y": 5050,
+            "width": 1400,
+            "height": 200,
+            "template": {
+              "type": "action-item",
+              "text": "Action: [what]\nOwner: [who]\nDeadline: [when]\nSuccess: [how to measure]",
+              "theme": "gray",
+              "width": 250,
+              "height": 150
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "facilitationGuide": {
+    "preparation": [
+      "Send pre-workshop survey to understand participants",
+      "Prepare user research materials and insights",
+      "Set up Miro board with team access",
+      "Test all integrations and tools",
+      "Prepare physical materials if needed"
+    ],
+    "phaseTiming": {
+      "empathize": {
+        "duration": "90 minutes",
+        "activities": [
+          "Review user research (20min)",
+          "Create personas (25min)",
+          "Build empathy map (30min)",
+          "Extract insights (15min)"
+        ]
+      },
+      "define": {
+        "duration": "60 minutes", 
+        "activities": [
+          "Craft point of view (20min)",
+          "Generate HMW questions (25min)",
+          "Define success metrics (15min)"
+        ]
+      },
+      "ideate": {
+        "duration": "90 minutes",
+        "activities": [
+          "Crazy 8s exercise (15min)",
+          "Open brainstorming (45min)",
+          "Idea clustering & voting (30min)"
+        ]
+      },
+      "prototype": {
+        "duration": "120 minutes",
+        "activities": [
+          "Choose prototype type (10min)",
+          "Build prototypes (80min)",
+          "Document assumptions (30min)"
+        ]
+      },
+      "test": {
+        "duration": "60 minutes",
+        "activities": [
+          "Plan user tests (15min)",
+          "Conduct quick tests (30min)",
+          "Synthesize feedback (15min)"
+        ]
+      }
+    },
+    "energizers": [
+      "Human spectrum voting",
+      "Quick sketch introductions",
+      "Two truths and a lie",
+      "Rapid fire word association"
+    ],
+    "troubleshooting": {
+      "lowParticipation": "Use silent brainstorming and round-robin sharing",
+      "tooManyIdeas": "Time-box activities and use dot voting",
+      "offTopic": "Use a parking lot for unrelated ideas",
+      "criticismEarly": "Remind of brainstorming rules, defer judgment"
+    }
+  },
+  "aiPrompts": {
+    "userPersonaGeneration": "Generate 2-3 realistic user personas for {problemDomain} in {industry}. Include demographics, goals, pain points, and behavioral patterns. Each persona should be specific and based on research insights.",
+    "empathyMapContent": "Create empathy map content for {userPersona} trying to {userGoal}. Generate 4-6 authentic insights for each quadrant: thinks & feels, sees, says & does, pains, and gains.",
+    "hmwQuestions": "Generate 8-10 'How Might We' questions based on the problem statement: {problemStatement}. Questions should be optimistic, broad enough for creative solutions, but narrow enough to be actionable.",
+    "solutionIdeas": "Generate 15-20 creative solution ideas for: {hmwQuestion}. Include both obvious and unconventional approaches. Focus on user value and feasibility.",
+    "prototypeGuidance": "Suggest the best prototyping approach for {solutionConcept} considering {constraints} and {timeline}. Include specific deliverables and testing methods."
+  },
+  "qualityChecks": [
+    "User insights are specific and actionable",
+    "Problem statement is clear and user-focused",
+    "Ideas are diverse and creative",
+    "Prototype assumptions are documented", 
+    "Test feedback is captured and analyzed",
+    "Next steps have clear owners and deadlines"
+  ]
+}

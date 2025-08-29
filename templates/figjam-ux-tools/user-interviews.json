@@ -1,0 +1,399 @@
+{
+  "metadata": {
+    "name": "User Interviews Workshop",
+    "tool": "User Interviews",
+    "category": "Research",
+    "platform": "figjam",
+    "duration": "60-90min",
+    "participants": "3-6",
+    "facilitator": "required",
+    "experience": "beginner-intermediate",
+    "version": "1.0.0"
+  },
+  "structure": {
+    "workshopTitle": "User Interview Research Session",
+    "sections": [
+      {
+        "id": "workshop-setup",
+        "name": "Interview Setup & Goals",
+        "x": 100,
+        "y": 100,
+        "width": 1800,
+        "height": 300,
+        "backgroundColor": "#E3F2FD",
+        "elements": ["title", "objectives", "participant-info", "timer"]
+      },
+      {
+        "id": "interview-guide",
+        "name": "Interview Questions & Guide",
+        "x": 100,
+        "y": 450,
+        "width": 1800,
+        "height": 400,
+        "backgroundColor": "#F3E5F5",
+        "elements": ["question-categories", "follow-up-prompts", "time-allocation"]
+      },
+      {
+        "id": "notes-collection",
+        "name": "Interview Notes & Insights",
+        "x": 100,
+        "y": 900,
+        "width": 1800,
+        "height": 600,
+        "backgroundColor": "#E8F5E8",
+        "elements": ["direct-quotes", "observations", "behavioral-notes", "pain-points"]
+      },
+      {
+        "id": "synthesis",
+        "name": "Key Insights & Themes",
+        "x": 100,
+        "y": 1550,
+        "width": 1800,
+        "height": 350,
+        "backgroundColor": "#FFF3E0",
+        "elements": ["themes", "patterns", "opportunities"]
+      }
+    ],
+    "items": [
+      {
+        "id": "title-1",
+        "type": "text",
+        "text": "🎯 Research Objectives",
+        "x": 150,
+        "y": 150,
+        "width": 400,
+        "height": 60,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "bold",
+          "backgroundColor": "#2196F3",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "objective-1",
+        "type": "sticky",
+        "text": "Understand user needs and motivations",
+        "x": 150,
+        "y": 230,
+        "width": 180,
+        "height": 100,
+        "clusterId": "objectives",
+        "category": "goal",
+        "style": {
+          "backgroundColor": "#BBDEFB",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "objective-2", 
+        "type": "sticky",
+        "text": "Identify pain points in current process",
+        "x": 350,
+        "y": 230,
+        "width": 180,
+        "height": 100,
+        "clusterId": "objectives",
+        "category": "goal",
+        "style": {
+          "backgroundColor": "#BBDEFB",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "participant-info",
+        "type": "sticky",
+        "text": "Participant: [Name]\nRole: [Title]\nExperience: [Years]",
+        "x": 600,
+        "y": 150,
+        "width": 200,
+        "height": 120,
+        "clusterId": "setup",
+        "category": "info",
+        "style": {
+          "backgroundColor": "#E1F5FE",
+          "fontSize": 12
+        }
+      },
+      {
+        "id": "question-header",
+        "type": "text",
+        "text": "📋 Interview Questions by Category",
+        "x": 150,
+        "y": 500,
+        "width": 500,
+        "height": 50,
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "bold",
+          "backgroundColor": "#9C27B0",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "background-q1",
+        "type": "sticky",
+        "text": "Tell me about your role and daily tasks",
+        "x": 150,
+        "y": 580,
+        "width": 220,
+        "height": 80,
+        "clusterId": "background-questions",
+        "category": "question",
+        "style": {
+          "backgroundColor": "#E8EAF6",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "behavior-q1",
+        "type": "sticky", 
+        "text": "Walk me through how you currently...",
+        "x": 400,
+        "y": 580,
+        "width": 220,
+        "height": 80,
+        "clusterId": "behavior-questions",
+        "category": "question",
+        "style": {
+          "backgroundColor": "#E8EAF6",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "pain-q1",
+        "type": "sticky",
+        "text": "What frustrates you most about...?",
+        "x": 650,
+        "y": 580,
+        "width": 220,
+        "height": 80,
+        "clusterId": "pain-questions",
+        "category": "question",
+        "style": {
+          "backgroundColor": "#E8EAF6",
+          "fontSize": 13
+        }
+      },
+      {
+        "id": "notes-header",
+        "type": "text",
+        "text": "📝 Interview Notes & Observations",
+        "x": 150,
+        "y": 950,
+        "width": 500,
+        "height": 50,
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "bold",
+          "backgroundColor": "#4CAF50",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "quote-1",
+        "type": "sticky",
+        "text": "\"[Direct user quote here]\"",
+        "x": 150,
+        "y": 1030,
+        "width": 250,
+        "height": 120,
+        "clusterId": "direct-quotes",
+        "category": "quote",
+        "style": {
+          "backgroundColor": "#C8E6C9",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "observation-1",
+        "type": "sticky",
+        "text": "User paused when asked about...",
+        "x": 430,
+        "y": 1030,
+        "width": 250,
+        "height": 120,
+        "clusterId": "observations",
+        "category": "observation",
+        "style": {
+          "backgroundColor": "#DCEDC8",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "behavior-1",
+        "type": "sticky",
+        "text": "Uses workaround solution daily",
+        "x": 710,
+        "y": 1030,
+        "width": 250,
+        "height": 120,
+        "clusterId": "behavioral-notes",
+        "category": "behavior",
+        "style": {
+          "backgroundColor": "#F1F8E9",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "pain-1",
+        "type": "sticky",
+        "text": "Frustrated by manual data entry",
+        "x": 990,
+        "y": 1030,
+        "width": 250,
+        "height": 120,
+        "clusterId": "pain-points",
+        "category": "pain",
+        "style": {
+          "backgroundColor": "#FFCDD2",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "synthesis-header",
+        "type": "text",
+        "text": "💡 Key Insights & Emerging Themes",
+        "x": 150,
+        "y": 1600,
+        "width": 500,
+        "height": 50,
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "bold",
+          "backgroundColor": "#FF9800",
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "id": "theme-1",
+        "type": "sticky",
+        "text": "Users need better workflow automation",
+        "x": 150,
+        "y": 1680,
+        "width": 280,
+        "height": 100,
+        "clusterId": "themes",
+        "category": "insight",
+        "style": {
+          "backgroundColor": "#FFE0B2",
+          "fontSize": 14
+        }
+      },
+      {
+        "id": "opportunity-1",
+        "type": "sticky",
+        "text": "Opportunity: Integrate with existing tools",
+        "x": 460,
+        "y": 1680,
+        "width": 280,
+        "height": 100,
+        "clusterId": "opportunities",
+        "category": "opportunity",
+        "style": {
+          "backgroundColor": "#FFF3E0",
+          "fontSize": 14
+        }
+      }
+    ],
+    "clusters": [
+      {
+        "id": "objectives",
+        "name": "Research Objectives",
+        "x": 150,
+        "y": 200,
+        "width": 400,
+        "height": 150,
+        "itemIds": ["objective-1", "objective-2"],
+        "criteria": "What we want to learn"
+      },
+      {
+        "id": "background-questions",
+        "name": "Background Questions",
+        "x": 150,
+        "y": 580,
+        "width": 220,
+        "height": 200,
+        "itemIds": ["background-q1"],
+        "criteria": "Understanding context"
+      },
+      {
+        "id": "behavior-questions", 
+        "name": "Behavior Questions",
+        "x": 400,
+        "y": 580,
+        "width": 220,
+        "height": 200,
+        "itemIds": ["behavior-q1"],
+        "criteria": "Current process understanding"
+      },
+      {
+        "id": "direct-quotes",
+        "name": "Direct Quotes",
+        "x": 150,
+        "y": 1030,
+        "width": 250,
+        "height": 300,
+        "itemIds": ["quote-1"],
+        "criteria": "User's exact words"
+      }
+    ],
+    "facilitationScript": [
+      {
+        "step": 1,
+        "instruction": "Set up interview environment and explain process",
+        "duration": "5 minutes",
+        "sectionId": "workshop-setup",
+        "materials": ["recording device", "consent form", "participant info"]
+      },
+      {
+        "step": 2,
+        "instruction": "Ask background questions to understand context",
+        "duration": "10 minutes", 
+        "sectionId": "interview-guide",
+        "materials": ["question guide", "note-taking area"]
+      },
+      {
+        "step": 3,
+        "instruction": "Dive into behavioral questions and current processes",
+        "duration": "25 minutes",
+        "sectionId": "notes-collection",
+        "materials": ["follow-up prompts", "observation checklist"]
+      },
+      {
+        "step": 4,
+        "instruction": "Explore pain points and improvement ideas",
+        "duration": "15 minutes",
+        "sectionId": "notes-collection",
+        "materials": ["probing questions", "scenario examples"]
+      },
+      {
+        "step": 5,
+        "instruction": "Synthesize key insights and identify themes",
+        "duration": "10 minutes",
+        "sectionId": "synthesis",
+        "materials": ["insight templates", "theme clustering"]
+      }
+    ],
+    "layoutHints": {
+      "arrangement": "sectioned",
+      "spacing": 50,
+      "columns": 4,
+      "totalWidth": 2000,
+      "totalHeight": 2000
+    }
+  },
+  "aiPrompts": {
+    "questionGeneration": "Generate 8-12 user interview questions for {context} research focusing on {objectives}. Include background, behavioral, and pain point questions. Each question should be open-ended and encourage detailed responses.",
+    "noteStructuring": "Structure interview notes from {interviewData} into direct quotes, observations, behaviors, and pain points. Identify 3-5 key themes and potential opportunities.",
+    "insightSynthesis": "Synthesize key insights from {interviewNotes} focusing on user needs, pain points, and opportunities. Generate actionable recommendations for {projectGoals}."
+  },
+  "qualityChecks": [
+    "Questions are open-ended and non-leading",
+    "Notes capture both what users say and do", 
+    "Direct quotes are preserved accurately",
+    "Behavioral observations are documented",
+    "Key themes emerge from the data",
+    "Opportunities are clearly identified"
+  ]
+}

@@ -39,7 +39,6 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
       type: 'stage',
       position: newPosition,
       width: 250,
-      height: 180,
       data: {
         stage,
         framework
@@ -76,7 +75,6 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         type: 'stage',
         position: newPosition,
         width: 250,
-        height: 180,
         data: {
           stage,
           framework
@@ -104,19 +102,18 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
     <ResizableNode 
       selected={selected || isSelected} 
       minWidth={300} 
-      minHeight={250}
+      minHeight="auto"
       maxWidth={500}
-      maxHeight={600}
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3 }}
         whileHover={selected || isSelected ? {} : { scale: 1.02 }}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%' }}
       >
       <Card className={`
-        w-full h-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col
+        w-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col
         ${selected || isSelected ? 'ring-2 ring-offset-2' : ''}
       `}
       style={{
