@@ -596,7 +596,6 @@ export default function Library() {
             onContract={handleContractPrompt}
             onCopy={handleCopyFromExpanded}
             onView={handleViewFromExpanded}
-            onExport={handleExportFromExpanded}
           />
         )}
       </AnimatePresence>

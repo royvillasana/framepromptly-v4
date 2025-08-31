@@ -107,13 +107,30 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const onConnect = useCallback(
     (params: Connection) => {
+      // Ensure we have valid source and target before creating edge
+      if (!params.source || !params.target) {
+        console.warn('Cannot create edge: missing source or target', params);
+        return;
+      }
+
+      // Create unique edge ID with timestamp to avoid duplicates
+      const edgeId = `edge-${params.source}-${params.target}-${Date.now()}`;
+      
       const newEdge = {
         ...params,
-        id: `edge-${params.source}-${params.target}`,
+        id: edgeId,
         type: 'smoothstep',
         animated: true,
         style: { stroke: 'white', strokeWidth: 2 },
       } as Edge;
+      
+      console.log('Creating new edge:', {
+        id: edgeId,
+        source: params.source,
+        target: params.target,
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle
+      });
       
       setFlowEdges((eds) => addEdge(newEdge, eds));
       addStoreEdge(newEdge);

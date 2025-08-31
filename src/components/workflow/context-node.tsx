@@ -49,7 +49,6 @@ export const ContextNode = memo(({ data, selected, id }: ContextNodeProps & { id
       initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.2 }}
-      whileHover={{ scale: 1.02 }}
     >
       {/* Connection Handles */}
       <Handle

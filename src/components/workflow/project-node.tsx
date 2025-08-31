@@ -26,7 +26,6 @@ export const ProjectNode = memo(({ data, selected }: ProjectNodeProps) => {
       initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.2 }}
-      whileHover={{ scale: 1.02 }}
     >
       <Card className={`
         w-80 p-4 transition-all duration-200 cursor-pointer

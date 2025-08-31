@@ -12,7 +12,7 @@ import {
   Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw, 
   ChevronLeft, ChevronRight, Loader2, User, Sparkles,
   Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock,
-  Target, Truck, Key
+  Target, Truck, Key, Play
 } from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
@@ -28,6 +28,7 @@ import { DestinationSelector } from './destination-selector';
 import { DestinationType, DestinationContext } from '@/lib/destination-driven-tailoring';
 import { DeliveryDashboard } from '@/components/delivery/delivery-dashboard';
 import { OAuthConnectionManager } from '@/components/delivery/oauth-connection-manager';
+import { formatForChatDisplay, splitIntoConversationBubbles, createAnalyzedChatBubbles, type ChatBubble } from '@/lib/text-formatting';
 
 interface SavedPromptVersion {
   id: string;
@@ -44,7 +45,6 @@ interface ExpandedPromptOverlayProps {
   onContract: () => void;
   onCopy: () => void;
   onView: () => void;
-  onExport: () => void;
 }
 
 function ExpandedPromptOverlayComponent({ 
@@ -52,8 +52,7 @@ function ExpandedPromptOverlayComponent({
   sourceToolName, 
   onContract, 
   onCopy, 
-  onView, 
-  onExport 
+  onView 
 }: ExpandedPromptOverlayProps) {
   const { 
     updatePromptConversation,
@@ -124,6 +123,71 @@ function ExpandedPromptOverlayComponent({
   const [showDeliveryDashboard, setShowDeliveryDashboard] = useState(false);
   const [showConnectionManager, setShowConnectionManager] = useState(false);
   
+  // Multi-bubble selection state
+  const [selectedBubbles, setSelectedBubbles] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  
+  // Helper function to create enhanced AI response bubbles
+  const createEnhancedResponseBubbles = useCallback((responseText: string): ChatBubble[] => {
+    const context = {
+      framework: prompt.context.framework.name,
+      stage: prompt.context.stage.name,
+      tool: prompt.context.tool.name,
+      userIntent: 'conversation'
+    };
+    
+    return createAnalyzedChatBubbles(responseText, context);
+  }, [prompt.context]);
+  
+  // Multi-bubble selection handlers
+  const handleBubbleSelect = useCallback((messageId: string) => {
+    setSelectedBubbles(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(messageId)) {
+        newSelection.delete(messageId);
+      } else {
+        newSelection.add(messageId);
+      }
+      
+      // Enable selection mode when first bubble is selected
+      if (newSelection.size > 0 && !isSelectionMode) {
+        setIsSelectionMode(true);
+      }
+      // Disable selection mode when no bubbles are selected
+      else if (newSelection.size === 0 && isSelectionMode) {
+        setIsSelectionMode(false);
+      }
+      
+      return newSelection;
+    });
+  }, [isSelectionMode]);
+  
+  const handleCopySelectedBubbles = useCallback(() => {
+    const selectedMessages = conversationMessages.filter(msg => 
+      selectedBubbles.has(msg.id) && msg.type === 'ai'
+    );
+    
+    // Sort messages by timestamp to maintain chronological order
+    selectedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    
+    const combinedContent = selectedMessages.map(msg => msg.content).join('\n\n');
+    
+    if (combinedContent.trim()) {
+      navigator.clipboard.writeText(combinedContent);
+      toast.success(`Copied ${selectedMessages.length} chat bubbles to clipboard`, {
+        description: `${combinedContent.slice(0, 50)}${combinedContent.length > 50 ? '...' : ''}`
+      });
+      
+      // Clear selection after copying
+      setSelectedBubbles(new Set());
+      setIsSelectionMode(false);
+    }
+  }, [selectedBubbles, conversationMessages]);
+  
+  const handleClearSelection = useCallback(() => {
+    setSelectedBubbles(new Set());
+    setIsSelectionMode(false);
+  }, []);
   
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -349,16 +413,32 @@ function ExpandedPromptOverlayComponent({
                 throw new Error(error.message || 'AI response failed');
               }
 
-              console.log('✅ AI response received, creating message...');
-              // Add the AI's detailed response as a new message (no extra wrapper text)
-              const tailoredResponseMessage: ConversationMessage = {
-                id: `tailored-response-${Date.now()}`,
-                type: 'ai',
-                content: data.response, // Direct AI response content
-                timestamp: new Date()
-              };
+              console.log('✅ AI response received, creating analyzed message bubbles...');
               
-              setConversationMessages(prev => [...prev, tailoredResponseMessage]);
+              // Create enhanced AI response bubbles with analysis
+              const responseBubbles = createEnhancedResponseBubbles(data.response);
+              
+              // Add each bubble as a separate message with optimized delays
+              responseBubbles.forEach((bubble, index) => {
+                setTimeout(() => {
+                  const tailoredResponseMessage: ConversationMessage = {
+                    id: `tailored-response-${Date.now()}-${index}`,
+                    type: 'ai',
+                    content: bubble.content,
+                    timestamp: new Date()
+                  };
+                  
+                  setConversationMessages(prev => [...prev, tailoredResponseMessage]);
+                  
+                  // Log bubble metadata for debugging
+                  console.log(`💬 Bubble ${index + 1}:`, {
+                    type: bubble.metadata.type,
+                    priority: bubble.metadata.priority,
+                    isActionable: bubble.metadata.isActionable,
+                    length: bubble.content.length
+                  });
+                }, bubble.delay); // Use analyzed delay timing
+              });
               
             } catch (aiError) {
               console.error('AI response failed:', aiError);
@@ -492,17 +572,33 @@ function ExpandedPromptOverlayComponent({
         throw new Error(data?.error || 'Failed to generate AI response');
       }
 
-      // Remove typing indicator and add real response
+      // Remove typing indicator
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
-      const aiMessage: ConversationMessage = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: data.response,
-        timestamp: new Date()
-      };
+      // Create enhanced AI response bubbles with analysis
+      const responseBubbles = createEnhancedResponseBubbles(data.response);
       
-      setConversationMessages(prev => [...prev, aiMessage]);
+      // Add each bubble as a separate message with optimized delays
+      responseBubbles.forEach((bubble, index) => {
+        setTimeout(() => {
+          const aiMessage: ConversationMessage = {
+            id: `ai-${Date.now()}-${index}`,
+            type: 'ai',
+            content: bubble.content,
+            timestamp: new Date()
+          };
+          
+          setConversationMessages(prev => [...prev, aiMessage]);
+          
+          // Log bubble metadata for debugging
+          console.log(`💬 Follow-up Bubble ${index + 1}:`, {
+            type: bubble.metadata.type,
+            priority: bubble.metadata.priority,
+            isActionable: bubble.metadata.isActionable,
+            length: bubble.content.length
+          });
+        }, bubble.delay); // Use analyzed delay timing
+      });
     } catch (error) {
       console.error('Error generating follow-up response:', error);
       
@@ -565,17 +661,33 @@ function ExpandedPromptOverlayComponent({
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Failed to regenerate response');
 
-      // Remove typing indicator and add new response
+      // Remove typing indicator
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
-      const aiMessage: ConversationMessage = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: data.response,
-        timestamp: new Date()
-      };
+      // Create enhanced AI response bubbles with analysis
+      const responseBubbles = createEnhancedResponseBubbles(data.response);
       
-      setConversationMessages(prev => [...prev, aiMessage]);
+      // Add each bubble as a separate message with optimized delays
+      responseBubbles.forEach((bubble, index) => {
+        setTimeout(() => {
+          const aiMessage: ConversationMessage = {
+            id: `ai-${Date.now()}-${index}`,
+            type: 'ai',
+            content: bubble.content,
+            timestamp: new Date()
+          };
+          
+          setConversationMessages(prev => [...prev, aiMessage]);
+          
+          // Log bubble metadata for debugging
+          console.log(`💬 Regenerated Bubble ${index + 1}:`, {
+            type: bubble.metadata.type,
+            priority: bubble.metadata.priority,
+            isActionable: bubble.metadata.isActionable,
+            length: bubble.content.length
+          });
+        }, bubble.delay); // Use analyzed delay timing
+      });
     } catch (error) {
       console.error('Error regenerating message:', error);
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
@@ -590,6 +702,163 @@ function ExpandedPromptOverlayComponent({
   const handleCopyMessage = (content: string) => {
     navigator.clipboard.writeText(content);
     toast.success('Message copied to clipboard');
+  };
+
+  // Function to detect if a message contains actionable content that can be used as a prompt
+  const isGeneratedPrompt = (content: string): boolean => {
+    // Don't show button for very short messages or typing indicators
+    if (content.length < 50 || content.trim() === '...' || content.includes('...')) {
+      return false;
+    }
+    
+    // Don't show for error messages
+    const lowerContent = content.toLowerCase();
+    if (lowerContent.includes('error') && lowerContent.includes('apologize')) {
+      return false;
+    }
+    
+    // Don't show for simple system/context messages
+    if (content.includes("I've updated my context") || 
+        content.includes("context change") ||
+        lowerContent.includes("i don't") ||
+        lowerContent.includes("i can't") ||
+        lowerContent.includes("i cannot")) {
+      return false;
+    }
+    
+    // Show button for most substantial AI responses
+    // This is more permissive - users can decide what they want to use as a prompt
+    
+    // Always show for content that looks like instructions or structured content
+    const hasStructure = 
+      content.includes('1.') || 
+      content.includes('2.') || 
+      content.includes('3.') ||
+      content.includes('•') ||
+      content.includes('*') ||
+      content.includes('-') ||
+      content.includes('#') ||
+      content.includes('**') ||
+      content.split('\n').length > 2; // Multi-line content
+    
+    // Show for substantial content (let users decide if they want to use it as a prompt)
+    const isSubstantial = content.length > 100;
+    
+    // Show for most content except very basic responses
+    const isBasicResponse = 
+      lowerContent.includes('yes') && content.length < 100 ||
+      lowerContent.includes('no') && content.length < 100 ||
+      lowerContent.includes('okay') && content.length < 100 ||
+      lowerContent.includes('sure') && content.length < 100;
+    
+    return (hasStructure || isSubstantial) && !isBasicResponse;
+  };
+
+  // Function to handle "Use Prompt" button click
+  const handleUsePrompt = async (promptContent: string) => {
+    if (!promptContent.trim() || isGenerating) return;
+    
+    const userMessage: ConversationMessage = {
+      id: `prompt-execution-${Date.now()}`,
+      type: 'user',
+      content: promptContent,
+      timestamp: new Date()
+    };
+    
+    setConversationMessages(prev => [...prev, userMessage]);
+    setIsGenerating(true);
+    setIsTyping(true);
+    
+    // Show typing indicator immediately
+    const typingIndicator: ConversationMessage = {
+      id: 'typing-indicator',
+      type: 'ai',
+      content: '...',
+      timestamp: new Date()
+    };
+    
+    setConversationMessages(prev => [...prev, typingIndicator]);
+    
+    try {
+      // Call the AI conversation function with the generated prompt
+      const { data, error } = await supabase.functions.invoke('ai-conversation', {
+        body: {
+          userMessage: promptContent,
+          initialPrompt: currentPromptContent,
+          conversationHistory: conversationMessages.filter(msg => msg.id !== 'initial'),
+          projectId: currentProject?.id,
+          knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
+          frameworkContext: {
+            framework: prompt.context.framework.name,
+            stage: prompt.context.stage.name,
+            tool: prompt.context.tool.name
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to execute prompt');
+      }
+
+      // Remove typing indicator
+      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
+      
+      // Create enhanced AI response bubbles with analysis
+      const responseBubbles = createEnhancedResponseBubbles(data.response);
+      
+      // Add each bubble as a separate message with optimized delays
+      responseBubbles.forEach((bubble, index) => {
+        setTimeout(() => {
+          const aiMessage: ConversationMessage = {
+            id: `ai-response-${Date.now()}-${index}`,
+            type: 'ai',
+            content: bubble.content,
+            timestamp: new Date()
+          };
+          
+          setConversationMessages(prev => [...prev, aiMessage]);
+          
+          // Log bubble metadata for debugging
+          console.log(`💬 Prompt Execution Bubble ${index + 1}:`, {
+            type: bubble.metadata.type,
+            priority: bubble.metadata.priority,
+            isActionable: bubble.metadata.isActionable,
+            length: bubble.content.length
+          });
+        }, bubble.delay); // Use analyzed delay timing
+      });
+      
+      toast.success('Prompt executed successfully!', {
+        description: 'AI has responded with analyzed, dissected chat bubbles'
+      });
+      
+    } catch (error) {
+      console.error('Error executing prompt:', error);
+      
+      // Remove typing indicator
+      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
+      
+      // Fallback error message
+      const errorMessage: ConversationMessage = {
+        id: `ai-error-${Date.now()}`,
+        type: 'ai',
+        content: `I apologize, but I encountered an error while executing the prompt. Please try again or modify the prompt.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date()
+      };
+      
+      setConversationMessages(prev => [...prev, errorMessage]);
+      
+      toast.error('Failed to execute prompt', {
+        description: error instanceof Error ? error.message : 'Please try again'
+      });
+    } finally {
+      setIsGenerating(false);
+      setIsTyping(false);
+    }
   };
 
   const handleEditPrompt = () => {
@@ -689,6 +958,8 @@ function ExpandedPromptOverlayComponent({
   const MessageBubble = memo(({ message }: { message: ConversationMessage }) => {
     const isUser = message.type === 'user';
     const isTyping = message.content === '...' && message.id === 'typing-indicator';
+    const isSelected = selectedBubbles.has(message.id);
+    const canBeSelected = message.type === 'ai' && !isTyping;
     
     return (
       <motion.div
@@ -696,16 +967,31 @@ function ExpandedPromptOverlayComponent({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className={cn(
-          "group flex gap-3 py-4 px-6",
-          isUser ? "justify-end" : "justify-start"
+          "group flex gap-3 py-4 px-6 transition-all duration-200",
+          isUser ? "justify-end" : "justify-start",
+          canBeSelected && "hover:bg-muted/30 cursor-pointer",
+          isSelected && "bg-primary/10 border-l-4 border-primary"
         )}
+        onClick={canBeSelected ? () => handleBubbleSelect(message.id) : undefined}
       >
         {!isUser && (
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
-            frameworkClasses[0]
-          )}>
-            <Bot className="w-4 h-4 text-white" />
+          <div className="flex flex-col items-center gap-1">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+              frameworkClasses[0]
+            )}>
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            {canBeSelected && (
+              <div className={cn(
+                "w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-200",
+                isSelected 
+                  ? "bg-primary border-primary" 
+                  : "border-muted-foreground/30 hover:border-primary/50"
+              )}>
+                {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+              </div>
+            )}
           </div>
         )}
         
@@ -725,7 +1011,7 @@ function ExpandedPromptOverlayComponent({
             <>
               <div className="prose prose-sm max-w-none dark:prose-invert">
                 <pre className="whitespace-pre-wrap font-sans leading-relaxed">
-                  {message.content}
+                  {formatForChatDisplay(message.content)}
                 </pre>
               </div>
               
@@ -749,6 +1035,30 @@ function ExpandedPromptOverlayComponent({
                     <TooltipContent>Copy message</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                
+                {/* Use Prompt Button for Generated Prompts */}
+                {!isUser && isGeneratedPrompt(message.content) && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleUsePrompt(message.content)}
+                          disabled={isGenerating}
+                          className="h-6 w-6 p-0"
+                        >
+                          {isGenerating ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Use this prompt</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 
                 {!isUser && (
                   <TooltipProvider>
@@ -957,7 +1267,7 @@ function ExpandedPromptOverlayComponent({
                                   </Badge>
                                 </div>
                                 <div className="bg-background rounded-lg p-3 text-sm font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                  {displayPromptContent}
+                                  {formatForChatDisplay(displayPromptContent)}
                                 </div>
                               </div>
                             </div>
@@ -974,6 +1284,41 @@ function ExpandedPromptOverlayComponent({
                     )}
                   </div>
                 </ScrollArea>
+
+                {/* Floating Copy Button for Selected Bubbles */}
+                <AnimatePresence>
+                  {selectedBubbles.size > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10"
+                    >
+                      <div className="bg-background border rounded-lg shadow-lg p-2 flex items-center gap-2">
+                        <div className="text-sm text-muted-foreground px-2">
+                          {selectedBubbles.size} bubble{selectedBubbles.size > 1 ? 's' : ''} selected
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleCopySelectedBubbles}
+                          className={cn("h-8", frameworkClasses[0])}
+                        >
+                          <Copy className="w-3 h-3 mr-1" />
+                          Copy All
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleClearSelection}
+                          className="h-8"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 
                 {/* Chat Input */}
@@ -1007,16 +1352,6 @@ function ExpandedPromptOverlayComponent({
                   {/* Action Buttons */}
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={onCopy}
-                        className="text-xs"
-                      >
-                        <Copy className="w-3 h-3 mr-1" />
-                        Copy
-                      </Button>
-                      
                       {/* Choose Destination Button */}
                       <Button
                         size="sm"
@@ -1049,15 +1384,6 @@ function ExpandedPromptOverlayComponent({
                         </Button>
                       )}
                       
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={onExport}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Export
-                      </Button>
                       
                       {/* Delivery Dashboard Button */}
                       <Button
@@ -1342,6 +1668,7 @@ function ExpandedPromptOverlayComponent({
           <OAuthConnectionManager
             isOpen={showConnectionManager}
             onClose={() => setShowConnectionManager(false)}
+            projectId={currentProject?.id}
           />
         )}
       </AnimatePresence>

@@ -14,6 +14,7 @@ import MetricsDashboard from "./pages/MetricsDashboard";
 import Frameworks from "./pages/Frameworks";
 import TestInstructions from "./pages/TestInstructions";
 import ToolPromptDemo from "./pages/ToolPromptDemo";
+import Board from "./pages/Board";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => {
           <Route path="/frameworks" element={<Frameworks />} />
           <Route path="/test-instructions" element={<TestInstructions />} />
           <Route path="/tool-prompt-demo" element={<ToolPromptDemo />} />
+          <Route path="/board" element={<Board />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

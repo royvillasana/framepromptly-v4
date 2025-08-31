@@ -494,17 +494,25 @@ export const useDeliveryStore = create<DeliveryState>((set, get) => ({
   initiateOAuth: async (destination: DeliveryDestination) => {
     set({ isConnecting: true });
     
-    // Generate OAuth URL based on destination
+    // Generate OAuth URL based on destination  
+    const clientId = import.meta.env.VITE_MIRO_CLIENT_ID || '';
+    const redirectUri = import.meta.env.VITE_APP_URL + '/oauth/callback' || '';
+    
     const oauthUrls = {
-      miro: 'https://miro.com/oauth/authorize?response_type=code&client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT&scope=boards:read boards:write',
+      miro: clientId 
+        ? `https://miro.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=boards:read boards:write`
+        : '', // Return empty string if no client ID is configured
       figjam: '#', // Plugin-based, no OAuth needed
       figma: '#'   // Plugin-based, no OAuth needed
     };
 
     const authUrl = oauthUrls[destination];
     
-    if (authUrl === '#') {
+    if (authUrl === '#' || authUrl === '') {
       set({ isConnecting: false });
+      if (destination === 'miro' && !clientId) {
+        throw new Error('Miro OAuth not configured. Please use the simple access token connection method or set up OAuth credentials.');
+      }
       throw new Error(`OAuth not required for ${destination}`);
     }
 

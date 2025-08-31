@@ -372,14 +372,20 @@ export class DeliveryPipeline {
     payload: DeliveryPayload,
     onProgress?: ProgressCallback
   ): Promise<DeliveryResult> {
-    // Get OAuth connection
-    const connection = await oauthManager.getConnection('miro');
-    if (!connection) {
-      throw new Error('No active Miro connection found');
+    // Try to get access token from localStorage first (simple connection)
+    let accessToken = localStorage.getItem('miro_access_token');
+    
+    if (!accessToken) {
+      // Fall back to OAuth connection
+      const connection = await oauthManager.getConnection('miro');
+      if (!connection) {
+        throw new Error('No Miro connection found. Please connect to Miro first using the Connection Manager.');
+      }
+      
+      // Get fresh access token from OAuth
+      accessToken = await oauthManager.getValidAccessToken('miro');
     }
 
-    // Get fresh access token
-    const accessToken = await oauthManager.getValidAccessToken('miro');
     const miroClient = new MiroApiClient(accessToken);
 
     // Validate board access
@@ -388,8 +394,17 @@ export class DeliveryPipeline {
       throw new Error(`Cannot write to Miro board: ${boardValidation.errors.join(', ')}`);
     }
 
+    // Validate payload items before sending to Miro
+    if (!payload.items || payload.items.length === 0) {
+      throw new Error('No items to deliver to Miro board');
+    }
+
+    console.log(`🎯 Delivering ${payload.items.length} items to Miro board: ${target.targetId}`);
+
     // Create items in batches
     const batchResults = await miroClient.createItems(target.targetId, payload.items);
+    
+    console.log(`✅ Miro delivery completed: ${batchResults.summary.successful}/${batchResults.summary.total} items created`);
     
     // Track progress
     if (onProgress) {
@@ -404,6 +419,13 @@ export class DeliveryPipeline {
           message: `Created ${batchResults.success.length} of ${payload.items.length} items...`
         });
       });
+    }
+
+    // Log any failed items for debugging
+    if (batchResults.failed.length > 0) {
+      console.warn(`⚠️ Failed to create ${batchResults.failed.length} items:`, 
+        batchResults.failed.map(f => ({ text: f.item.text?.substring(0, 30), error: f.error }))
+      );
     }
 
     // Generate embed URL
@@ -576,9 +598,11 @@ export class DeliveryPipeline {
 
     // Validate destination-specific requirements
     if (target.destination === 'miro' && target.targetId) {
-      const connection = await oauthManager.getConnection('miro');
-      if (!connection) {
-        errors.push('Miro connection required');
+      const storedToken = localStorage.getItem('miro_access_token');
+      const oauthConnection = await oauthManager.getConnection('miro');
+      
+      if (!storedToken && !oauthConnection) {
+        errors.push('Miro connection required - please connect using the Connection Manager');
       }
     }
 

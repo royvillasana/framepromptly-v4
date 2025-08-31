@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand } from 'lucide-react';
+import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand, Database } from 'lucide-react';
 import { GeneratedPrompt, usePromptStore } from '@/stores/prompt-store';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +11,33 @@ import { NodeActionsMenu } from './node-actions-menu';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
 import { ExpandedPromptOverlay } from './expanded-prompt-overlay';
+import { formatForChatDisplay } from '@/lib/text-formatting';
+
+/**
+ * Extracts only the generated prompt content, removing knowledge base context
+ * for cleaner node display while preserving full content for expanded view
+ */
+const extractGeneratedPromptOnly = (fullPromptContent: string): string => {
+  // Check if the prompt contains knowledge base context
+  const knowledgeBaseStart = fullPromptContent.indexOf('=== PROJECT KNOWLEDGE BASE ===');
+  const knowledgeBaseEnd = fullPromptContent.indexOf('=== END KNOWLEDGE BASE ===');
+  
+  if (knowledgeBaseStart !== -1 && knowledgeBaseEnd !== -1) {
+    // Extract content after the knowledge base section
+    const afterKnowledgeBase = fullPromptContent.substring(
+      knowledgeBaseEnd + '=== END KNOWLEDGE BASE ==='.length
+    );
+    
+    // Clean up the extracted content (remove leading/trailing whitespace and extra line breaks)
+    return afterKnowledgeBase
+      .replace(/^[\s\n]*Based on the above project knowledge, generate customized instructions for:[\s\n]*/, '') // Remove the bridge text
+      .replace(/^[\s\n]+/, '') // Remove leading whitespace
+      .trim();
+  }
+  
+  // If no knowledge base context, return the full content
+  return fullPromptContent;
+};
 
 interface PromptNodeData {
   prompt: GeneratedPrompt;
@@ -37,6 +64,10 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
     ? prompt.conversation.filter(msg => msg.type === 'ai').pop()?.content 
     : prompt.output;
   
+  // Extract only the generated prompt content (without knowledge base) for node display
+  const displayPromptContent = extractGeneratedPromptOnly(prompt.content);
+  const hasKnowledgeBase = prompt.content.includes('=== PROJECT KNOWLEDGE BASE ===');
+  
   const isExpanded = expandedPromptId === prompt.id;
 
   const handleExpand = () => {
@@ -50,14 +81,14 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   };
 
   const handleCopy = () => {
-    const contentToCopy = latestAIResponse || prompt.content;
+    const contentToCopy = latestAIResponse || displayPromptContent;
     
     navigator.clipboard.writeText(contentToCopy);
     toast({
       title: "Copied to clipboard",
       description: latestAIResponse 
         ? "AI response has been copied to your clipboard."
-        : "Prompt content has been copied to your clipboard."
+        : "Generated prompt has been copied to your clipboard."
     });
   };
 
@@ -70,18 +101,25 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   };
 
   const handleExport = () => {
+    const hasKnowledgeBase = prompt.content.includes('=== PROJECT KNOWLEDGE BASE ===');
+    const knowledgeBaseLine = hasKnowledgeBase 
+      ? `Knowledge Base: Included (project-specific context integrated)\n`
+      : `Knowledge Base: None\n`;
+    
     const exportContent = latestAIResponse 
       ? `Generated Prompt for ${prompt.context.tool.name}\n` +
         `Framework: ${prompt.context.framework.name}\n` +
         `Stage: ${prompt.context.stage.name}\n` +
-        `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n\n` +
-        `PROMPT:\n${'-'.repeat(50)}\n${prompt.content}\n\n` +
+        `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n` +
+        knowledgeBaseLine + `\n` +
+        `GENERATED PROMPT:\n${'-'.repeat(50)}\n${displayPromptContent}\n\n` +
         `AI RESPONSE:\n${'-'.repeat(50)}\n${latestAIResponse}`
       : `Generated Prompt for ${prompt.context.tool.name}\n` +
         `Framework: ${prompt.context.framework.name}\n` +
         `Stage: ${prompt.context.stage.name}\n` +
-        `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n\n` +
-        `PROMPT:\n${'-'.repeat(50)}\n${prompt.content}`;
+        `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n` +
+        knowledgeBaseLine + `\n` +
+        `GENERATED PROMPT:\n${'-'.repeat(50)}\n${displayPromptContent}`;
     
     const blob = new Blob([exportContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -99,17 +137,13 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   return (
     <>
       <ResizableNode 
-      selected={selected} 
-      minWidth={200} 
-      minHeight={150}
-      maxWidth={2000}
-      maxHeight={1500}
-    >
+        selected={selected}
+        nodeType="prompt"
+      >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.2 }}
-        whileHover={selected ? {} : { scale: 1.02 }}
       >
       {/* Draggable Connection Handles */}
       <DraggableHandle
@@ -146,7 +180,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           <Expand className="w-4 h-4" />
         </Button>
 
-        <div className="space-y-3">
+        <div className="space-y-3 h-full flex flex-col min-h-0">
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex-1 mr-10">
@@ -167,7 +201,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           </div>
 
           {/* Framework → Stage → Tool Info */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="outline" className="text-sm px-3 py-1">
               {prompt.context.framework.name}
             </Badge>
@@ -177,18 +211,35 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
             <Badge variant="default" className="text-sm px-3 py-1">
               {prompt.context.tool.name}
             </Badge>
+            {hasKnowledgeBase && (
+              <Badge variant="outline" className="text-sm px-2 py-1 bg-blue-50 border-blue-200 text-blue-700">
+                <Database className="w-3 h-3 mr-1" />
+                Knowledge Base
+              </Badge>
+            )}
           </div>
 
           {/* Content Preview */}
-          <div className="bg-muted/50 p-4 rounded text-sm space-y-3">
+          <div className="bg-muted/50 p-4 rounded text-sm space-y-3 flex-1 flex flex-col min-h-0">
             <div className="flex items-center gap-3 mb-3">
               <FileText className="w-4 h-4 text-muted-foreground" />
-              <span className="font-semibold text-muted-foreground">Prompt Content</span>
+              <span className="font-semibold text-muted-foreground">Generated Prompt</span>
+              {hasKnowledgeBase && (
+                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  + Project Context
+                </span>
+              )}
             </div>
-            <div className="max-h-96 overflow-y-auto">
-              <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-                {prompt.content}
+            <div className="flex-1">
+              <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed p-2">
+                {formatForChatDisplay(displayPromptContent)}
               </pre>
+              {hasKnowledgeBase && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                  <Database className="w-3 h-3 inline mr-1" />
+                  Full prompt with project knowledge base context available in expanded view
+                </div>
+              )}
             </div>
           </div>
 
@@ -202,55 +253,61 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
                   {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
                 </Badge>
               </div>
-              <div className="max-h-96 overflow-y-auto">
-                <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {latestAIResponse}
+              <div className="flex-1">
+                <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-2">
+                  {formatForChatDisplay(latestAIResponse)}
                 </pre>
               </div>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Button
-              size="default"
-              variant="outline"
-              onClick={handleView}
-              className="flex-1 h-10 text-sm"
-              title="View full prompt details"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              View Details
-            </Button>
+          <div className="flex flex-col gap-2">
+            {/* Primary action row */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleView}
+                className="flex-1 h-8 text-xs"
+                title="View full prompt details"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                View Details
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCopy}
+                className="h-8 px-3"
+                title="Copy prompt and response"
+              >
+                <Copy className="w-3 h-3 mr-1" />
+                Copy
+              </Button>
+            </div>
             
-            <Button
-              size="default"
-              variant="outline"
-              onClick={handleCopy}
-              className="h-10 px-4"
-              title="Copy prompt and response"
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              Copy
-            </Button>
+            {/* Secondary action row */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExport}
+                className="flex-1 h-8 text-xs"
+                title="Export as file"
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Export
+              </Button>
 
-            <Button
-              size="default"
-              variant="outline"
-              onClick={handleExport}
-              className="h-10 px-4"
-              title="Export as file"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-
-            <NodeActionsMenu
-              nodeId={id || ''}
-              nodeType="prompt"
-              nodeData={data}
-              position={{ x: 0, y: 0 }}
-            />
+              <NodeActionsMenu
+                nodeId={id || ''}
+                nodeType="prompt"
+                nodeData={data}
+                position={{ x: 0, y: 0 }}
+              />
+            </div>
           </div>
         </div>
       </Card>
@@ -280,7 +337,6 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
         onContract={handleContract}
         onCopy={handleCopy}
         onView={handleView}
-        onExport={handleExport}
       />
     )}
     </>

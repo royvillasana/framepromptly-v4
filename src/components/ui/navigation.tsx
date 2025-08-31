@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { GradientButton } from "@/components/ui/gradient-button";
 import { cn } from "@/lib/utils";
 import { Zap, Menu, User, LogOut, BarChart, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
@@ -141,9 +142,9 @@ export function Navigation({ className }: NavigationProps) {
             <Button variant="outline" size="sm" asChild>
               <Link to="/auth">Sign In</Link>
             </Button>
-            <Button size="sm" className="bg-gradient-primary hover:bg-primary-hover" asChild>
+            <GradientButton variant="primary" size="sm" asChild>
               <Link to="/auth">Get Started</Link>
-            </Button>
+            </GradientButton>
           </>
         )}
         <Button variant="ghost" size="sm" className="md:hidden">

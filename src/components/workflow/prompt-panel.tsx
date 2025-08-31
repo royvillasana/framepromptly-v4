@@ -17,6 +17,7 @@ import {
 import { usePromptStore } from '@/stores/prompt-store';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { toast } from 'sonner';
+import { formatForChatDisplay } from '@/lib/text-formatting';
 
 export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
   const { prompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating } = usePromptStore();
@@ -131,7 +132,7 @@ export function PromptPanel({ onPromptView }: { onPromptView?: () => void }) {
                       </div>
                       <div className="max-h-20 overflow-y-auto">
                         <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-                          {prompt.content.length > 200 ? `${prompt.content.substring(0, 200)}...` : prompt.content}
+                          {formatForChatDisplay(prompt.content.length > 200 ? `${prompt.content.substring(0, 200)}...` : prompt.content)}
                         </pre>
                       </div>
                       {prompt.content.length > 200 && (

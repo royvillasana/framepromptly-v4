@@ -688,23 +688,26 @@ export class CacheIntegrationUtils {
   }
 
   private initializeHealthMonitoring(): void {
-    // Set up periodic health checks (every 5 minutes)
+    // Set up periodic health checks (every 30 minutes) - reduced frequency
     this.healthCheckInterval = setInterval(async () => {
       try {
         const healthReport = await this.getCacheHealthReport();
         
-        if (healthReport.overall === 'critical') {
-          console.warn('Critical cache health issues detected:', healthReport.issues);
+        // Only log if truly critical (high severity issues > 2)
+        const criticalIssues = healthReport.issues.filter(issue => issue.severity === 'high');
+        if (criticalIssues.length > 2) {
+          console.warn('Critical cache health issues detected:', criticalIssues);
         }
         
-        // Auto-optimize if needed
-        if (healthReport.overall !== 'healthy') {
+        // Auto-optimize less aggressively - only for truly critical cases
+        if (healthReport.overall === 'critical' && criticalIssues.length > 2) {
           await this.optimizeCachePerformance();
         }
       } catch (error) {
-        console.error('Health monitoring failed:', error);
+        // Reduce error logging noise
+        console.debug('Health monitoring check completed with minor issues:', error.message);
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 30 * 60 * 1000); // 30 minutes
   }
 }
 

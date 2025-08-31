@@ -1,13 +1,15 @@
-import { memo, useState } from 'react';
+import React, { memo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { Play, Settings, Sparkles, BookOpen, AlertCircle, Zap, Star } from 'lucide-react';
+import { Play, Settings, Sparkles, BookOpen, AlertCircle, Zap, Star, Cpu, Users, Palette } from 'lucide-react';
 import { UXTool, useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 import { useProjectStore } from '@/stores/project-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
+import { getPlatformRecommendation, PlatformType } from '@/lib/ux-tool-platform-optimizer';
+import { generateToolSpecificInstructions } from '@/lib/tool-specific-prompt-instructions';
 import { supabase } from '@/integrations/supabase/client';
 import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
@@ -16,6 +18,7 @@ import { KnowledgeSelectionDialog } from './knowledge-selection-dialog';
 import { EnhancedPromptPanel } from './enhanced-prompt-panel';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
+import { PlatformSelector } from './platform-selector';
 import { getFrameworkColors } from '@/lib/framework-colors';
 import { toast } from 'sonner';
 
@@ -50,12 +53,36 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const [currentStep, setCurrentStep] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [showEnhancedPanel, setShowEnhancedPanel] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType | undefined>();
   const totalSteps = 4;
   
   // Check if enhanced template is available
   const enhancedTemplate = getEnhancedTemplate(tool.id);
+  
+  // Get platform recommendation for this tool
+  const platformRecommendation = getPlatformRecommendation(tool.id);
+  
+  // Platform icon mapping
+  const getPlatformIcon = (platform: PlatformType) => {
+    switch (platform) {
+      case 'miro': return Cpu;
+      case 'figjam': return Users;
+      case 'figma': return Palette;
+      default: return Sparkles;
+    }
+  };
+  
+  // Platform color mapping
+  const getPlatformColor = (platform: PlatformType) => {
+    switch (platform) {
+      case 'miro': return 'bg-blue-500 text-white';
+      case 'figjam': return 'bg-purple-500 text-white';
+      case 'figma': return 'bg-green-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
 
-  const handleGeneratePrompt = async () => {
+  const handleGeneratePrompt = async (platform?: PlatformType) => {
     if (!framework || !stage || !currentProject) {
       console.error('Missing required data for prompt generation');
       return;
@@ -94,17 +121,35 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         .filter(entry => linkedKnowledge.includes(entry.id))
         .map(entry => `${entry.title}: ${entry.content}`)
         .join('\n\n');
+
+      // Generate platform-optimized prompt content
+      const selectedPlatform = platform || platformRecommendation?.platform;
+      let promptContent: string;
+      
+      if (selectedPlatform && platformRecommendation) {
+        // Use platform-optimized instructions
+        const toolInstructions = generateToolSpecificInstructions({
+          framework,
+          stage,
+          tool,
+          projectContext: knowledgeContext,
+          preferredPlatform: selectedPlatform
+        });
         
-      const promptContent = await generatePrompt(
-        currentProject.id, 
-        framework, 
-        stage, 
-        tool, 
-        undefined, 
-        undefined, 
-        undefined,
-        knowledgeContext || undefined
-      );
+        promptContent = toolInstructions.platformOptimizedPrompt || toolInstructions.promptTemplate;
+      } else {
+        // Fallback to standard prompt generation
+        promptContent = await generatePrompt(
+          currentProject.id, 
+          framework, 
+          stage, 
+          tool, 
+          undefined, 
+          undefined, 
+          undefined,
+          knowledgeContext || undefined
+        );
+      }
       await new Promise(resolve => setTimeout(resolve, 400));
       
       // Step 4: Executing AI Request
@@ -271,34 +316,34 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
   return (
     <ResizableNode 
-      selected={selected} 
-      minWidth={320} 
-      minHeight={200}
-      maxWidth={450}
-      maxHeight={500}
+      selected={selected}
+      nodeType="tool"
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.2 }}
-        whileHover={selected ? {} : { scale: 1.02 }}
         style={{ width: '100%', height: '100%' }}
       >
       {/* Draggable Connection Handles */}
-      <DraggableHandle
-        id="target-1"
-        type="target"
-        initialPosition={handlePositions['target-1'] || 'left'}
-        onPositionChange={(position) => updateHandlePosition('target-1', position)}
-        nodeId={id}
-      />
-      <DraggableHandle
-        id="target-2"
-        type="target"
-        initialPosition={handlePositions['target-2'] || 'top'}
-        onPositionChange={(position) => updateHandlePosition('target-2', position)}
-        nodeId={id}
-      />
+      {id && (
+        <>
+          <DraggableHandle
+            id={`${id}-target-1`}
+            type="target"
+            initialPosition={handlePositions['target-1'] || 'left'}
+            onPositionChange={(position) => updateHandlePosition('target-1', position)}
+            nodeId={id}
+          />
+          <DraggableHandle
+            id={`${id}-target-2`}
+            type="target"
+            initialPosition={handlePositions['target-2'] || 'top'}
+            onPositionChange={(position) => updateHandlePosition('target-2', position)}
+            nodeId={id}
+          />
+        </>
+      )}
       
       <Card 
         className={`w-full h-full p-4 transition-all duration-200 flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''} hover:shadow-md`}
@@ -333,10 +378,21 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
                     Enhanced
                   </Badge>
                 )}
+                {platformRecommendation && (
+                  <Badge 
+                    className={`text-xs px-2 py-0 h-5 ${getPlatformColor(platformRecommendation.platform)}`}
+                    title={`Recommended for ${platformRecommendation.platform}: ${platformRecommendation.reasoning}`}
+                  >
+                    {React.createElement(getPlatformIcon(platformRecommendation.platform), { className: "w-2 h-2 mr-1" })}
+                    {platformRecommendation.platform}
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs leading-relaxed" style={{ color: colors.text.light }}>
-                {tool.description}
-              </p>
+              <div className="max-h-12 overflow-hidden">
+                <p className="text-xs leading-relaxed line-clamp-2" style={{ color: colors.text.light }}>
+                  {tool.description}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -393,11 +449,10 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
               )}
             </div>
             {linkedKnowledge.length > 0 && (
-              <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="flex-1">
                 <div className="flex flex-wrap gap-1">
                   {entries
                     .filter(entry => linkedKnowledge.includes(entry.id))
-                    .slice(0, 2)
                     .map(entry => (
                       <Badge 
                         key={entry.id} 
@@ -408,76 +463,53 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
                           borderColor: colors.border.secondary 
                         }}
                       >
-                        {entry.title.length > 12 ? `${entry.title.substring(0, 12)}...` : entry.title}
+                        {entry.title.length > 10 ? `${entry.title.substring(0, 10)}...` : entry.title}
                       </Badge>
                     ))}
-                  {linkedKnowledge.length > 2 && (
-                    <Badge 
-                      className="text-xs px-1 py-0 h-4 flex-shrink-0" 
-                      style={{ 
-                        backgroundColor: colors.background.secondary, 
-                        color: colors.text.secondary, 
-                        borderColor: colors.border.secondary 
-                      }}
-                    >
-                      +{linkedKnowledge.length - 2} more
-                    </Badge>
-                  )}
                 </div>
               </div>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {enhancedTemplate ? (
-              <>
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowEnhancedPanel(true);
-                  }}
-                  className="flex-1 h-8 text-xs bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-                  disabled={showProgress}
-                >
-                  <Zap className="w-3 h-3 mr-1" />
-                  Enhanced Prompt
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleGeneratePrompt();
-                  }}
-                  className="h-8 text-xs"
-                  style={{
-                    borderColor: colors.border.secondary,
-                    color: colors.text.secondary,
-                    backgroundColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = colors.background.secondary;
-                    e.currentTarget.style.color = colors.text.hover;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = colors.text.secondary;
-                  }}
-                  disabled={!framework || !stage || !currentProject || showProgress}
-                >
-                  <Play className="w-3 h-3" />
-                </Button>
-              </>
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            {/* Enhanced Template Button (if available) */}
+            {enhancedTemplate && (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEnhancedPanel(true);
+                }}
+                className="w-full h-8 text-xs bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                disabled={showProgress}
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Enhanced Prompt
+              </Button>
+            )}
+            
+            {/* Platform-Aware Generation */}
+            {platformRecommendation ? (
+              <PlatformSelector
+                toolId={tool.id}
+                toolName={tool.name}
+                selectedPlatform={selectedPlatform}
+                onPlatformChange={setSelectedPlatform}
+                onGenerate={(platform) => {
+                  handleGeneratePrompt(platform);
+                }}
+                className="w-full"
+              />
             ) : (
+              /* Fallback for tools without platform optimization */
               <Button
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleGeneratePrompt();
                 }}
-                className="flex-1 h-8 text-xs"
+                className="w-full h-8 text-xs"
                 style={{
                   backgroundColor: colors.background.primary,
                   color: colors.text.primary,
@@ -498,48 +530,57 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
               </Button>
             )}
             
-            {/* Debug Info in Development */}
-            {process.env.NODE_ENV === 'development' && linkedKnowledge.length > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const knowledgeEntries = entries.filter(entry => linkedKnowledge.includes(entry.id));
-                  console.log('Debug - Linked Knowledge:', knowledgeEntries);
-                  toast.success(`Debug: ${knowledgeEntries.length} knowledge entries linked`);
-                }}
-                title="Debug knowledge context"
-              >
-                🔍
-              </Button>
-            )}
-            
-            <NodeActionsMenu
-              nodeId={id || ''}
-              nodeType="tool"
-              nodeData={data}
-              position={{ x: 0, y: 0 }}
-            />
+            {/* Debug and Actions Row */}
+            <div className="flex items-center justify-between">
+              {/* Debug Info in Development */}
+              {process.env.NODE_ENV === 'development' && linkedKnowledge.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs px-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const knowledgeEntries = entries.filter(entry => linkedKnowledge.includes(entry.id));
+                    console.log('Debug - Linked Knowledge:', knowledgeEntries);
+                    toast.success(`Debug: ${knowledgeEntries.length} knowledge entries linked`);
+                  }}
+                  title="Debug knowledge context"
+                >
+                  🔍 Debug
+                </Button>
+              )}
+              
+              <div className="ml-auto">
+                <NodeActionsMenu
+                  nodeId={id || ''}
+                  nodeType="tool"
+                  nodeData={data}
+                  position={{ x: 0, y: 0 }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </Card>
 
-      <DraggableHandle
-        id="source-1"
-        type="source"
-        initialPosition={handlePositions['source-1'] || 'right'}
-        onPositionChange={(position) => updateHandlePosition('source-1', position)}
-        nodeId={id}
-      />
-      <DraggableHandle
-        id="source-2"
-        type="source"
-        initialPosition={handlePositions['source-2'] || 'bottom'}
-        onPositionChange={(position) => updateHandlePosition('source-2', position)}
-        nodeId={id}
-      />
+      {id && (
+        <>
+          <DraggableHandle
+            id={`${id}-source-1`}
+            type="source"
+            initialPosition={handlePositions['source-1'] || 'right'}
+            onPositionChange={(position) => updateHandlePosition('source-1', position)}
+            nodeId={id}
+          />
+          <DraggableHandle
+            id={`${id}-source-2`}
+            type="source"
+            initialPosition={handlePositions['source-2'] || 'bottom'}
+            onPositionChange={(position) => updateHandlePosition('source-2', position)}
+            nodeId={id}
+          />
+        </>
+      )}
       </motion.div>
       
       <ProgressOverlay

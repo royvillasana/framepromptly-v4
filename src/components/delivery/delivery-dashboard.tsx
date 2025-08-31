@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -11,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Truck, Target, CheckCircle, AlertCircle, XCircle, Clock, ExternalLink,
   Copy, Download, RefreshCw, Eye, Zap, Send, Settings, MoreHorizontal,
-  Loader2, ArrowRight, ArrowUpRight, Calendar, Timer, Users, Gauge, Link
+  Loader2, ArrowRight, ArrowUpRight, Calendar, Timer, Users, Gauge, Link, Maximize2
 } from 'lucide-react';
 import { useDeliveryStore } from '@/stores/delivery-store';
 import { DeliveryResult, DeliveryDestination } from '@/stores/delivery-store';
@@ -19,6 +21,7 @@ import { deliveryPipeline, DeliveryProgress, ProgressCallback } from '@/lib/deli
 import { GeneratedPrompt } from '@/stores/prompt-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { MiroBoardEmbed, useMiroBoardEmbed } from './miro-board-embed';
 
 interface DeliveryDashboardProps {
   prompt: GeneratedPrompt;
@@ -86,6 +89,11 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
 
   const [activeDeliveries, setActiveDeliveries] = useState<Map<string, ActiveDelivery>>(new Map());
   const [selectedDelivery, setSelectedDelivery] = useState<DeliveryResult | null>(null);
+  const [miroBoardId, setMiroBoardId] = useState('');
+  const [showBoardEmbed, setShowBoardEmbed] = useState(false);
+  
+  // Miro board embedding
+  const { activeBoardId, isEmbedVisible, showBoard, hideBoard, closeBoard } = useMiroBoardEmbed();
 
   // Load deliveries on component mount
   useEffect(() => {
@@ -138,11 +146,17 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
         // Add the successful delivery to the store immediately
         addDelivery(result);
         
+        // Auto-embed Miro board after successful delivery
+        if (destination === 'miro' && result.targetId) {
+          showBoard(result.targetId);
+          setShowBoardEmbed(true);
+        }
+        
         toast.success(`Successfully delivered to ${destination}!`, {
           description: `${result.deliveredItems} items delivered`,
           action: result.embedUrl || result.importUrl ? {
-            label: 'View Result',
-            onClick: () => handleViewResult(result)
+            label: destination === 'miro' ? 'View Embedded Board' : 'View Result',
+            onClick: () => destination === 'miro' && result.targetId ? showBoard(result.targetId) : handleViewResult(result)
           } : undefined
         });
         
@@ -153,7 +167,8 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
           deliveredItems: result.deliveredItems,
           hasImportUrl: !!result.importUrl,
           hasEmbedUrl: !!result.embedUrl,
-          importUrl: result.importUrl ? 'URL present' : 'No URL'
+          importUrl: result.importUrl ? 'URL present' : 'No URL',
+          boardEmbedded: destination === 'miro'
         });
       }
 
@@ -340,6 +355,18 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
           </div>
           
           <div className="flex items-center gap-2">
+            {isEmbedVisible && activeBoardId && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.open(`/board?id=${activeBoardId}`, '_blank');
+                }}
+              >
+                <Maximize2 className="w-4 h-4 mr-2" />
+                Full Screen
+              </Button>
+            )}
+            
             <Button
               variant="outline"
               onClick={() => prompt.projectId && loadProjectDeliveries(prompt.projectId)}
@@ -412,8 +439,32 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
           </Card>
         </div>
 
+        {/* Embedded Miro Board */}
+        {isEmbedVisible && activeBoardId && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold">Connected Miro Board</h2>
+              <Button variant="outline" size="sm" onClick={closeBoard}>
+                Close Board View
+              </Button>
+            </div>
+            <MiroBoardEmbed
+              boardId={activeBoardId}
+              projectId={prompt.projectId}
+              isVisible={isEmbedVisible}
+              onClose={closeBoard}
+              className="border-2 border-primary/20"
+              showControls={true}
+              autoResize={true}
+            />
+          </div>
+        )}
+
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        <div className={cn(
+          "grid gap-6 flex-1 min-h-0",
+          isEmbedVisible ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 lg:grid-cols-3"
+        )}>
           
           {/* Quick Actions */}
           <Card className="lg:col-span-1">
@@ -442,27 +493,99 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
 
               <div className="space-y-3">
                 <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-3 mb-3">
                     {getDestinationIcon('miro')}
                     <div>
                       <h4 className="font-semibold">Miro Board</h4>
                       <p className="text-sm text-muted-foreground">Direct API delivery with live embed</p>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeliverToDestination('miro', 'demo-board-123')}
-                      disabled={isDelivering}
-                      className="flex-1"
-                    >
-                      <Send className="w-3 h-3 mr-1" />
-                      Deliver
-                    </Button>
-                    <Button size="sm" variant="ghost">
-                      <Settings className="w-3 h-3" />
-                    </Button>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="miro-board-id" className="text-sm">Board ID</Label>
+                      <Input
+                        id="miro-board-id"
+                        placeholder="Enter Miro board ID (e.g., uXjVKMeWJv4=)"
+                        value={miroBoardId}
+                        onChange={(e) => setMiroBoardId(e.target.value)}
+                        className="text-sm"
+                      />
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p>Find the board ID in your Miro board URL:</p>
+                        <p className="font-mono bg-muted px-2 py-1 rounded">
+                          miro.com/app/board/<strong className="text-primary">uXjVKMeWJv4=</strong>/
+                        </p>
+                        <p>
+                          <strong>Note:</strong> Welcome/invite URLs won't work. Open the board first, 
+                          then copy the board ID from the address bar.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeliverToDestination('miro', miroBoardId)}
+                        disabled={isDelivering || !miroBoardId.trim()}
+                        className="flex-1"
+                      >
+                        {isDelivering ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Delivering...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3 h-3 mr-1" />
+                            Deliver to Board
+                          </>
+                        )}
+                      </Button>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                if (miroBoardId.trim()) {
+                                  showBoard(miroBoardId.trim());
+                                  setShowBoardEmbed(true);
+                                } else {
+                                  toast.error('Please enter a board ID first');
+                                }
+                              }}
+                              disabled={!miroBoardId.trim()}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Preview board before delivery</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                const hasConnection = localStorage.getItem('miro_access_token');
+                                if (!hasConnection) {
+                                  toast.error('Please connect to Miro first using the Connections tab');
+                                }
+                              }}
+                            >
+                              <Settings className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Connection Settings</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
                 </div>
 
@@ -618,6 +741,29 @@ export function DeliveryDashboard({ prompt, isOpen, onClose }: DeliveryDashboard
                           <div className="flex items-center gap-2">
                             {delivery.status === 'success' && (
                               <TooltipProvider>
+                                {/* Miro board embed button */}
+                                {delivery.destination === 'miro' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          showBoard(delivery.targetId);
+                                          setShowBoardEmbed(true);
+                                        }}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Embed board in page
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                
                                 {/* Primary action button */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>

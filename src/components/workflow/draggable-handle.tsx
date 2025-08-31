@@ -145,7 +145,7 @@ export const DraggableHandle = ({
         <Handle
           type={type}
           position={positionMap[currentPosition]}
-          id={`${id}-${currentPosition}`}
+          id={id}
           className={cn(
             "w-4 h-4 border-2 border-background transition-all duration-200",
             "hover:scale-110 active:scale-125",

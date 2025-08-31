@@ -368,16 +368,20 @@ export const RESEARCH_TOOL_INSTRUCTIONS = {
   // NEW TOOLS FROM COMPLETE FRAMEWORKS - DESIGN THINKING
   'problem-statements': {
     core: [
-      'Define clear, actionable problem statements using Point-of-View (POV) format',
+      'Define clear, actionable problem statements using the specific format: [User name] is a/an [user characteristics] who needs [user need] because [insight]',
       'Ground problem statements in validated user research insights rather than assumptions',
-      'Frame problems from the user perspective focusing on their needs and contexts',
+      'Frame problems from the user perspective focusing on their specific needs and contexts',
       'Ensure problems are specific enough to guide solution development but broad enough to allow innovation',
       'Create problem statements that inspire action and creative solution generation',
       'Balance user needs with business objectives and technical constraints in problem framing',
       'Validate problem statements with stakeholders and users before proceeding to ideation'
     ],
     methodology: [
-      'Use the POV format: [User] needs [need] because [insight]',
+      'Use the exact format: [User name] is a/an [user characteristics] who needs [user need] because [insight]',
+      'Create specific user names that represent real personas (e.g., "Sarah", "Marcus", "Elena")',
+      'Define user characteristics that capture key demographics, roles, or behavioral traits',
+      'Express user needs as clear, actionable requirements or desired outcomes',
+      'Base insights on validated research findings that explain the underlying reasons for the need',
       'Start with user research insights and synthesize into core problem themes',
       'Test problem statement clarity by having team members explain the problem back',
       'Create multiple problem statement variations to explore different angles',

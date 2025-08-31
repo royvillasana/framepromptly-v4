@@ -1,16 +1,23 @@
 /**
  * @fileoverview Tool-Specific AI Prompt Instructions System
  * Each tool has unique, contextual AI prompt instructions based on framework, stage, and tool purpose
+ * Enhanced with platform-specific optimizations for Miro AI, FigJam AI, and Figma AI
  * This addresses the issue where all tools were using generic prompt text
  */
 
 import { UXFramework, UXStage, UXTool } from '@/stores/workflow-store';
+import { 
+  getPlatformRecommendation, 
+  getOptimizedPrompt, 
+  PlatformType 
+} from '@/lib/ux-tool-platform-optimizer';
 
 export interface ToolPromptContext {
   framework: UXFramework;
   stage: UXStage;
   tool: UXTool;
   projectContext?: string; // From knowledge base
+  preferredPlatform?: PlatformType; // Platform preference for optimizations
 }
 
 export interface SpecificToolInstructions {
@@ -21,13 +28,27 @@ export interface SpecificToolInstructions {
   knowledgeIntegrationInstructions: string[];
   qualityChecks: string[];
   expectedOutputFormat: string;
+  // Platform optimization enhancements
+  platformRecommendation?: {
+    recommendedPlatform: PlatformType;
+    confidence: number;
+    reasoning: string;
+    alternativePlatforms?: { platform: PlatformType; useCase: string }[];
+  };
+  platformOptimizedPrompt?: string;
+  platformSpecifics?: {
+    platform: PlatformType;
+    instructions: string[];
+    specifications: string[];
+    bestPractices: string[];
+  };
 }
 
 /**
  * Generate specific AI prompt instructions for each tool based on context
  */
 export function generateToolSpecificInstructions(context: ToolPromptContext): SpecificToolInstructions {
-  const { framework, stage, tool } = context;
+  const { framework, stage, tool, preferredPlatform } = context;
   
   // Get base template for this tool type
   const baseInstructions = getBaseToolInstructions(tool.id);
@@ -38,8 +59,32 @@ export function generateToolSpecificInstructions(context: ToolPromptContext): Sp
   // Customize based on stage context
   const stageCustomizations = getStageSpecificCustomizations(tool.id, stage.id, framework.id);
   
+  // Get platform optimization (if supported)
+  const platformRecommendation = getPlatformRecommendation(tool.id);
+  const selectedPlatform = preferredPlatform || platformRecommendation?.platform;
+  
+  // Generate platform-optimized prompt
+  let platformOptimization = null;
+  if (selectedPlatform && platformRecommendation) {
+    const basePrompt = `# AI Prompt Instructions for ${tool.name}
+## Framework Context: ${framework.name} - ${stage.name} Stage
+
+${baseInstructions.core}
+
+### Framework-Specific Application in ${framework.name}:
+${frameworkCustomizations.join('\n')}
+
+### Stage-Specific Focus in ${stage.name}:
+${stageCustomizations.join('\n')}
+
+### Integration with Project Knowledge:
+${baseInstructions.knowledgeIntegration.join('\n')}`;
+
+    platformOptimization = getOptimizedPrompt(tool.id, basePrompt, selectedPlatform);
+  }
+  
   return {
-    promptTemplate: `# AI Prompt Instructions for ${tool.name}
+    promptTemplate: platformOptimization?.optimizedPrompt || `# AI Prompt Instructions for ${tool.name}
 ## Framework Context: ${framework.name} - ${stage.name} Stage
 
 ${baseInstructions.core}
@@ -58,7 +103,17 @@ ${baseInstructions.knowledgeIntegration.join('\n')}`,
     stageSpecificFocus: stageCustomizations,
     knowledgeIntegrationInstructions: baseInstructions.knowledgeIntegration,
     qualityChecks: baseInstructions.qualityChecks,
-    expectedOutputFormat: baseInstructions.outputFormat
+    expectedOutputFormat: baseInstructions.outputFormat,
+    
+    // Platform optimization enhancements
+    platformRecommendation: platformRecommendation ? {
+      recommendedPlatform: platformRecommendation.platform,
+      confidence: platformRecommendation.confidence,
+      reasoning: platformRecommendation.reasoning,
+      alternativePlatforms: platformRecommendation.alternativePlatforms
+    } : undefined,
+    platformOptimizedPrompt: platformOptimization?.optimizedPrompt,
+    platformSpecifics: platformOptimization?.platformSpecifics
   };
 }
 
@@ -405,25 +460,34 @@ function getBaseToolInstructions(toolId: string): any {
     },
 
     'problem-statements': {
-      core: `You are generating AI prompts for creating problem statements in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that articulate clear, actionable problem definitions.`,
+      core: `You are generating AI prompts for creating problem statements in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that articulate clear, actionable problem definitions using the specific format: [User name] is a/an [user characteristics] who needs [user need] because [insight].`,
       guidance: [
-        'Structure problem statements that are specific, measurable, and user-focused',
+        'Structure problem statements using the exact format: [User name] is a/an [user characteristics] who needs [user need] because [insight]',
+        'Create specific user names that represent real personas (e.g., "Sarah", "Marcus", "Elena")',
+        'Define user characteristics that capture key demographics, roles, or behavioral traits',
+        'Express user needs as clear, actionable requirements or desired outcomes',
+        'Base insights on validated research findings that explain the underlying reasons for the need',
         'Include both functional problems (what users can\'t do) and emotional problems (how they feel)',
         'Create problem statements that inspire solution thinking without prescribing solutions',
         'Frame problems in terms of user needs and business impact'
       ],
       knowledgeIntegration: [
         'CRITICAL: Use project knowledge to ground problem statements in real user and business contexts',
-        'Reference specific user research findings and pain points from the knowledge base',
+        'Reference specific user research findings and pain points from the knowledge base to inform user characteristics and insights',
         'Incorporate business objectives and strategic priorities into problem framing',
-        'Align problem statements with organizational capabilities and constraints'
+        'Align problem statements with organizational capabilities and constraints',
+        'Use persona data from the knowledge base to create realistic user names and characteristics'
       ],
       qualityChecks: [
-        'Ensure problem statements are based on evidence, not assumptions',
+        'Ensure problem statements follow the exact format: [User name] is a/an [user characteristics] who needs [user need] because [insight]',
+        'Verify that user names are specific and realistic, not generic placeholders',
+        'Confirm that user characteristics provide meaningful context about the user',
+        'Validate that user needs are actionable and specific to the user type',
+        'Ensure insights are based on evidence, not assumptions',
         'Include validation criteria for testing problem accuracy and priority',
         'Plan for iterating problem statements based on new insights'
       ],
-      outputFormat: 'Structured problem statements with user impact, business relevance, and validation criteria'
+      outputFormat: 'Problem statements in the format: [User name] is a/an [user characteristics] who needs [user need] because [insight], with supporting research evidence and validation criteria'
     },
 
     'journey-maps': {

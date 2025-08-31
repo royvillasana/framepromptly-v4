@@ -19,10 +19,12 @@ import { DeliveryDestination, OAuthConnection } from '@/stores/delivery-store';
 import { oauthManager } from '@/lib/oauth-manager';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { MiroConnectionSimple } from './miro-connection-simple';
 
 interface OAuthConnectionManagerProps {
   isOpen: boolean;
   onClose: () => void;
+  projectId?: string; // Add project ID to save tokens to specific project
 }
 
 interface ConnectionTestResult {
@@ -337,7 +339,7 @@ function ConnectionCard({
   );
 }
 
-export function OAuthConnectionManager({ isOpen, onClose }: OAuthConnectionManagerProps) {
+export function OAuthConnectionManager({ isOpen, onClose, projectId }: OAuthConnectionManagerProps) {
   const {
     connections,
     isConnecting,
@@ -572,9 +574,25 @@ export function OAuthConnectionManager({ isOpen, onClose }: OAuthConnectionManag
           </AlertDescription>
         </Alert>
 
+        {/* Miro Simple Connection */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4">Quick Setup - Miro Connection</h2>
+          <MiroConnectionSimple
+            projectId={projectId}
+            onConnectionSuccess={(token) => {
+              toast.success('Miro connected successfully!');
+              // Store the token securely (you might want to implement this)
+              localStorage.setItem('miro_access_token', token);
+            }}
+            onConnectionFailed={(error) => {
+              toast.error('Miro connection failed: ' + error);
+            }}
+          />
+        </div>
+
         {/* Connection Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 flex-1">
-          {destinations.map((destination) => (
+          {destinations.filter(d => d !== 'miro').map((destination) => (
             <ConnectionCard
               key={destination}
               destination={destination}

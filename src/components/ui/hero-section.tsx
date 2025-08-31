@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { GradientButton } from "@/components/ui/gradient-button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedBackground } from "@/components/ui/animated-background";
@@ -21,7 +22,7 @@ export function HeroSection() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Badge variant="secondary" className="mb-6 text-sm font-medium">
+            <Badge variant="celestial-blue-subtle" className="mb-6 text-sm font-medium">
               <Sparkles className="w-3 h-3 mr-1" />
               AI-Powered UX Workflow Platform
             </Badge>
@@ -54,15 +55,22 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
           >
-            <Button size="lg" className="bg-gradient-primary hover:bg-primary-hover text-lg px-8 py-6" asChild>
+            <GradientButton 
+              variant="primary"
+              size="xl"
+              asChild
+            >
               <a href="/workflow">
                 Start Building
                 <ArrowRight className="w-5 h-5 ml-2" />
               </a>
-            </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+            </GradientButton>
+            <GradientButton 
+              variant="secondary-outline"
+              size="xl"
+            >
               View Demo
-            </Button>
+            </GradientButton>
           </motion.div>
 
           {/* Feature cards */}

@@ -81,11 +81,14 @@ export class MiroApiClient {
   async getBoard(boardId: string): Promise<MiroBoard> {
     await this.checkRateLimit();
 
+    // Clean and validate board ID
+    const cleanBoardId = this.sanitizeBoardId(boardId);
+
     try {
-      const response = await this.makeRequest(`/boards/${boardId}`, 'GET');
+      const response = await this.makeRequest(`/boards/${cleanBoardId}`, 'GET');
       return response;
     } catch (error) {
-      throw this.handleApiError(error, `Failed to get board ${boardId}`);
+      throw this.handleApiError(error, `Failed to get board ${cleanBoardId}`);
     }
   }
 
@@ -112,32 +115,59 @@ export class MiroApiClient {
   async createStickyNote(boardId: string, item: DeliveryItem): Promise<MiroItem> {
     await this.checkRateLimit();
 
+    // Clean and validate board ID
+    const cleanBoardId = this.sanitizeBoardId(boardId);
+
+    // Validate and sanitize input data
+    const sanitizedItem = this.validateAndSanitizeDeliveryItem(item);
+
+    // Ensure content is not empty and properly formatted
+    const content = (sanitizedItem.text || '').trim();
+    if (!content) {
+      throw new Error('Sticky note content cannot be empty');
+    }
+
+    // Miro API specific payload structure
     const payload = {
       data: {
-        content: item.text || '',
+        content: content,
         shape: 'square'
       },
       style: {
-        fillColor: item.style?.backgroundColor || '#fff9b1',
+        fillColor: sanitizedItem.style?.backgroundColor || '#fff9b1',
         textAlign: 'center',
         textAlignVertical: 'middle'
       },
       position: {
-        x: item.x,
-        y: item.y,
+        x: Number(sanitizedItem.x) || 0,
+        y: Number(sanitizedItem.y) || 0,
         origin: 'center'
       },
       geometry: {
-        width: item.width || 180,
-        height: item.height || 120
+        width: Number(sanitizedItem.width) || 180,
+        height: Number(sanitizedItem.height) || 120
       }
     };
 
+    console.log('📝 Creating sticky note with payload:', {
+      boardId: cleanBoardId,
+      content: content.substring(0, 30) + '...',
+      position: payload.position,
+      geometry: payload.geometry,
+      style: payload.style
+    });
+
     try {
-      const response = await this.makeRequest(`/boards/${boardId}/sticky_notes`, 'POST', payload);
+      const response = await this.makeRequest(`/boards/${cleanBoardId}/sticky_notes`, 'POST', payload);
       return response;
     } catch (error) {
-      throw this.handleApiError(error, `Failed to create sticky note: ${item.text?.substring(0, 30)}...`);
+      console.error('❌ Sticky note creation failed:', {
+        boardId: cleanBoardId,
+        content: content.substring(0, 30) + '...',
+        error: error.message || error,
+        payload
+      });
+      throw this.handleApiError(error, `Failed to create sticky note: ${content.substring(0, 30)}...`);
     }
   }
 
@@ -147,33 +177,60 @@ export class MiroApiClient {
   async createText(boardId: string, item: DeliveryItem): Promise<MiroItem> {
     await this.checkRateLimit();
 
+    // Clean and validate board ID
+    const cleanBoardId = this.sanitizeBoardId(boardId);
+
+    // Validate and sanitize input data
+    const sanitizedItem = this.validateAndSanitizeDeliveryItem(item);
+
+    // Ensure content is not empty and properly formatted
+    const content = (sanitizedItem.text || '').trim();
+    if (!content) {
+      throw new Error('Text content cannot be empty');
+    }
+
+    // Miro API specific payload structure for text items
     const payload = {
       data: {
-        content: item.text || ''
+        content: content
       },
       style: {
-        color: item.style?.color || '#1a1a1a',
+        color: sanitizedItem.style?.color || '#1a1a1a',
         fillColor: 'transparent',
         fontFamily: 'arial',
-        fontSize: item.style?.fontSize || 14,
+        fontSize: Math.max(8, Math.min(72, sanitizedItem.style?.fontSize || 14)), // Clamp font size
         textAlign: 'left'
       },
       position: {
-        x: item.x,
-        y: item.y,
+        x: Number(sanitizedItem.x) || 0,
+        y: Number(sanitizedItem.y) || 0,
         origin: 'center'
       },
       geometry: {
-        width: item.width || 200,
-        height: item.height || 50
+        width: Number(sanitizedItem.width) || 200,
+        height: Number(sanitizedItem.height) || 50
       }
     };
 
+    console.log('📝 Creating text item with payload:', {
+      boardId: cleanBoardId,
+      content: content.substring(0, 30) + '...',
+      position: payload.position,
+      geometry: payload.geometry,
+      fontSize: payload.style.fontSize
+    });
+
     try {
-      const response = await this.makeRequest(`/boards/${boardId}/texts`, 'POST', payload);
+      const response = await this.makeRequest(`/boards/${cleanBoardId}/texts`, 'POST', payload);
       return response;
     } catch (error) {
-      throw this.handleApiError(error, `Failed to create text: ${item.text?.substring(0, 30)}...`);
+      console.error('❌ Text creation failed:', {
+        boardId: cleanBoardId,
+        content: content.substring(0, 30) + '...',
+        error: error.message || error,
+        payload
+      });
+      throw this.handleApiError(error, `Failed to create text: ${content.substring(0, 30)}...`);
     }
   }
 
@@ -183,31 +240,37 @@ export class MiroApiClient {
   async createShape(boardId: string, item: DeliveryItem): Promise<MiroItem> {
     await this.checkRateLimit();
 
+    // Clean and validate board ID
+    const cleanBoardId = this.sanitizeBoardId(boardId);
+
+    // Validate and sanitize input data
+    const sanitizedItem = this.validateAndSanitizeDeliveryItem(item);
+
     const payload = {
       data: {
-        content: item.text || '',
+        content: sanitizedItem.text,
         shape: 'rectangle'
       },
       style: {
-        fillColor: item.style?.backgroundColor || '#f0f0f0',
+        fillColor: sanitizedItem.style?.backgroundColor || '#f0f0f0',
         borderColor: '#333333',
         borderWidth: 2,
         textAlign: 'center',
         textAlignVertical: 'middle'
       },
       position: {
-        x: item.x,
-        y: item.y,
+        x: sanitizedItem.x,
+        y: sanitizedItem.y,
         origin: 'center'
       },
       geometry: {
-        width: item.width || 200,
-        height: item.height || 100
+        width: sanitizedItem.width,
+        height: sanitizedItem.height
       }
     };
 
     try {
-      const response = await this.makeRequest(`/boards/${boardId}/shapes`, 'POST', payload);
+      const response = await this.makeRequest(`/boards/${cleanBoardId}/shapes`, 'POST', payload);
       return response;
     } catch (error) {
       throw this.handleApiError(error, `Failed to create shape: ${item.text?.substring(0, 30)}...`);
@@ -275,23 +338,27 @@ export class MiroApiClient {
   }
 
   /**
-   * Get board embed URL
+   * Get board embed URL - Note: Miro restricts iframe embedding
+   * Returns the standard board URL which should be opened in a new window
    */
   getBoardEmbedUrl(boardId: string, options?: {
     autoplay?: boolean;
     embedMode?: 'live_embed' | 'view_only';
   }): string {
-    const embedMode = options?.embedMode || 'live_embed';
-    const params = new URLSearchParams();
+    // Clean and validate board ID
+    const cleanBoardId = this.sanitizeBoardId(boardId);
     
-    if (options?.autoplay !== undefined) {
-      params.set('autoplay', options.autoplay.toString());
-    }
+    // Miro has strict iframe security policies that block most embed attempts
+    // Instead, return the standard board URL for opening in new window/tab
+    return `https://miro.com/app/board/${cleanBoardId}/`;
+  }
 
-    const paramString = params.toString();
-    const queryString = paramString ? `?${paramString}` : '';
-
-    return `https://miro.com/app/${embedMode}/${boardId}${queryString}`;
+  /**
+   * Get board view URL that works in new window/tab
+   */
+  getBoardViewUrl(boardId: string): string {
+    const cleanBoardId = this.sanitizeBoardId(boardId);
+    return `https://miro.com/app/board/${cleanBoardId}/`;
   }
 
   /**
@@ -308,8 +375,11 @@ export class MiroApiClient {
     let canWrite = false;
     let boardName = '';
 
+    // Clean and validate board ID
+    const cleanBoardId = this.sanitizeBoardId(boardId);
+
     try {
-      const board = await this.getBoard(boardId);
+      const board = await this.getBoard(cleanBoardId);
       canRead = true;
       boardName = board.name;
 
@@ -322,13 +392,13 @@ export class MiroApiClient {
       const apiError = error as MiroApiError;
       
       if (apiError.status === 404) {
-        errors.push('Board not found or no access');
+        errors.push(`Miro board "${cleanBoardId}" not found. Please check the board ID and ensure you have access to this board.`);
       } else if (apiError.status === 403) {
-        errors.push('Insufficient permissions to access board');
+        errors.push(`You don't have permission to edit board "${cleanBoardId}". Please ask the board owner to grant you edit access.`);
       } else if (apiError.status === 401) {
-        errors.push('Authentication failed - token may be expired');
+        errors.push('Your Miro access token has expired. Please reconnect your Miro account.');
       } else {
-        errors.push(`Board access validation failed: ${apiError.message}`);
+        errors.push(`Unable to access Miro board: ${apiError.message || 'Unknown error'}`);
       }
     }
 
@@ -348,22 +418,32 @@ export class MiroApiClient {
     error?: string;
   }> {
     try {
-      const response = await this.makeRequest('/oauth-token', 'GET');
+      // Use the /boards endpoint to test connection - it's a valid Miro API endpoint
+      const response = await this.makeRequest('/boards?limit=1', 'GET');
       
       return {
         isValid: true,
         userInfo: {
-          id: response.user?.id || '',
-          name: response.user?.name || '',
-          email: response.user?.email || ''
+          id: 'miro-user',
+          name: 'Miro User',
+          email: 'Connection successful!'
         }
       };
 
     } catch (error) {
       const apiError = error as MiroApiError;
+      let errorMessage = `Connection test failed: ${apiError.message}`;
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
+        errorMessage = 'Invalid access token. Please check your Miro access token.';
+      } else if (errorMessage.includes('YOUR_CLIENT_ID')) {
+        errorMessage = 'Invalid access token format. Please provide a valid Miro access token.';
+      }
+      
       return {
         isValid: false,
-        error: `Connection test failed: ${apiError.message}`
+        error: errorMessage
       };
     }
   }
@@ -458,5 +538,110 @@ export class MiroApiClient {
    */
   updateAccessToken(newToken: string): void {
     this.accessToken = newToken;
+  }
+
+  /**
+   * Validate and sanitize delivery item data for Miro API
+   */
+  private validateAndSanitizeDeliveryItem(item: DeliveryItem): DeliveryItem {
+    // Ensure text content exists and is valid
+    let text = item.text || '';
+    if (typeof text !== 'string') {
+      text = String(text);
+    }
+    // Miro API has content length limits
+    text = text.substring(0, 5000);
+
+    // Validate and sanitize coordinates
+    let x = item.x || 0;
+    let y = item.y || 0;
+    
+    // Ensure coordinates are numbers and within reasonable bounds
+    x = isNaN(Number(x)) ? 0 : Number(x);
+    y = isNaN(Number(y)) ? 0 : Number(y);
+    
+    // Clamp coordinates to reasonable ranges to avoid Miro API errors
+    x = Math.max(-100000, Math.min(100000, x));
+    y = Math.max(-100000, Math.min(100000, y));
+
+    // Validate and sanitize dimensions
+    let width = item.width || 180;
+    let height = item.height || 120;
+    
+    width = isNaN(Number(width)) ? 180 : Number(width);
+    height = isNaN(Number(height)) ? 120 : Number(height);
+    
+    // Ensure minimum dimensions for Miro API
+    width = Math.max(10, Math.min(2000, width));
+    height = Math.max(10, Math.min(2000, height));
+
+    // Validate style colors if present
+    const style = item.style ? {
+      ...item.style,
+      backgroundColor: this.validateHexColor(item.style.backgroundColor),
+      color: this.validateHexColor(item.style.color),
+      fontSize: item.style.fontSize ? Math.max(8, Math.min(72, item.style.fontSize)) : undefined
+    } : undefined;
+
+    return {
+      ...item,
+      text,
+      x,
+      y,
+      width,
+      height,
+      style
+    };
+  }
+
+  /**
+   * Validate hex color format for Miro API
+   */
+  private validateHexColor(color?: string): string | undefined {
+    if (!color) return undefined;
+    
+    // Basic hex color validation
+    const hexPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    if (hexPattern.test(color)) {
+      return color;
+    }
+    
+    // Try to normalize common color formats
+    if (color.startsWith('rgb')) {
+      // For now, just return undefined for RGB colors
+      // Could implement RGB to hex conversion here
+      return undefined;
+    }
+    
+    // Return undefined for invalid colors - let Miro API use defaults
+    return undefined;
+  }
+
+  /**
+   * Sanitize board ID to ensure valid URL construction
+   */
+  private sanitizeBoardId(boardId: string): string {
+    if (!boardId || typeof boardId !== 'string') {
+      throw new Error('Board ID is required and must be a string');
+    }
+
+    // Trim whitespace and remove any extra slashes
+    let cleanId = boardId.trim().replace(/\/+/g, '');
+    
+    // Remove protocol and domain if full URL was provided
+    if (cleanId.includes('miro.com/app/board/')) {
+      const match = cleanId.match(/miro\.com\/app\/board\/([^\/]+)/);
+      if (match && match[1]) {
+        cleanId = match[1];
+      }
+    }
+
+    // Validate that we have a reasonable board ID
+    if (!cleanId || cleanId.length < 3) {
+      throw new Error('Invalid board ID format');
+    }
+
+    console.log(`🧹 Sanitized board ID: "${boardId}" → "${cleanId}"`);
+    return cleanId;
   }
 }

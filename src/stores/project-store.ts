@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface MiroSettings {
+  accessToken?: string;
+  connectedBoards?: Array<{
+    id: string;
+    name: string;
+    lastUsed: string;
+  }>;
+  defaultBoardId?: string;
+  autoConnect?: boolean;
+}
+
 export interface Project {
   id: string;
   user_id: string;
@@ -8,6 +19,7 @@ export interface Project {
   description?: string;
   canvas_data: any;
   node_contexts?: Record<string, string>;
+  miro_settings?: MiroSettings;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +37,14 @@ interface ProjectState {
   deleteProject: (id: string) => Promise<void>;
   setCurrentProject: (project: Project | null) => void;
   saveCanvasData: (projectId: string, nodes: any[], edges: any[]) => Promise<void>;
+  
+  // Miro Settings Actions
+  saveMiroToken: (projectId: string, accessToken: string) => Promise<void>;
+  addConnectedBoard: (projectId: string, boardId: string, boardName: string) => Promise<void>;
+  setDefaultBoard: (projectId: string, boardId: string) => Promise<void>;
+  getMiroToken: (projectId: string) => string | null;
+  getConnectedBoards: (projectId: string) => Array<{id: string; name: string; lastUsed: string}>;
+  
   clearError: () => void;
 }
 
@@ -172,6 +192,151 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       console.error('Error saving canvas data:', error);
       set({ error: error instanceof Error ? error.message : 'Failed to save canvas data' });
     }
+  },
+
+  // Miro Settings Methods
+  saveMiroToken: async (projectId: string, accessToken: string) => {
+    try {
+      const state = get();
+      const project = state.projects.find(p => p.id === projectId);
+      if (!project) throw new Error('Project not found');
+
+      const updatedMiroSettings: MiroSettings = {
+        ...project.miro_settings,
+        accessToken
+      };
+
+      const { error } = await supabase
+        .from('projects')
+        .update({ miro_settings: updatedMiroSettings })
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      // Update local state
+      set(state => ({
+        projects: state.projects.map(p => 
+          p.id === projectId 
+            ? { ...p, miro_settings: updatedMiroSettings }
+            : p
+        ),
+        currentProject: state.currentProject?.id === projectId 
+          ? { ...state.currentProject, miro_settings: updatedMiroSettings }
+          : state.currentProject
+      }));
+    } catch (error) {
+      console.error('Error saving Miro token:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to save Miro token' });
+      throw error;
+    }
+  },
+
+  addConnectedBoard: async (projectId: string, boardId: string, boardName: string) => {
+    try {
+      const state = get();
+      const project = state.projects.find(p => p.id === projectId);
+      if (!project) throw new Error('Project not found');
+
+      const currentBoards = project.miro_settings?.connectedBoards || [];
+      const existingBoardIndex = currentBoards.findIndex(b => b.id === boardId);
+      
+      let updatedBoards;
+      if (existingBoardIndex >= 0) {
+        // Update existing board
+        updatedBoards = [...currentBoards];
+        updatedBoards[existingBoardIndex] = {
+          id: boardId,
+          name: boardName,
+          lastUsed: new Date().toISOString()
+        };
+      } else {
+        // Add new board
+        updatedBoards = [
+          {
+            id: boardId,
+            name: boardName,
+            lastUsed: new Date().toISOString()
+          },
+          ...currentBoards
+        ];
+      }
+
+      const updatedMiroSettings: MiroSettings = {
+        ...project.miro_settings,
+        connectedBoards: updatedBoards.slice(0, 10) // Keep only last 10 boards
+      };
+
+      const { error } = await supabase
+        .from('projects')
+        .update({ miro_settings: updatedMiroSettings })
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      // Update local state
+      set(state => ({
+        projects: state.projects.map(p => 
+          p.id === projectId 
+            ? { ...p, miro_settings: updatedMiroSettings }
+            : p
+        ),
+        currentProject: state.currentProject?.id === projectId 
+          ? { ...state.currentProject, miro_settings: updatedMiroSettings }
+          : state.currentProject
+      }));
+    } catch (error) {
+      console.error('Error adding connected board:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to save connected board' });
+      throw error;
+    }
+  },
+
+  setDefaultBoard: async (projectId: string, boardId: string) => {
+    try {
+      const state = get();
+      const project = state.projects.find(p => p.id === projectId);
+      if (!project) throw new Error('Project not found');
+
+      const updatedMiroSettings: MiroSettings = {
+        ...project.miro_settings,
+        defaultBoardId: boardId
+      };
+
+      const { error } = await supabase
+        .from('projects')
+        .update({ miro_settings: updatedMiroSettings })
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      // Update local state
+      set(state => ({
+        projects: state.projects.map(p => 
+          p.id === projectId 
+            ? { ...p, miro_settings: updatedMiroSettings }
+            : p
+        ),
+        currentProject: state.currentProject?.id === projectId 
+          ? { ...state.currentProject, miro_settings: updatedMiroSettings }
+          : state.currentProject
+      }));
+    } catch (error) {
+      console.error('Error setting default board:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to set default board' });
+      throw error;
+    }
+  },
+
+  getMiroToken: (projectId: string) => {
+    const state = get();
+    const project = state.projects.find(p => p.id === projectId) || state.currentProject;
+    return project?.miro_settings?.accessToken || null;
+  },
+
+  getConnectedBoards: (projectId: string) => {
+    const state = get();
+    const project = state.projects.find(p => p.id === projectId) || state.currentProject;
+    return project?.miro_settings?.connectedBoards || [];
   },
 
   clearError: () => set({ error: null })

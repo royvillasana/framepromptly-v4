@@ -100,20 +100,17 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
 
   return (
     <ResizableNode 
-      selected={selected || isSelected} 
-      minWidth={300} 
-      minHeight="auto"
-      maxWidth={500}
+      selected={selected || isSelected}
+      nodeType="framework"
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3 }}
-        whileHover={selected || isSelected ? {} : { scale: 1.02 }}
         style={{ width: '100%' }}
       >
       <Card className={`
-        w-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col
+        w-full h-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col overflow-hidden
         ${selected || isSelected ? 'ring-2 ring-offset-2' : ''}
       `}
       style={{
@@ -153,9 +150,11 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
           </Button>
         </div>
 
-        <p className="text-sm mb-4 leading-relaxed flex-shrink-0" style={{ color: colors.text.light }}>
-          {framework.description}
-        </p>
+        <div className="flex-shrink-0 mb-4 max-h-20 overflow-hidden">
+          <p className="text-sm leading-relaxed line-clamp-3" style={{ color: colors.text.light }}>
+            {framework.description}
+          </p>
+        </div>
 
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center justify-between text-sm mb-3 flex-shrink-0">
@@ -171,7 +170,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
               {framework.stages.length}
             </Badge>
           </div>
-          <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
+          <div className="flex-1 space-y-2 p-1">
             {framework.stages.map((stage) => (
               <div 
                 key={stage.id}
@@ -214,20 +213,8 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
 
         <div className="flex items-center space-x-2 mt-4 flex-shrink-0">
           <Button 
+            variant="gradient-primary-subtle"
             className="flex-1 text-sm h-8" 
-            style={{
-              backgroundColor: colors.background.primary,
-              color: colors.text.primary,
-              borderColor: colors.border.primary
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = colors.background.hover;
-              e.currentTarget.style.color = colors.text.hover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = colors.background.primary;
-              e.currentTarget.style.color = colors.text.primary;
-            }}
             onClick={handleUseFramework}
           >
             <Layers className="w-4 h-4 mr-2" />

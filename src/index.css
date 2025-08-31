@@ -2,80 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Sophisticated Multi-Color Design System for FramePromptly
+ * Professional color palette with gradients for UX workflow builder
+ * Color Palette:
+ * - Indigo Dye: #2D425B - Primary foundation color
+ * - Malachite: #27D966 - Success and positive feedback 
+ * - Celestial Blue: #009CDD - Primary CTAs and interactive elements
+ * - Cobalt Blue: #004DA8 - Secondary actions and depth
+ * All colors are HSL format with full shade ranges for accessibility.
+ */
 
 @layer base {
   :root {
-    /* Modern UX Platform Design System */
+    /* FramePromptly Design System - Light Mode */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 213 26% 18%; /* Indigo Dye 400 for text */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 213 26% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 213 26% 18%;
 
-    /* Primary: Modern purple/blue gradient system */
-    --primary: 262 83% 58%;
+    /* Primary: Celestial Blue - Main CTAs */
+    --primary: 194 100% 43%; /* Celestial Blue #009CDD */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 262 83% 52%;
-    --primary-light: 262 83% 94%;
+    --primary-hover: 194 100% 38%; /* Darker Celestial Blue */
+    --primary-light: 194 100% 97%; /* Very light Celestial Blue tint */
 
-    /* Secondary: Sophisticated grays */
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    /* Secondary: Indigo Dye - Foundation colors */
+    --secondary: 213 26% 95%; /* Very light Indigo Dye tint */
+    --secondary-foreground: 213 26% 18%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 213 26% 95%;
+    --muted-foreground: 213 26% 45%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    /* Accent: Cobalt Blue - Secondary actions */
+    --accent: 211 100% 33%; /* Cobalt Blue #004DA8 */
+    --accent-foreground: 0 0% 100%;
 
     /* Status colors */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%; /* Red for errors */
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 50%; /* Malachite #27D966 */
+    --success-foreground: 0 0% 100%;
+    --warning: 45 93% 47%; /* Orange for warnings */
+    --warning-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262 83% 58%;
+    --border: 213 26% 85%;
+    --input: 213 26% 90%;
+    --ring: 194 100% 43%; /* Celestial Blue for focus rings */
 
     /* Layout */
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 262 83% 58%;
+    /* Sidebar colors */
+    --sidebar-background: 213 26% 98%;
+    --sidebar-foreground: 213 26% 18%;
+    --sidebar-primary: 194 100% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 26% 95%;
+    --sidebar-accent-foreground: 213 26% 18%;
+    --sidebar-border: 213 26% 85%;
+    --sidebar-ring: 194 100% 43%;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(252 83% 63%));
-    --gradient-secondary: linear-gradient(135deg, hsl(240 4.8% 95.9%), hsl(240 6% 90%));
-    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(252 83% 63%), hsl(242 83% 68%));
+    /* Sophisticated gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(194 100% 43%), hsl(211 100% 33%));
+    --gradient-secondary: linear-gradient(135deg, hsl(213 26% 36%), hsl(213 26% 18%));
+    --gradient-tertiary: linear-gradient(135deg, hsl(142 76% 50%), hsl(142 76% 40%));
+    --gradient-hero: linear-gradient(135deg, hsl(194 100% 43%), hsl(211 100% 33%), hsl(213 26% 18%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(213 26% 98%));
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(240 5.9% 10% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(240 5.9% 10% / 0.1), 0 2px 4px -1px hsl(240 5.9% 10% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(240 5.9% 10% / 0.1), 0 4px 6px -2px hsl(240 5.9% 10% / 0.05);
-    --shadow-xl: 0 20px 25px -5px hsl(240 5.9% 10% / 0.1), 0 10px 10px -5px hsl(240 5.9% 10% / 0.04);
+    /* Color-enhanced shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(213 26% 18% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(213 26% 18% / 0.1), 0 2px 4px -1px hsl(194 100% 43% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(213 26% 18% / 0.1), 0 4px 6px -2px hsl(211 100% 33% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(213 26% 18% / 0.1), 0 10px 10px -5px hsl(194 100% 43% / 0.04);
+    
+    /* Button-specific gradients */
+    --gradient-button-primary: linear-gradient(135deg, hsl(194 100% 43%), hsl(194 100% 48%));
+    --gradient-button-secondary: linear-gradient(135deg, hsl(213 26% 36%), hsl(213 26% 40%));
+    --gradient-button-tertiary: linear-gradient(135deg, hsl(142 76% 50%), hsl(142 76% 55%));
+    
+    /* Hover gradients */
+    --gradient-button-primary-hover: linear-gradient(135deg, hsl(194 100% 38%), hsl(194 100% 43%));
+    --gradient-button-secondary-hover: linear-gradient(135deg, hsl(213 26% 32%), hsl(213 26% 36%));
+    --gradient-button-tertiary-hover: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 50%));
     
     /* Animations */
     --animate-in: cubic-bezier(0.16, 1, 0.3, 1);
@@ -83,59 +96,75 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* FramePromptly Design System - Dark Mode */
+    --background: 213 26% 8%; /* Dark Indigo Dye background */
+    --foreground: 0 0% 100%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 213 26% 12%; /* Darker Indigo Dye cards */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 213 26% 12%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 98%;
-    --primary-hover: 262 83% 52%;
-    --primary-light: 262 83% 15%;
+    /* Primary: Brighter Celestial Blue for dark mode */
+    --primary: 194 100% 55%; /* Brighter Celestial Blue */
+    --primary-foreground: 213 26% 8%;
+    --primary-hover: 194 100% 60%; /* Even brighter for hover */
+    --primary-light: 213 26% 15%; /* Dark Indigo Dye tint */
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 213 26% 15%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 213 26% 15%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    /* Accent: Brighter Cobalt Blue for dark mode */
+    --accent: 211 100% 45%; /* Brighter Cobalt Blue */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 60%; /* Brighter Malachite */
+    --success-foreground: 213 26% 8%;
+    --warning: 45 93% 57%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262 83% 58%;
+    --border: 213 26% 25%;
+    --input: 213 26% 20%;
+    --ring: 194 100% 55%; /* Brighter Celestial Blue focus rings */
     
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 262 83% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 262 83% 58%;
+    /* Sidebar colors for dark mode */
+    --sidebar-background: 213 26% 5%; /* Very dark Indigo Dye */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 194 100% 55%;
+    --sidebar-primary-foreground: 213 26% 8%;
+    --sidebar-accent: 213 26% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 213 26% 20%;
+    --sidebar-ring: 194 100% 55%;
     
-    /* Dark mode gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(252 83% 63%));
-    --gradient-secondary: linear-gradient(135deg, hsl(240 3.7% 15.9%), hsl(240 5% 20%));
-    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(252 83% 63%), hsl(242 83% 68%));
+    /* Dark mode sophisticated gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(194 100% 55%), hsl(211 100% 45%));
+    --gradient-secondary: linear-gradient(135deg, hsl(213 26% 15%), hsl(213 26% 20%));
+    --gradient-tertiary: linear-gradient(135deg, hsl(142 76% 60%), hsl(142 76% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(194 100% 55%), hsl(211 100% 45%), hsl(213 26% 12%));
+    --gradient-card: linear-gradient(135deg, hsl(213 26% 12%), hsl(213 26% 8%));
     
-    /* Dark shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.25);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -2px hsl(0 0% 0% / 0.2);
-    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.4), 0 10px 10px -5px hsl(0 0% 0% / 0.2);
+    /* Dark mode color-enhanced shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(213 26% 3% / 0.25);
+    --shadow-md: 0 4px 6px -1px hsl(213 26% 3% / 0.3), 0 2px 4px -1px hsl(194 100% 55% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(213 26% 3% / 0.3), 0 4px 6px -2px hsl(211 100% 45% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(213 26% 3% / 0.4), 0 10px 10px -5px hsl(194 100% 55% / 0.1);
+    
+    /* Dark mode button-specific gradients */
+    --gradient-button-primary: linear-gradient(135deg, hsl(194 100% 55%), hsl(194 100% 60%));
+    --gradient-button-secondary: linear-gradient(135deg, hsl(213 26% 15%), hsl(213 26% 20%));
+    --gradient-button-tertiary: linear-gradient(135deg, hsl(142 76% 60%), hsl(142 76% 65%));
+    
+    /* Dark mode hover gradients */
+    --gradient-button-primary-hover: linear-gradient(135deg, hsl(194 100% 60%), hsl(194 100% 65%));
+    --gradient-button-secondary-hover: linear-gradient(135deg, hsl(213 26% 20%), hsl(213 26% 25%));
+    --gradient-button-tertiary-hover: linear-gradient(135deg, hsl(142 76% 65%), hsl(142 76% 70%));
   }
 }
 
@@ -162,20 +191,235 @@ All colors MUST be HSL.
       linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
   }
+  
+  /* Node Content Utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Styled scrollbars for node content */
+  .scrollable-area {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) hsl(var(--muted));
+  }
+
+  .scrollable-area::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollable-area::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  .scrollable-area::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+
+  .scrollable-area::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary-hover));
+  }
+
+  /* Node-specific scrollable areas with new color theme */
+  .node-content-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(194, 100%, 43%) hsl(213, 26%, 95%);
+  }
+
+  .node-content-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .node-content-scroll::-webkit-scrollbar-track {
+    background: hsl(213, 26%, 95%);
+    border-radius: 4px;
+  }
+
+  .node-content-scroll::-webkit-scrollbar-thumb {
+    background: hsl(194, 100%, 43%);
+    border-radius: 4px;
+    border: 1px solid hsl(213, 26%, 95%);
+  }
+
+  .node-content-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(194, 100%, 38%);
+  }
+  
+  /* Scrollable Areas with Custom Scrollbars */
+  .scrollable-area {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--muted));
+  }
+  
+  .scrollable-area::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .scrollable-area::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  .scrollable-area::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+    border-radius: 2px;
+  }
+  
+  .scrollable-area::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--foreground));
+  }
+  
+  /* Node Resize Visual Feedback */
+  .resizable-node-wrapper:hover .resize-indicator {
+    opacity: 1;
+  }
+  
+  .resize-indicator {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  /* Node Content Layout Helpers */
+  .node-content-fit {
+    overflow: hidden;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  .node-actions-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: space-between;
+  }
+  
+  @media (max-width: 360px) {
+    .node-actions-compact {
+      flex-direction: column;
+    }
+  }
+  
+  /* Responsive Node Content */
+  .resizable-node-wrapper {
+    container-type: inline-size;
+    container-name: node-container;
+  }
+  
+  .responsive-content-wrapper {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .resizable-node-content {
+    /* No scrollbar styles needed anymore */
+  }
+  
+  /* Simplified responsive breakpoints based on node width */
+  @container node-container (max-width: 350px) {
+    .resizable-node-content .text-sm {
+      font-size: 0.8rem;
+      line-height: 1.2;
+    }
+    
+    .resizable-node-content .text-xs {
+      font-size: 0.7rem;
+      line-height: 1.1;
+    }
+    
+    .resizable-node-content .p-6 {
+      padding: 1rem;
+    }
+    
+    .resizable-node-content .p-4 {
+      padding: 0.75rem;
+    }
+  }
+  
+  @container node-container (max-width: 300px) {
+    .resizable-node-content .text-lg {
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+    
+    .resizable-node-content .text-base {
+      font-size: 0.85rem;
+      line-height: 1.25;
+    }
+    
+    .resizable-node-content .p-6 {
+      padding: 0.75rem;
+    }
+    
+    .resizable-node-content .p-4 {
+      padding: 0.5rem;
+    }
+  }
+  
+  /* Ensure text doesn't break out of narrow nodes */
+  .resizable-node-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  .resizable-node-content pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  
+  /* Ensure cards fill the complete node area */
+  .resizable-node-content > .motion-div,
+  .resizable-node-content > div {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* Remove the responsive content wrapper styles since we removed the wrapper */
+  .responsive-content-wrapper {
+    /* This class is no longer used */
+  }
 }
 
-/* React Flow Edge Customization */
+/* React Flow Edge Customization - New Color System */
 .react-flow__edge.animated path.react-flow__edge-interaction {
-  stroke: white !important;
+  stroke: hsl(194, 100%, 43%) !important; /* Celestial Blue */
   stroke-width: 2px !important;
 }
 
 .react-flow__edge path {
-  stroke: white !important;
+  stroke: hsl(194, 100%, 43%) !important; /* Celestial Blue */
   stroke-width: 2px !important;
 }
 
 .react-flow__edge.animated path {
-  stroke: white !important;
+  stroke: hsl(194, 100%, 43%) !important; /* Celestial Blue */
   stroke-width: 2px !important;
+}
+
+/* Dark mode edges */
+.dark .react-flow__edge.animated path.react-flow__edge-interaction,
+.dark .react-flow__edge path,
+.dark .react-flow__edge.animated path {
+  stroke: hsl(194, 100%, 55%) !important; /* Brighter Celestial Blue */
 }
