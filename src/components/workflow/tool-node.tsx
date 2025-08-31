@@ -40,7 +40,7 @@ interface ToolNodeProps {
 export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
   const { generatePrompt, setCurrentPrompt, getEnhancedTemplate, generateEnhancedPrompt } = usePromptStore();
   const { addNode, addEdge, nodes, updateNode } = useWorkflowStore();
-  const { currentProject } = useProjectStore();
+  const { currentProject, getEnhancedSettings } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
   const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab } = data;
   const linkedKnowledge = Array.isArray(rawLinkedKnowledge) ? rawLinkedKnowledge : [];
@@ -58,6 +58,9 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   
   // Check if enhanced template is available
   const enhancedTemplate = getEnhancedTemplate(tool.id);
+  
+  // Check if project has enhanced settings configured
+  const hasProjectEnhancedSettings = currentProject ? getEnhancedSettings(currentProject.id) !== null : false;
   
   // Get platform recommendation for this tool
   const platformRecommendation = getPlatformRecommendation(tool.id);
@@ -473,8 +476,8 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
           {/* Actions */}
           <div className="flex flex-col gap-2 flex-shrink-0">
-            {/* Enhanced Template Button (if available) */}
-            {enhancedTemplate && (
+            {/* Enhanced Template Button (if available and no project settings) */}
+            {enhancedTemplate && !hasProjectEnhancedSettings && (
               <Button
                 size="sm"
                 onClick={(e) => {
@@ -487,6 +490,19 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
                 <Zap className="w-3 h-3 mr-1" />
                 Enhanced Prompt
               </Button>
+            )}
+
+            {/* Project Enhancement Notice (when project has enhanced settings) */}
+            {enhancedTemplate && hasProjectEnhancedSettings && (
+              <div className="w-full p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                <div className="flex items-center gap-1 mb-1">
+                  <Settings className="w-3 h-3" />
+                  <span className="font-medium">Enhanced via Project</span>
+                </div>
+                <p className="text-blue-600">
+                  Enhanced prompts use your project's knowledge base and settings
+                </p>
+              </div>
             )}
             
             {/* Platform-Aware Generation */}

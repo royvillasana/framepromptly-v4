@@ -12,6 +12,25 @@ export interface MiroSettings {
   autoConnect?: boolean;
 }
 
+export interface ProjectEnhancedSettings {
+  industry: string;
+  projectContext: {
+    primaryGoals: string;
+    targetAudience: string;
+    keyConstraints: string;
+    successMetrics: string;
+    teamComposition: string;
+    timeline: string;
+  };
+  qualitySettings: {
+    methodologyDepth: 'basic' | 'intermediate' | 'advanced';
+    outputDetail: 'brief' | 'moderate' | 'comprehensive';
+    timeConstraints: 'urgent' | 'standard' | 'extended';
+    industryCompliance: boolean;
+    accessibilityFocus: boolean;
+  };
+}
+
 export interface Project {
   id: string;
   user_id: string;
@@ -20,6 +39,7 @@ export interface Project {
   canvas_data: any;
   node_contexts?: Record<string, string>;
   miro_settings?: MiroSettings;
+  enhanced_settings?: ProjectEnhancedSettings;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +64,10 @@ interface ProjectState {
   setDefaultBoard: (projectId: string, boardId: string) => Promise<void>;
   getMiroToken: (projectId: string) => string | null;
   getConnectedBoards: (projectId: string) => Array<{id: string; name: string; lastUsed: string}>;
+  
+  // Enhanced Settings Actions
+  saveEnhancedSettings: (projectId: string, settings: ProjectEnhancedSettings) => Promise<void>;
+  getEnhancedSettings: (projectId: string) => ProjectEnhancedSettings | null;
   
   clearError: () => void;
 }
@@ -337,6 +361,44 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const state = get();
     const project = state.projects.find(p => p.id === projectId) || state.currentProject;
     return project?.miro_settings?.connectedBoards || [];
+  },
+
+  // Enhanced Settings Actions Implementation
+  saveEnhancedSettings: async (projectId: string, settings: ProjectEnhancedSettings) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ enhanced_settings: settings })
+        .eq('id', projectId);
+
+      if (error) {
+        // If column doesn't exist yet, gracefully handle it
+        console.warn('Enhanced settings column may not exist yet:', error);
+        throw error;
+      }
+
+      // Update local state
+      set(state => ({
+        projects: state.projects.map(p => 
+          p.id === projectId 
+            ? { ...p, enhanced_settings: settings }
+            : p
+        ),
+        currentProject: state.currentProject?.id === projectId 
+          ? { ...state.currentProject, enhanced_settings: settings }
+          : state.currentProject
+      }));
+    } catch (error) {
+      console.error('Error saving enhanced settings:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to save enhanced settings' });
+      throw error;
+    }
+  },
+
+  getEnhancedSettings: (projectId: string) => {
+    const state = get();
+    const project = state.projects.find(p => p.id === projectId) || state.currentProject;
+    return project?.enhanced_settings || null;
   },
 
   clearError: () => set({ error: null })

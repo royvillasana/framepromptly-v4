@@ -78,15 +78,8 @@ export function Navigation({ className }: NavigationProps) {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/library">Library</Link>
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setCurrentProject(null);
-                  navigate('/workflow');
-                }}
-              >
-                Projects
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/projects">Projects</Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/metrics" className="flex items-center gap-2">

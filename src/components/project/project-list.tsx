@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Project } from '@/stores/project-store';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +8,7 @@ import { useProjectStore } from '@/stores/project-store';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectDialog } from './project-dialog';
 import { motion } from 'framer-motion';
-import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2 } from 'lucide-react';
+import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2, Database, Settings } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function ProjectList() {
@@ -20,12 +22,13 @@ export function ProjectList() {
     deleteProject 
   } = useProjectStore();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
-  const handleOpenProject = (project: any) => {
+  const handleOpenProject = (project: Project) => {
     setCurrentProject(project);
     toast({
       title: "Project Opened",
@@ -49,6 +52,10 @@ export function ProjectList() {
         });
       }
     }
+  };
+
+  const handleOpenKnowledgeManager = (project: Project) => {
+    navigate(`/knowledge/${project.id}`);
   };
 
   if (isLoading && projects.length === 0) {
@@ -93,7 +100,7 @@ export function ProjectList() {
           <h3 className="text-lg font-semibold">Current Project</h3>
           <Card className="p-4 border-primary bg-primary/5">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 <h4 className="font-semibold">{currentProject.name}</h4>
                 {currentProject.description && (
                   <p className="text-sm text-muted-foreground">
@@ -111,7 +118,18 @@ export function ProjectList() {
                   </div>
                 </div>
               </div>
-              <Badge variant="default">Active</Badge>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenKnowledgeManager(currentProject)}
+                  className="h-8 px-3"
+                >
+                  <Database className="w-3 h-3 mr-1" />
+                  Manage Knowledge
+                </Button>
+                <Badge variant="default">Active</Badge>
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -139,63 +157,83 @@ export function ProjectList() {
           </div>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
           {projects.map((project, index) => (
             <motion.div
               key={project.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
             >
-              <Card className={`
-                p-4 hover:shadow-md transition-all duration-200 cursor-pointer
-                ${currentProject?.id === project.id ? 'ring-2 ring-primary' : ''}
+              <div className={`
+                flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-md transition-all duration-200
+                ${currentProject?.id === project.id ? 'ring-2 ring-primary bg-blue-50' : 'hover:bg-gray-50'}
               `}>
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <h4 className="font-semibold truncate">{project.name}</h4>
-                      {project.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {project.description}
-                        </p>
+                {/* Left side - Project info */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg flex-shrink-0">
+                    <FolderOpen className="w-5 h-5 text-blue-600" />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-gray-900 truncate">{project.name}</h4>
+                      {currentProject?.id === project.id && (
+                        <Badge variant="default" className="text-xs">Active</Badge>
                       )}
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Layers className="w-3 h-3" />
-                      {project.canvas_data?.nodes?.length || 0} nodes
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleOpenProject(project)}
-                      disabled={currentProject?.id === project.id}
-                      className="flex-1"
-                    >
-                      <FolderOpen className="w-3 h-3 mr-1" />
-                      {currentProject?.id === project.id ? 'Current' : 'Open'}
-                    </Button>
                     
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeleteProject(project.id, project.name)}
-                      className="w-8 h-8 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    {project.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
+                        {project.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Layers className="w-3 h-3" />
+                        {project.canvas_data?.nodes?.length || 0} nodes
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </Card>
+                
+                {/* Right side - Actions */}
+                <div className="flex items-center gap-2 ml-4">
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenProject(project)}
+                    disabled={currentProject?.id === project.id}
+                    className="px-4"
+                  >
+                    <FolderOpen className="w-4 h-4 mr-2" />
+                    {currentProject?.id === project.id ? 'Current' : 'Open'}
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenKnowledgeManager(project)}
+                    className="px-4"
+                  >
+                    <Database className="w-4 h-4 mr-2" />
+                    Knowledge
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteProject(project.id, project.name)}
+                    className="w-10 h-10 p-0 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </motion.div>
           ))}
         </div>

@@ -8,6 +8,9 @@ import { usePromptStore } from "@/stores/prompt-store";
 import { useWorkflowStore } from "@/stores/workflow-store";
 import Index from "./pages/Index";
 import Workflow from "./pages/Workflow";
+import Projects from "./pages/Projects";
+import KnowledgeBase from "./pages/KnowledgeBase";
+import KnowledgeDocument from "./pages/KnowledgeDocument";
 import Library from "./pages/Library";
 import Auth from "./pages/Auth";
 import MetricsDashboard from "./pages/MetricsDashboard";
@@ -47,6 +50,9 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/workflow" element={<Workflow />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/knowledge/:projectId" element={<KnowledgeBase />} />
+          <Route path="/knowledge/:projectId/document/:documentId" element={<KnowledgeDocument />} />
           <Route path="/library" element={<Library />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/metrics" element={<MetricsDashboard />} />
