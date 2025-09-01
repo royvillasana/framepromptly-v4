@@ -321,12 +321,19 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
     <ResizableNode 
       selected={selected}
       nodeType="tool"
+      initialWidth={300}
+      initialHeight={420}
+      minWidth={260}
+      nodeId={id}
+      maxWidth={380}
+      minHeight={420}
+      maxHeight={650}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.2 }}
-        style={{ width: '100%', height: '100%' }}
+        className="w-full h-full"
       >
       {/* Draggable Connection Handles */}
       {id && (
@@ -349,7 +356,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       )}
       
       <Card 
-        className={`w-full h-full p-4 transition-all duration-200 flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''} hover:shadow-md`}
+        className={`w-full p-4 transition-all duration-200 flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''} hover:shadow-md`}
         style={{
           backgroundColor: isActive ? colors.background.hover : colors.background.tertiary,
           borderTopWidth: '2px',
@@ -368,10 +375,10 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           })
         }}
       >
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-grow flex flex-col">
           {/* Header */}
           <div className="flex items-start justify-between mb-3 flex-shrink-0">
-            <div className="flex-1">
+            <div className="flex-grow">
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4" style={{ color: colors.text.secondary }} />
                 <h3 className="font-semibold text-sm" style={{ color: colors.text.secondary }}>{tool.name}</h3>
@@ -452,7 +459,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
               )}
             </div>
             {linkedKnowledge.length > 0 && (
-              <div className="flex-1">
+              <div className="flex-grow max-h-16 overflow-y-auto">
                 <div className="flex flex-wrap gap-1">
                   {entries
                     .filter(entry => linkedKnowledge.includes(entry.id))

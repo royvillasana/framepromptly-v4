@@ -25,7 +25,7 @@ export default function KnowledgeDocument() {
   const [project, setProject] = useState(projects.find(p => p.id === projectId));
   const [document, setDocument] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('document');
-  const [isNewDocument] = useState(searchParams.get('new') === 'true');
+  const [isNewDocument] = useState(searchParams.get('new') === 'true' || (documentId && documentId.startsWith('new-')));
 
   // Enhanced prompt state
   const [selectedIndustry, setSelectedIndustry] = useState<string>('general');
@@ -76,9 +76,10 @@ export default function KnowledgeDocument() {
       setDocument(foundDocument);
     } else if (isNewDocument) {
       // Create a new document structure
+      const titleFromUrl = searchParams.get('title') || 'Untitled Document';
       setDocument({
         id: documentId,
-        title: 'Untitled Document',
+        title: titleFromUrl,
         content: '',
         type: 'text',
         created_at: new Date().toISOString(),

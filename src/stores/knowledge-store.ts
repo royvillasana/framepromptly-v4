@@ -76,12 +76,16 @@ export const useKnowledgeStore = create<KnowledgeState>((set, get) => ({
         entries: [newEntry, ...state.entries],
         isLoading: false 
       }));
+
+      console.log('Successfully added text entry:', newEntry);
+      return newEntry;
     } catch (error) {
       console.error('Error adding text entry:', error);
       set({ 
         error: error instanceof Error ? error.message : 'Failed to add text entry',
         isLoading: false 
       });
+      throw error;
     }
   },
 

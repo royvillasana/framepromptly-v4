@@ -8,7 +8,6 @@ import { UXStage, UXTool, UXFramework, useWorkflowStore } from '@/stores/workflo
 import { NodeActionsMenu } from './node-actions-menu';
 import { getSmartPosition } from '@/utils/node-positioning';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
-import { ResizableNode } from './resizable-node';
 import { getFrameworkColors } from '@/lib/framework-colors';
 
 interface StageNodeData {
@@ -42,7 +41,6 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: newPosition,
-      width: 320,
       data: {
         tool,
         stage,
@@ -87,7 +85,6 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
           id: `tool-${tool.id}-${Date.now()}-${index}`,
           type: 'tool',
           position: newPosition,
-          width: 320,
           data: {
             tool,
             stage,
@@ -115,16 +112,12 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
   };
 
   return (
-    <ResizableNode 
-      selected={selected}
-      nodeType="stage"
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="w-72"
     >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ width: '100%' }}
-      >
       {/* Draggable Connection Handles */}
       <DraggableHandle
         id="target-1"
@@ -142,7 +135,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
       />
       
       <Card 
-        className={`w-full h-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col overflow-hidden ${selected ? 'ring-2 ring-offset-2' : ''}`}
+        className={`w-full p-4 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col ${selected ? 'ring-2 ring-offset-2' : ''}`}
         style={{
           backgroundColor: isActive ? colors.background.hover : colors.background.secondary,
           borderTopWidth: '2px',
@@ -182,7 +175,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col">
           <div className="flex items-center justify-between text-xs mb-2 flex-shrink-0">
             <span style={{ color: colors.text.light }}>Tools</span>
             <Badge 
@@ -196,7 +189,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
               {stage.tools.length}
             </Badge>
           </div>
-          <div className="flex-1 space-y-1">
+          <div className="space-y-1">
             {stage.tools.map((tool) => (
               <div 
                 key={tool.id}
@@ -272,7 +265,6 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
         nodeId={id}
       />
     </motion.div>
-    </ResizableNode>
   );
 });
 

@@ -23,7 +23,7 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   PlatformType, 
   getPlatformRecommendation, 
@@ -193,6 +193,9 @@ export function PlatformSelector({
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Platform Comparison for {toolName}</DialogTitle>
+              <DialogDescription>
+                Compare different platform capabilities and choose the best option for your UX tool implementation.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {comparison.platforms.map((platform) => {

@@ -247,7 +247,7 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
                   }}>
               <CardHeader className="border-b" style={{ backgroundColor: colors.background.secondary, borderBottomColor: colors.border.secondary }}>
                 <div className="flex items-center justify-between">
-                  <CardTitle className={`text-lg font-bold leading-tight ${frameworkClasses[2]}`}>{framework.name}</CardTitle>
+                  <CardTitle className="text-lg font-bold leading-tight text-black">{framework.name}</CardTitle>
                   <Badge className="font-medium" style={{ 
                     backgroundColor: colors.background.secondary, 
                     color: colors.text.secondary, 
@@ -336,19 +336,9 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = colors.background.hover;
-                // Update text colors for a11y compliance during hover
-                const title = e.currentTarget.querySelector('[data-title]');
-                const description = e.currentTarget.querySelector('[data-description]');
-                if (title) title.style.color = colors.text.hover;
-                if (description) description.style.color = colors.text.hover;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = colors.background.secondary;
-                // Restore original text colors
-                const title = e.currentTarget.querySelector('[data-title]');
-                const description = e.currentTarget.querySelector('[data-description]');
-                if (title) title.style.color = colors.text.secondary;
-                if (description) description.style.color = colors.text.secondary;
               }}
               onClick={() => setSelectedFramework(selectedFramework === framework.id ? null : framework.id)}
             >
@@ -360,7 +350,7 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
                     <ChevronRight className="w-5 h-5" style={{ color: colors.text.secondary }} />
                   )}
                   <div>
-                    <CardTitle data-title className={`text-xl font-bold leading-tight ${frameworkClasses[2]}`}>{framework.name}</CardTitle>
+                    <CardTitle data-title className="text-xl font-bold leading-tight text-black">{framework.name}</CardTitle>
                     <CardDescription data-description className="text-sm leading-relaxed" style={{ color: colors.text.secondary }}>{framework.description}</CardDescription>
                   </div>
                 </div>
@@ -398,19 +388,9 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
                        }}
                        onMouseEnter={(e) => {
                          e.currentTarget.style.backgroundColor = colors.background.hover;
-                         // Update text colors for a11y compliance during stage hover
-                         const stageTitle = e.currentTarget.querySelector('[data-stage-title]');
-                         const stageDesc = e.currentTarget.querySelector('[data-stage-description]');
-                         if (stageTitle) stageTitle.style.color = colors.text.hover;
-                         if (stageDesc) stageDesc.style.color = colors.text.hover;
                        }}
                        onMouseLeave={(e) => {
                          e.currentTarget.style.backgroundColor = colors.background.secondary;
-                         // Restore original stage text colors
-                         const stageTitle = e.currentTarget.querySelector('[data-stage-title]');
-                         const stageDesc = e.currentTarget.querySelector('[data-stage-description]');
-                         if (stageTitle) stageTitle.style.color = colors.text.secondary;
-                         if (stageDesc) stageDesc.style.color = colors.text.light;
                        }}>
                     <div 
                       className="flex items-center justify-between cursor-pointer -m-1 p-3 rounded-md transition-colors duration-200"
@@ -430,7 +410,7 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
                           <ChevronRight className="w-4 h-4" style={{ color: colors.text.secondary }} />
                         )}
                         <div>
-                          <h3 data-stage-title className={`font-semibold text-lg leading-tight ${stageClasses[2]}`}>{stage.name}</h3>
+                          <h3 data-stage-title className="font-semibold text-lg leading-tight text-black">{stage.name}</h3>
                           <p data-stage-description className="text-sm leading-relaxed" style={{ color: colors.text.light }}>{stage.description}</p>
                         </div>
                       </div>
@@ -459,26 +439,16 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
                                onMouseEnter={(e) => {
                                  e.currentTarget.style.backgroundColor = colors.background.hover;
                                  e.currentTarget.style.borderLeftColor = colors.border.secondary;
-                                 // Update tool text colors for a11y compliance during hover
-                                 const toolTitle = e.currentTarget.querySelector('[data-tool-title]');
-                                 const toolDesc = e.currentTarget.querySelector('[data-tool-description]');
-                                 if (toolTitle) toolTitle.style.color = colors.text.hover;
-                                 if (toolDesc) toolDesc.style.color = colors.text.hover;
                                }}
                                onMouseLeave={(e) => {
                                  e.currentTarget.style.backgroundColor = colors.background.tertiary;
                                  e.currentTarget.style.borderLeftColor = colors.border.tertiary;
-                                 // Restore original tool text colors
-                                 const toolTitle = e.currentTarget.querySelector('[data-tool-title]');
-                                 const toolDesc = e.currentTarget.querySelector('[data-tool-description]');
-                                 if (toolTitle) toolTitle.style.color = colors.text.secondary;
-                                 if (toolDesc) toolDesc.style.color = colors.text.light;
                                }}>
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
                                 <Wrench className="w-4 h-4" style={{ color: colors.text.secondary }} />
                                 <div>
-                                  <h4 data-tool-title className={`font-medium leading-tight ${toolClasses[2]}`}>{tool.name}</h4>
+                                  <h4 data-tool-title className="font-medium leading-tight text-black">{tool.name}</h4>
                                   <p data-tool-description className="text-xs leading-relaxed" style={{ color: colors.text.light }}>{tool.description}</p>
                                 </div>
                               </div>

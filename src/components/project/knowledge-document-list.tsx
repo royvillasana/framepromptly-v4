@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useKnowledgeStore, KnowledgeEntry } from '@/stores/knowledge-store';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -178,6 +178,9 @@ export const KnowledgeDocumentList: React.FC<KnowledgeDocumentListProps> = ({
                   <Sparkles className="w-5 h-5 text-purple-600" />
                   Create New Document
                 </DialogTitle>
+                <DialogDescription>
+                  Create a new document in your knowledge base to store project information and research.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div>

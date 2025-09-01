@@ -39,15 +39,19 @@ export function HeroSection() {
             <span className="text-white">with AI Intelligence</span>
           </motion.h1>
 
-          <motion.p
+          <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed"
           >
-            Streamline your UX process with intelligent frameworks, automated prompt generation, 
+            <Card className="p-6 bg-white/10 backdrop-blur-sm border-white/20 hover:shadow-lg transition-all duration-300">
+             <p className="text-lg font-semibold mb-2 text-white">
+             Streamline your UX process with intelligent frameworks, automated prompt generation, 
             and AI-powered tools. From Design Thinking to Agile UX - build better experiences faster.
-          </motion.p>
+            </p>
+            </Card>
+            </motion.div>
 
           <motion.div
             initial={{ y: 20, opacity: 0 }}
@@ -60,13 +64,13 @@ export function HeroSection() {
               size="xl"
               asChild
             >
-              <a href="/workflow">
+              <a className="flex items-center" href="/workflow">
                 Start Building
                 <ArrowRight className="w-5 h-5 ml-2" />
               </a>
             </GradientButton>
             <GradientButton 
-              variant="secondary-outline"
+              variant="secondary"
               size="xl"
             >
               View Demo

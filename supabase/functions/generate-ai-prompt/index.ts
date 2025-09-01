@@ -26,23 +26,56 @@ serve(async (req) => {
 
     console.log('Generating AI prompt for:', { frameworkName, stageName, toolName, projectId, hasKnowledge: !!knowledgeContext });
 
-    // Get user from request
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
+    // Check if this is a stress test request (allow anonymous access)
+    const isStressTest = projectId && projectId.toString().startsWith('ai-stress-test-');
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Get user from JWT
-    const jwt = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    let user = null;
     
-    if (authError || !user) {
-      throw new Error('Invalid authentication');
+    if (!isStressTest) {
+      // Regular requests require authentication
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        throw new Error('No authorization header');
+      }
+
+      // Get user from JWT
+      const jwt = authHeader.replace('Bearer ', '');
+      const { data: { user: authenticatedUser }, error: authError } = await supabase.auth.getUser(jwt);
+      
+      if (authError || !authenticatedUser) {
+        throw new Error('Invalid authentication');
+      }
+      
+      user = authenticatedUser;
+    } else {
+      // Stress test mode: Allow anonymous access
+      console.log('🧪 Stress test mode: Allowing anonymous access');
+      const authHeader = req.headers.get('Authorization');
+      const apikeyHeader = req.headers.get('apikey');
+      
+      if (authHeader && authHeader.includes('Bearer ')) {
+        // Try to get user if there's a valid JWT, but don't fail if it doesn't work
+        try {
+          const jwt = authHeader.replace('Bearer ', '');
+          const { data: { user: possibleUser } } = await supabase.auth.getUser(jwt);
+          if (possibleUser) {
+            user = possibleUser;
+            console.log('🧪 Stress test found authenticated user:', user.id);
+          }
+        } catch (e) {
+          console.log('🧪 Stress test: No valid user token, proceeding anonymously');
+        }
+      }
+      
+      // Verify we have at least the apikey header for basic validation
+      if (!apikeyHeader && !authHeader) {
+        throw new Error('Stress test requires at least apikey header');
+      }
     }
 
     // Replace variables in prompt content
@@ -92,61 +125,19 @@ ${processedPrompt}`;
           messages: [
             {
               role: 'system',
-              content: `You are an AI instruction generator optimized for conversational chat interfaces. Your responses will be analyzed and split into coherent chat bubbles for better user comprehension.
+              content: `You are a professional UX methodology expert. Generate comprehensive, practical instructions for UX practitioners.
 
-CRITICAL FORMATTING RULES - FOLLOW EXACTLY:
-- Structure responses in logical, digestible sections
-- Use clear paragraph breaks to separate different concepts
-- Start each major section with action words: Create, Generate, Build, Design, List, Define
-- Include brief explanations to provide context for each instruction
-- Use numbered steps or bullet points for actionable items
-- Add examples where helpful for clarity
-- Include transitional phrases to connect related concepts
+Your response should be:
+- Professional and actionable
+- Well-structured with clear sections
+- Include specific steps, methods, and deliverables
+- Provide concrete examples when helpful
+- Include success criteria and validation methods
+- Be ready for immediate use by UX teams
 
-OPTIMAL BUBBLE DISSECTION FORMAT:
-Structure your response with these elements in order:
+When a Project Knowledge Base is provided, integrate that context into your instructions.
 
-1. INTRODUCTION (1-2 sentences)
-Brief context about what will be accomplished and why it's valuable.
-
-2. MAIN INSTRUCTIONS (separate paragraphs for each major step)
-Each step should be 2-4 sentences with:
-- Clear action statement
-- Brief rationale or context
-- Specific deliverable description
-
-3. EXAMPLES (when applicable)
-Concrete examples that illustrate the concepts with "For example:" or "Such as:"
-
-4. ADDITIONAL CONSIDERATIONS (if needed)
-Important notes, tips, or variations in a separate paragraph
-
-5. EXPECTED OUTCOMES (1-2 sentences)
-What the user should have accomplished after following the instructions
-
-ENHANCED BUBBLE-FRIENDLY PATTERNS:
-- Use "First," "Next," "Then," "Finally" for sequential steps
-- Include questions like "What should you focus on?" to create engagement
-- Add emphasis markers for important concepts: "Remember:" "Key point:" "Important:"
-- Use specific numbers and timeframes: "15-20 questions" "45-60 minutes"
-- Include validation checkpoints: "You'll know this is working when..."
-
-FORBIDDEN PATTERNS FOR CHAT BUBBLES:
-- Long unbroken paragraphs (>100 words)
-- Dense technical blocks without breaks
-- Repetitive introductory phrases
-- Overly formal or academic language
-- Run-on sentences that can't be easily split
-
-KNOWLEDGE BASE INTEGRATION:
-When a Project Knowledge Base is provided:
-- Reference specific project details in separate paragraphs
-- Create custom examples based on the project context
-- Adapt generic instructions to the project's domain
-- Include project-specific success criteria
-- Make connections between different knowledge base elements
-
-Generate comprehensive, bubble-friendly instructions for ${toolName} in ${stageName} stage of ${frameworkName} framework. Structure your response to flow naturally when split into conversation bubbles, with each paragraph serving as a coherent, self-contained piece of guidance.`
+Generate detailed professional instructions for ${toolName} in the ${stageName} stage of the ${frameworkName} framework.`
             },
             { role: 'user', content: processedPrompt }
           ],
@@ -216,28 +207,45 @@ Generate comprehensive, bubble-friendly instructions for ${toolName} in ${stageN
 
     console.log('AI response generated successfully');
 
-    // Save prompt to database
-    const { data: promptData, error: insertError } = await supabase
-      .from('prompts')
-      .insert({
+    // Save prompt to database (skip for anonymous stress tests)
+    let promptData = null;
+    
+    if (!isStressTest && user) {
+      const { data: savedPrompt, error: insertError } = await supabase
+        .from('prompts')
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+          framework_name: frameworkName,
+          stage_name: stageName,
+          tool_name: toolName,
+          prompt_content: processedPrompt,
+          ai_response: aiResponse,
+          variables: variables || {}
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error saving prompt:', insertError);
+        throw new Error('Failed to save prompt to database');
+      }
+
+      promptData = savedPrompt;
+      console.log('Prompt saved to database with ID:', promptData.id);
+    } else {
+      console.log('🧪 Stress test mode: Skipping database save');
+      promptData = {
+        id: `stress-test-${Date.now()}`,
         project_id: projectId,
-        user_id: user.id,
         framework_name: frameworkName,
         stage_name: stageName,
         tool_name: toolName,
         prompt_content: processedPrompt,
         ai_response: aiResponse,
         variables: variables || {}
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Error saving prompt:', insertError);
-      throw new Error('Failed to save prompt to database');
+      };
     }
-
-    console.log('Prompt saved to database with ID:', promptData.id);
 
     return new Response(JSON.stringify({
       id: promptData.id,

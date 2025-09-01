@@ -8,7 +8,6 @@ import { UXFramework, UXStage, useWorkflowStore } from '@/stores/workflow-store'
 import { NodeActionsMenu } from './node-actions-menu';
 import { getSmartPosition } from '@/utils/node-positioning';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
-import { ResizableNode } from './resizable-node';
 import { getFrameworkColors } from '@/lib/framework-colors';
 
 interface FrameworkNodeData {
@@ -38,7 +37,6 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
       position: newPosition,
-      width: 250,
       data: {
         stage,
         framework
@@ -74,7 +72,6 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         id: `stage-${stage.id}-${Date.now()}-${index}`,
         type: 'stage',
         position: newPosition,
-        width: 250,
         data: {
           stage,
           framework
@@ -99,18 +96,14 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
   };
 
   return (
-    <ResizableNode 
-      selected={selected || isSelected}
-      nodeType="framework"
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="w-80"
     >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ width: '100%' }}
-      >
       <Card className={`
-        w-full h-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col overflow-hidden
+        w-full p-6 transition-all duration-300 shadow-lg hover:shadow-xl flex flex-col
         ${selected || isSelected ? 'ring-2 ring-offset-2' : ''}
       `}
       style={{
@@ -156,7 +149,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col">
           <div className="flex items-center justify-between text-sm mb-3 flex-shrink-0">
             <span style={{ color: colors.text.light }}>Stages</span>
             <Badge 
@@ -170,7 +163,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
               {framework.stages.length}
             </Badge>
           </div>
-          <div className="flex-1 space-y-2 p-1">
+          <div className="space-y-2 p-1">
             {framework.stages.map((stage) => (
               <div 
                 key={stage.id}
@@ -259,7 +252,6 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         nodeId={id}
       />
     </motion.div>
-    </ResizableNode>
   );
 });
 

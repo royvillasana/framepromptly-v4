@@ -123,8 +123,6 @@ function WorkflowWithProject() {
       id: `framework-${framework.id}`,
       type: 'framework',
       position: { x: 100, y: 100 },
-      width: 300,
-      height: 250,
       data: { framework, isSelected: true },
     };
     console.log('Creating framework node:', newNode);
@@ -137,8 +135,6 @@ function WorkflowWithProject() {
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
       position: { x: 300, y: 200 },
-      width: 250,
-      height: 180,
       data: { stage, isActive: true },
     };
     addNode(newNode);
@@ -149,8 +145,6 @@ function WorkflowWithProject() {
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: { x: 500, y: 300 },
-      width: 250,
-      height: 200,
       data: { tool, framework, stage, isActive: true },
     };
     addNode(newNode);

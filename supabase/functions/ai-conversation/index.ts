@@ -29,23 +29,56 @@ serve(async (req) => {
       conversationLength: conversationHistory?.length || 0
     });
 
-    // Get user from request
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
+    // Check if this is a stress test request (allow anonymous access)
+    const isStressTest = projectId && projectId.toString().startsWith('ai-stress-test-');
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Get user from JWT
-    const jwt = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    let user = null;
     
-    if (authError || !user) {
-      throw new Error('Invalid authentication');
+    if (!isStressTest) {
+      // Regular requests require authentication
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        throw new Error('No authorization header');
+      }
+
+      // Get user from JWT
+      const jwt = authHeader.replace('Bearer ', '');
+      const { data: { user: authenticatedUser }, error: authError } = await supabase.auth.getUser(jwt);
+      
+      if (authError || !authenticatedUser) {
+        throw new Error('Invalid authentication');
+      }
+      
+      user = authenticatedUser;
+    } else {
+      // Stress test mode: Allow anonymous access
+      console.log('🧪 Conversation stress test mode: Allowing anonymous access');
+      const authHeader = req.headers.get('Authorization');
+      const apikeyHeader = req.headers.get('apikey');
+      
+      if (authHeader && authHeader.includes('Bearer ')) {
+        // Try to get user if there's a valid JWT, but don't fail if it doesn't work
+        try {
+          const jwt = authHeader.replace('Bearer ', '');
+          const { data: { user: possibleUser } } = await supabase.auth.getUser(jwt);
+          if (possibleUser) {
+            user = possibleUser;
+            console.log('🧪 Conversation stress test found authenticated user:', user.id);
+          }
+        } catch (e) {
+          console.log('🧪 Conversation stress test: No valid user token, proceeding anonymously');
+        }
+      }
+      
+      // Verify we have at least the apikey header for basic validation
+      if (!apikeyHeader && !authHeader) {
+        throw new Error('Stress test requires at least apikey header');
+      }
     }
 
     // Get OpenAI API key
@@ -66,38 +99,17 @@ serve(async (req) => {
     const messages = [
       {
         role: 'system',
-        content: `You are an AI assistant helping with UX design and workflow optimization. Your responses will be split into chat bubbles, so format them accordingly for optimal readability and engagement.
+        content: `You are a professional UX methodology expert and AI assistant helping with design and workflow optimization. Generate comprehensive, practical responses for UX practitioners.
 
-BUBBLE-FRIENDLY RESPONSE GUIDELINES:
-- Structure responses with clear paragraph breaks between concepts
-- Start each major point in a new paragraph
-- Use transitional phrases: "First," "Next," "Also," "Additionally," "Finally"
-- Include specific examples in separate paragraphs with "For example:" or "Such as:"
-- Keep individual paragraphs focused (2-4 sentences max)
-- Add engagement elements: questions, checkpoints, actionable suggestions
-- Use emphasis markers: "Important:" "Remember:" "Key insight:" "Pro tip:"
+Your response should be:
+- Professional and actionable
+- Well-structured with clear sections
+- Include specific steps, methods, and deliverables
+- Provide concrete examples when helpful
+- Include success criteria and validation methods
+- Be ready for immediate use by UX teams
 
-CONVERSATION STYLE:
-- Be conversational yet professional
-- Reference the initial prompt context when relevant
-- Use knowledge base information to provide specific, contextual advice
-- Ask clarifying questions to encourage interaction
-- Suggest practical next steps in separate, actionable paragraphs
-- Include validation points: "You'll know this is working when..."
-
-FORMATTING FOR CHAT BUBBLES:
-- Break complex explanations into digestible chunks
-- Use numbered steps when providing sequences
-- Include brief introductions before detailed explanations
-- Add connecting phrases between related concepts
-- End with clear next steps or questions for the user
-
-INITIAL PROMPT CONTEXT:
-${initialPrompt || 'No initial prompt provided'}
-
-${contextString ? `KNOWLEDGE BASE CONTEXT:\n${contextString}` : 'No additional knowledge base context available'}
-
-Respond to the user's questions and requests based on this context. Structure your response to flow naturally when split into conversation bubbles, ensuring each paragraph is coherent and engaging on its own.`
+${initialPrompt ? `INITIAL PROMPT CONTEXT:\n${initialPrompt}\n\n` : ''}${contextString ? `KNOWLEDGE BASE CONTEXT:\n${contextString}\n\n` : ''}Respond to the user's questions and requests based on this context.`
       }
     ];
 

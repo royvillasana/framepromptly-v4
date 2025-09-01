@@ -33,7 +33,12 @@ export default function KnowledgeBase() {
   }, [projects, projectId, fetchEntries]);
 
   const handleSelectDocument = (document: any) => {
-    navigate(`/knowledge/${projectId}/document/${document.id}`);
+    if (document.id.startsWith('new-')) {
+      // For new documents, pass the title as a URL parameter
+      navigate(`/knowledge/${projectId}/document/${document.id}?title=${encodeURIComponent(document.title)}`);
+    } else {
+      navigate(`/knowledge/${projectId}/document/${document.id}`);
+    }
   };
 
   const handleCreateNew = () => {

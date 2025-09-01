@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { useProjectStore } from '@/stores/project-store';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectDialog } from './project-dialog';
+import { ProjectShareModal } from './project-share-modal';
 import { motion } from 'framer-motion';
-import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2, Database, Settings } from 'lucide-react';
+import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2, Database, Settings, Share } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function ProjectList() {
@@ -23,6 +24,8 @@ export function ProjectList() {
   } = useProjectStore();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -30,6 +33,7 @@ export function ProjectList() {
 
   const handleOpenProject = (project: Project) => {
     setCurrentProject(project);
+    navigate('/workflow');
     toast({
       title: "Project Opened",
       description: `Now working on "${project.name}"`
@@ -56,6 +60,16 @@ export function ProjectList() {
 
   const handleOpenKnowledgeManager = (project: Project) => {
     navigate(`/knowledge/${project.id}`);
+  };
+
+  const handleShareProject = (project: Project) => {
+    setSelectedProject(project);
+    setShareModalOpen(true);
+  };
+
+  const handleCloseShareModal = () => {
+    setShareModalOpen(false);
+    setSelectedProject(null);
   };
 
   if (isLoading && projects.length === 0) {
@@ -127,6 +141,14 @@ export function ProjectList() {
                 >
                   <Database className="w-3 h-3 mr-1" />
                   Manage Knowledge
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleShareProject(currentProject)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Share className="w-3 h-3" />
                 </Button>
                 <Badge variant="default">Active</Badge>
               </div>
@@ -227,6 +249,15 @@ export function ProjectList() {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => handleShareProject(project)}
+                    className="w-10 h-10 p-0"
+                  >
+                    <Share className="w-4 h-4" />
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleDeleteProject(project.id, project.name)}
                     className="w-10 h-10 p-0 text-destructive hover:text-destructive"
                   >
@@ -237,6 +268,17 @@ export function ProjectList() {
             </motion.div>
           ))}
         </div>
+      )}
+
+      {/* Share Modal */}
+      {selectedProject && (
+        <ProjectShareModal
+          isOpen={shareModalOpen}
+          onClose={handleCloseShareModal}
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+          isOwner={true}
+        />
       )}
     </div>
   );

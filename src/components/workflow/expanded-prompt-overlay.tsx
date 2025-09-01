@@ -28,7 +28,7 @@ import { DestinationSelector } from './destination-selector';
 import { DestinationType, DestinationContext } from '@/lib/destination-driven-tailoring';
 import { DeliveryDashboard } from '@/components/delivery/delivery-dashboard';
 import { OAuthConnectionManager } from '@/components/delivery/oauth-connection-manager';
-import { formatForChatDisplay, splitIntoConversationBubbles, createAnalyzedChatBubbles, type ChatBubble } from '@/lib/text-formatting';
+import { formatForChatDisplay } from '@/lib/text-formatting';
 
 interface SavedPromptVersion {
   id: string;
@@ -127,17 +127,6 @@ function ExpandedPromptOverlayComponent({
   const [selectedBubbles, setSelectedBubbles] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   
-  // Helper function to create enhanced AI response bubbles
-  const createEnhancedResponseBubbles = useCallback((responseText: string): ChatBubble[] => {
-    const context = {
-      framework: prompt.context.framework.name,
-      stage: prompt.context.stage.name,
-      tool: prompt.context.tool.name,
-      userIntent: 'conversation'
-    };
-    
-    return createAnalyzedChatBubbles(responseText, context);
-  }, [prompt.context]);
   
   // Multi-bubble selection handlers
   const handleBubbleSelect = useCallback((messageId: string) => {
@@ -415,29 +404,18 @@ function ExpandedPromptOverlayComponent({
 
               console.log('✅ AI response received, creating analyzed message bubbles...');
               
-              // Create enhanced AI response bubbles with analysis
-              const responseBubbles = createEnhancedResponseBubbles(data.response);
+              // Create single AI response message
+              const tailoredResponseMessage: ConversationMessage = {
+                id: `tailored-response-${Date.now()}`,
+                type: 'ai',
+                content: data.response,
+                timestamp: new Date()
+              };
               
-              // Add each bubble as a separate message with optimized delays
-              responseBubbles.forEach((bubble, index) => {
-                setTimeout(() => {
-                  const tailoredResponseMessage: ConversationMessage = {
-                    id: `tailored-response-${Date.now()}-${index}`,
-                    type: 'ai',
-                    content: bubble.content,
-                    timestamp: new Date()
-                  };
-                  
-                  setConversationMessages(prev => [...prev, tailoredResponseMessage]);
-                  
-                  // Log bubble metadata for debugging
-                  console.log(`💬 Bubble ${index + 1}:`, {
-                    type: bubble.metadata.type,
-                    priority: bubble.metadata.priority,
-                    isActionable: bubble.metadata.isActionable,
-                    length: bubble.content.length
-                  });
-                }, bubble.delay); // Use analyzed delay timing
+              setConversationMessages(prev => [...prev, tailoredResponseMessage]);
+              
+              console.log('💬 Tailored Response:', {
+                length: data.response.length
               });
               
             } catch (aiError) {
@@ -575,29 +553,18 @@ function ExpandedPromptOverlayComponent({
       // Remove typing indicator
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
-      // Create enhanced AI response bubbles with analysis
-      const responseBubbles = createEnhancedResponseBubbles(data.response);
+      // Create single AI response message
+      const aiMessage: ConversationMessage = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: data.response,
+        timestamp: new Date()
+      };
       
-      // Add each bubble as a separate message with optimized delays
-      responseBubbles.forEach((bubble, index) => {
-        setTimeout(() => {
-          const aiMessage: ConversationMessage = {
-            id: `ai-${Date.now()}-${index}`,
-            type: 'ai',
-            content: bubble.content,
-            timestamp: new Date()
-          };
-          
-          setConversationMessages(prev => [...prev, aiMessage]);
-          
-          // Log bubble metadata for debugging
-          console.log(`💬 Follow-up Bubble ${index + 1}:`, {
-            type: bubble.metadata.type,
-            priority: bubble.metadata.priority,
-            isActionable: bubble.metadata.isActionable,
-            length: bubble.content.length
-          });
-        }, bubble.delay); // Use analyzed delay timing
+      setConversationMessages(prev => [...prev, aiMessage]);
+      
+      console.log('💬 Follow-up Response:', {
+        length: data.response.length
       });
     } catch (error) {
       console.error('Error generating follow-up response:', error);
@@ -664,29 +631,21 @@ function ExpandedPromptOverlayComponent({
       // Remove typing indicator
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
-      // Create enhanced AI response bubbles with analysis
-      const responseBubbles = createEnhancedResponseBubbles(data.response);
+      // Create single regenerated AI response
+      const aiMessage: ConversationMessage = {
+        id: `ai-regen-${Date.now()}`,
+        type: 'ai',
+        content: data.response,
+        timestamp: new Date()
+      };
       
-      // Add each bubble as a separate message with optimized delays
-      responseBubbles.forEach((bubble, index) => {
-        setTimeout(() => {
-          const aiMessage: ConversationMessage = {
-            id: `ai-${Date.now()}-${index}`,
-            type: 'ai',
-            content: bubble.content,
-            timestamp: new Date()
-          };
-          
-          setConversationMessages(prev => [...prev, aiMessage]);
-          
-          // Log bubble metadata for debugging
-          console.log(`💬 Regenerated Bubble ${index + 1}:`, {
-            type: bubble.metadata.type,
-            priority: bubble.metadata.priority,
-            isActionable: bubble.metadata.isActionable,
-            length: bubble.content.length
-          });
-        }, bubble.delay); // Use analyzed delay timing
+      // Replace the message being regenerated
+      setConversationMessages(prev => 
+        prev.map(msg => msg.id === messageId ? aiMessage : msg)
+      );
+      
+      console.log('💬 Regenerated Response:', {
+        length: data.response.length
       });
     } catch (error) {
       console.error('Error regenerating message:', error);
@@ -807,33 +766,22 @@ function ExpandedPromptOverlayComponent({
       // Remove typing indicator
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
-      // Create enhanced AI response bubbles with analysis
-      const responseBubbles = createEnhancedResponseBubbles(data.response);
+      // Create single AI response message
+      const aiMessage: ConversationMessage = {
+        id: `ai-response-${Date.now()}`,
+        type: 'ai',
+        content: data.response,
+        timestamp: new Date()
+      };
       
-      // Add each bubble as a separate message with optimized delays
-      responseBubbles.forEach((bubble, index) => {
-        setTimeout(() => {
-          const aiMessage: ConversationMessage = {
-            id: `ai-response-${Date.now()}-${index}`,
-            type: 'ai',
-            content: bubble.content,
-            timestamp: new Date()
-          };
-          
-          setConversationMessages(prev => [...prev, aiMessage]);
-          
-          // Log bubble metadata for debugging
-          console.log(`💬 Prompt Execution Bubble ${index + 1}:`, {
-            type: bubble.metadata.type,
-            priority: bubble.metadata.priority,
-            isActionable: bubble.metadata.isActionable,
-            length: bubble.content.length
-          });
-        }, bubble.delay); // Use analyzed delay timing
+      setConversationMessages(prev => [...prev, aiMessage]);
+      
+      console.log('💬 Prompt Execution Response:', {
+        length: data.response.length
       });
       
       toast.success('Prompt executed successfully!', {
-        description: 'AI has responded with analyzed, dissected chat bubbles'
+        description: 'AI has responded to your prompt'
       });
       
     } catch (error) {

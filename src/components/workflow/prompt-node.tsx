@@ -139,6 +139,13 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
       <ResizableNode 
         selected={selected}
         nodeType="prompt"
+        initialWidth={1250}
+        initialHeight="auto"
+        minWidth={1250}
+        maxWidth={1600}
+        minHeight={300}
+        maxHeight={600}
+        nodeId={id}
       >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
@@ -162,8 +169,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
       />
       
       <Card className={`
-      
-        w-full h-full p-6 transition-all duration-200 relative
+        w-full p-6 transition-all duration-200 relative
         ${selected ? 'ring-2 ring-primary shadow-lg border-2 border-primary' : 'hover:shadow-md'}
         ${isActive ? 'border-primary bg-primary/5' : ''}
         ${latestAIResponse ? 'border-solid border-success bg-gradient-to-br from-primary/5 to-success/5' : 'border-dashed border-2'}
@@ -180,14 +186,13 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           <Expand className="w-4 h-4" />
         </Button>
 
-        <div className="space-y-3 h-full flex flex-col min-h-0">
+        <div className="space-y-3 flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between flex-shrink-0">
             <div className="flex-1 mr-10">
               <div className="flex items-center gap-3 mb-2">
-                <Sparkles className="w-6 h-6 text-primary" />
-                <h3 className="font-bold text-lg">AI Generated Prompt</h3>
-                {latestAIResponse && <Bot className="w-6 h-6 text-success" />}
+                <Bot className="w-6 h-6 text-success" />
+                <h3 className="font-bold text-lg">AI Response</h3>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {sourceToolName || prompt.context.tool.name} • {prompt.context.stage.name}
@@ -201,7 +206,7 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
           </div>
 
           {/* Framework → Stage → Tool Info */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
             <Badge variant="outline" className="text-sm px-3 py-1">
               {prompt.context.framework.name}
             </Badge>
@@ -219,95 +224,49 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
             )}
           </div>
 
-          {/* Content Preview */}
-          <div className="bg-muted/50 p-4 rounded text-sm space-y-3 flex-1 flex flex-col min-h-0">
-            <div className="flex items-center gap-3 mb-3">
-              <FileText className="w-4 h-4 text-muted-foreground" />
-              <span className="font-semibold text-muted-foreground">Generated Prompt</span>
-              {hasKnowledgeBase && (
-                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                  + Project Context
-                </span>
-              )}
-            </div>
-            <div className="flex-1">
-              <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed p-2">
-                {formatForChatDisplay(displayPromptContent)}
-              </pre>
-              {hasKnowledgeBase && (
-                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-                  <Database className="w-3 h-3 inline mr-1" />
-                  Full prompt with project knowledge base context available in expanded view
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* AI Output Section */}
-          {latestAIResponse && (
-            <div className="bg-success/10 border border-success/20 p-4 rounded text-sm space-y-3">
-              <div className="flex items-center gap-3 mb-3">
+          {/* AI Output Section - Max Height 400px with Scrollbar */}
+          {latestAIResponse ? (
+            <div className="bg-success/10 border border-success/20 p-4 rounded text-sm space-y-3 flex flex-col max-h-96">
+              <div className="flex items-center gap-3 mb-3 flex-shrink-0">
                 <Bot className="w-4 h-4 text-success" />
                 <span className="font-semibold text-success">AI Response</span>
                 <Badge variant="default" className="text-sm bg-success px-3 py-1">
                   {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
                 </Badge>
               </div>
-              <div className="flex-1">
+              <div className="overflow-y-auto max-h-80">
                 <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-2">
                   {formatForChatDisplay(latestAIResponse)}
                 </pre>
               </div>
             </div>
+          ) : (
+            <div className="bg-muted/20 border border-dashed border-muted-foreground/30 p-4 rounded text-sm flex flex-col justify-center items-center max-h-96">
+              <Bot className="w-8 h-8 text-muted-foreground/50 mb-2" />
+              <span className="text-muted-foreground">No AI response yet</span>
+              <span className="text-xs text-muted-foreground/70 mt-1">Run the prompt to see AI output</span>
+            </div>
           )}
 
           {/* Actions */}
-          <div className="flex flex-col gap-2">
-            {/* Primary action row */}
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleView}
-                className="flex-1 h-8 text-xs"
-                title="View full prompt details"
-              >
-                <Eye className="w-3 h-3 mr-1" />
-                View Details
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCopy}
-                className="h-8 px-3"
-                title="Copy prompt and response"
-              >
-                <Copy className="w-3 h-3 mr-1" />
-                Copy
-              </Button>
-            </div>
-            
-            {/* Secondary action row */}
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExport}
-                className="flex-1 h-8 text-xs"
-                title="Export as file"
-              >
-                <Download className="w-3 h-3 mr-1" />
-                Export
-              </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopy}
+              className="h-8 px-3"
+              title="Copy AI response"
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              Copy
+            </Button>
 
-              <NodeActionsMenu
-                nodeId={id || ''}
-                nodeType="prompt"
-                nodeData={data}
-                position={{ x: 0, y: 0 }}
-              />
-            </div>
+            <NodeActionsMenu
+              nodeId={id || ''}
+              nodeType="prompt"
+              nodeData={data}
+              position={{ x: 0, y: 0 }}
+            />
           </div>
         </div>
       </Card>

@@ -66,9 +66,10 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
         title: 'Project Knowledge Base',
         content: 'Start writing your project knowledge here...',
         type: 'text',
-        isModified: false,
+        isModified: true,
         isEnhancing: false
       });
+      setHasUnsavedChanges(true);
     }
 
     setDocumentSections(sections);
@@ -88,7 +89,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
 
   // Format content for display with proper HTML structure
   const formatContentForDisplay = (content: string): string => {
-    if (!content) return '<p>Start writing...</p>';
+    if (!content) return '<p style="direction: ltr;">Start writing...</p>';
     
     // Clean the content first
     const cleaned = cleanContent(content);
@@ -97,7 +98,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
     const paragraphs = cleaned.split(/\n\s*\n/).filter(p => p.trim());
     
     if (paragraphs.length === 0) {
-      return '<p>Start writing...</p>';
+      return '<p style="direction: ltr;">Start writing...</p>';
     }
     
     return paragraphs.map(paragraph => {
@@ -105,17 +106,17 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
       
       // Check if it's a bullet point
       if (trimmed.match(/^[•·*-]\s/)) {
-        return `<p style="margin-left: 20px; text-indent: -20px;">${trimmed}</p>`;
+        return `<p style="margin-left: 20px; text-indent: -20px; direction: ltr;">${trimmed}</p>`;
       }
       
       // Check if it's a heading (starts with ** or has all caps and is short)
       if (trimmed.match(/^\*\*(.*)\*\*$/) || (trimmed.length < 50 && trimmed === trimmed.toUpperCase() && trimmed.includes(' '))) {
         const headingText = trimmed.replace(/^\*\*(.*)\*\*$/, '$1');
-        return `<h3 style="font-weight: bold; font-size: 18px; margin: 20px 0 10px 0; color: #1f2937;">${headingText}</h3>`;
+        return `<h3 style="font-weight: bold; font-size: 18px; margin: 20px 0 10px 0; color: #1f2937; direction: ltr;">${headingText}</h3>`;
       }
       
       // Regular paragraph
-      return `<p style="margin-bottom: 12px; text-indent: 24px;">${trimmed}</p>`;
+      return `<p style="margin-bottom: 12px; text-indent: 24px; direction: ltr;">${trimmed}</p>`;
     }).join('');
   };
 
@@ -248,6 +249,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
     
     try {
       const modifiedSections = documentSections.filter(section => section.isModified);
+      const { fetchEntries } = useKnowledgeStore.getState();
       
       for (const section of modifiedSections) {
         if (section.originalEntryId) {
@@ -261,6 +263,9 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
           await addTextEntry(projectId, section.title, section.content);
         }
       }
+      
+      // Refresh entries to get the latest data with correct IDs
+      await fetchEntries(projectId);
       
       // Reset modified flags
       setDocumentSections(prev => prev.map(section => ({
@@ -280,6 +285,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
         setTimeout(onDocumentSaved, 500); // Small delay to show the success message
       }
     } catch (error) {
+      console.error('Save error:', error);
       toast({
         title: "Save Failed",
         description: "Failed to save changes to the knowledge base",
@@ -405,6 +411,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
                         value={section.title}
                         onChange={(e) => handleContentChange(section.id, 'title', e.target.value)}
                         className="font-bold text-xl border-none p-0 bg-transparent focus:outline-none focus:bg-transparent w-full mr-4"
+                        dir="ltr"
                         placeholder="Section title..."
                         style={{ 
                           fontFamily: '"Times New Roman", serif',
@@ -412,7 +419,11 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
                           fontWeight: 'bold',
                           lineHeight: '1.3',
                           color: '#1f2937',
-                          marginBottom: '8px'
+                          marginBottom: '8px',
+                          direction: 'ltr !important',
+                          textAlign: 'left !important',
+                          unicodeBidi: 'embed',
+                          writingMode: 'horizontal-tb'
                         }}
                       />
                       
@@ -439,27 +450,27 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
                   <div
                     contentEditable
                     suppressContentEditableWarning
+                    dir="ltr"
                     onInput={(e) => {
                       const content = e.currentTarget.textContent || '';
                       handleContentChange(section.id, 'content', content);
                     }}
                     onMouseUp={handleTextSelection}
                     onKeyUp={handleTextSelection}
-                    onBlur={(e) => {
-                      // Reformat content when user finishes editing
-                      const content = e.currentTarget.textContent || '';
-                      e.currentTarget.innerHTML = formatContentForDisplay(content);
-                    }}
                     className="min-h-[120px] p-0 focus:outline-none bg-transparent text-gray-900 leading-relaxed"
                     style={{ 
                       fontFamily: '"Times New Roman", serif', 
                       fontSize: '16px', 
                       lineHeight: '1.8',
-                      textAlign: 'justify',
+                      textAlign: 'left !important',
+                      direction: 'ltr !important',
+                      unicodeBidi: 'embed',
+                      writingMode: 'horizontal-tb',
                       marginBottom: '24px'
                     }}
-                    dangerouslySetInnerHTML={{ __html: formatContentForDisplay(section.content) }}
-                  />
+                  >
+                    {section.content || 'Start writing...'}
+                  </div>
 
                   {index < documentSections.length - 1 && (
                     <div className="mt-12 mb-8">
