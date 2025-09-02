@@ -394,7 +394,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
 
       // Update local state
-      console.log('✅ Enhanced settings saved to database successfully');
       set(state => ({
         projects: state.projects.map(p => 
           p.id === projectId 

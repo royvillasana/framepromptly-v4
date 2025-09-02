@@ -616,16 +616,6 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
               <p className="text-muted-foreground mt-1">
                 Manage UX methodologies, stages, tools, and AI prompt instructions
               </p>
-              <div className="mt-3 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-blue-900">Enhanced Tool-Specific AI Prompts</span>
-                </div>
-                <p className="text-xs text-blue-800">
-                  Each tool now generates unique, contextual AI prompt instructions based on framework methodology, 
-                  stage objectives, and tool-specific best practices with knowledge base integration.
-                </p>
-              </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -638,6 +628,18 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
                 />
               </div>
             </div>
+          </div>
+
+          {/* Enhanced AI Prompts Banner - Full Width */}
+          <div className="w-full bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-blue-900">Enhanced Tool-Specific AI Prompts</span>
+            </div>
+            <p className="text-xs text-blue-800">
+              Each tool now generates unique, contextual AI prompt instructions based on framework methodology, 
+              stage objectives, and tool-specific best practices with knowledge base integration.
+            </p>
           </div>
 
           {/* Stats */}
@@ -699,7 +701,7 @@ ${enhancedInstructions.slice(22).map(instruction => `• ${instruction}`).join('
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="overview">Framework Overview</TabsTrigger>
               <TabsTrigger value="instructions">Manage Instructions</TabsTrigger>
             </TabsList>

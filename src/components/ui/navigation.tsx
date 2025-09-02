@@ -47,113 +47,119 @@ export function Navigation({ className }: NavigationProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className={cn("flex items-center justify-between w-full p-6 bg-background/80 backdrop-blur-lg border-b border-border relative", className)}
+      className={cn("w-full bg-background/80 backdrop-blur-lg border-b border-border relative", className)}
       style={{ zIndex: 20 }}
     >
-      <div className="flex items-center space-x-8">
-        <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-          <img 
-            src={logoHeader}
-            alt="FramePromptly Logo" 
-            className="h-8 w-auto"
-          />
-          <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            FramePromptly
-          </span>
-        </Link>
-        
-        <div className="hidden md:flex items-center space-x-6">
-          {user ? (
-            // Navigation for logged-in users
-            <>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/frameworks" className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4" />
-                  Frameworks
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/library">Library</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/projects">Projects</Link>
-              </Button>
-            </>
-          ) : (
-            // Navigation for non-logged-in users
-            <>
-              <Button variant="ghost" size="sm">
-                Features
-              </Button>
-              <Button variant="ghost" size="sm">
-                Pricing
-              </Button>
-              <Button variant="ghost" size="sm">
-                About
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-3 items-center">
+          {/* Left: Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <img 
+                src={logoHeader}
+                alt="FramePromptly Logo" 
+                className="h-8 w-auto"
+              />
+              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                FramePromptly
+              </span>
+            </Link>
+          </div>
 
-      <div className="flex items-center space-x-4">
-        {loading ? (
-          <div className="h-9 w-20 bg-muted animate-pulse rounded" />
-        ) : user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <User className="h-4 w-4" />
-                {user.email?.split('@')[0] || 'User'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link to="/profile" className="flex items-center">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/profile" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/metrics" className="flex items-center">
-                  <BarChart className="mr-2 h-4 w-4" />
-                  Metrics
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/aistresstest" className="flex items-center">
-                  <FlaskConical className="mr-2 h-4 w-4" />
-                  AI Stress Test
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/auth">Sign In</Link>
+          {/* Center: Navigation Menu */}
+          <div className="hidden md:flex items-center justify-center space-x-6">
+            {user ? (
+              // Navigation for logged-in users
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/projects">Projects</Link>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/frameworks">
+                    Frameworks
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/library">Library</Link>
+                </Button>
+              </>
+            ) : (
+              // Navigation for non-logged-in users
+              <>
+                <Button variant="ghost" size="sm">
+                  Features
+                </Button>
+                <Button variant="ghost" size="sm">
+                  Pricing
+                </Button>
+                <Button variant="ghost" size="sm">
+                  About
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Right: User Controls */}
+          <div className="flex items-center justify-end space-x-4">
+            {loading ? (
+              <div className="h-9 w-20 bg-muted animate-pulse rounded" />
+            ) : user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <User className="h-4 w-4" />
+                    {user.email?.split('@')[0] || 'User'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/metrics" className="flex items-center">
+                      <BarChart className="mr-2 h-4 w-4" />
+                      Metrics
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/aistresstest" className="flex items-center">
+                      <FlaskConical className="mr-2 h-4 w-4" />
+                      AI Stress Test
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/auth">Sign In</Link>
+                </Button>
+                <GradientButton variant="primary" size="sm" asChild>
+                  <Link to="/auth">Get Started</Link>
+                </GradientButton>
+              </>
+            )}
+            <Button variant="ghost" size="sm" className="md:hidden">
+              <Menu className="w-4 h-4" />
             </Button>
-            <GradientButton variant="primary" size="sm" asChild>
-              <Link to="/auth">Get Started</Link>
-            </GradientButton>
-          </>
-        )}
-        <Button variant="ghost" size="sm" className="md:hidden">
-          <Menu className="w-4 h-4" />
-        </Button>
+          </div>
       </div>
+    </div>
     </motion.nav>
   );
 }

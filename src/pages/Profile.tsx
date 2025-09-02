@@ -170,7 +170,14 @@ export default function Profile() {
         .from('avatars')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // If bucket doesn't exist, skip upload and continue saving profile
+        if (uploadError.message?.includes('Bucket not found')) {
+          console.warn('Avatars bucket not configured yet. Skipping profile picture upload.');
+          return null;
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
@@ -193,7 +200,11 @@ export default function Profile() {
 
       // Upload new profile picture if selected
       if (profilePicture) {
-        avatarUrl = await uploadProfilePicture(profilePicture);
+        const uploadedUrl = await uploadProfilePicture(profilePicture);
+        if (uploadedUrl) {
+          avatarUrl = uploadedUrl;
+        }
+        // If upload fails due to missing bucket, continue without updating avatar_url
       }
 
       // Update user metadata

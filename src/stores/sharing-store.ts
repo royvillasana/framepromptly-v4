@@ -152,7 +152,15 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         .select('*')
         .eq('project_id', projectId);
 
-      if (invitationError) throw invitationError;
+      if (invitationError) {
+        // If project_invitations table doesn't exist, return empty shares
+        if (invitationError.code === 'PGRST205' && invitationError.message?.includes('project_invitations')) {
+          console.warn('Project invitations table not configured yet. Project sharing features are disabled.');
+          set({ shares: [], isLoading: false });
+          return;
+        }
+        throw invitationError;
+      }
 
       // Transform invitations to ProjectShare format
       const shares: ProjectShare[] = (invitations || []).map(invitation => ({
@@ -195,7 +203,15 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         `)
         .eq('project_id', projectId);
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        // If project_members table doesn't exist, return empty members
+        if (memberError.code === 'PGRST205' && memberError.message?.includes('project_members')) {
+          console.warn('Project members table not configured yet. Project sharing features are disabled.');
+          set(state => ({ ...state, members: [] }));
+          return;
+        }
+        throw memberError;
+      }
 
       // Transform to ProjectMember format
       const projectMembers: ProjectMember[] = (members || []).map(member => ({
@@ -288,7 +304,15 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         `)
         .eq('invited_by', user.id);
 
-      if (invitationError) throw invitationError;
+      if (invitationError) {
+        // If project_invitations table doesn't exist, return empty shares
+        if (invitationError.code === 'PGRST205' && invitationError.message?.includes('project_invitations')) {
+          console.warn('Project invitations table not configured yet. Project sharing features are disabled.');
+          set({ shares: [], isLoading: false });
+          return;
+        }
+        throw invitationError;
+      }
 
       // Transform invitations to ProjectShare format
       const shares: ProjectShare[] = (invitations || []).map(invitation => ({
