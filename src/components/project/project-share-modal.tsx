@@ -24,18 +24,21 @@ export function ProjectShareModal({ isOpen, onClose, projectId, projectName, isO
   
   const { 
     shares, 
+    members,
     isLoading, 
     shareProject, 
     updateShareRole, 
     removeShare, 
-    fetchProjectShares 
+    fetchProjectShares,
+    fetchProjectMembers 
   } = useSharingStore();
 
   useEffect(() => {
     if (isOpen && projectId) {
       fetchProjectShares(projectId);
+      fetchProjectMembers(projectId);
     }
-  }, [isOpen, projectId, fetchProjectShares]);
+  }, [isOpen, projectId, fetchProjectShares, fetchProjectMembers]);
 
   const handleShareProject = async () => {
     if (!email.trim()) {
@@ -55,11 +58,11 @@ export function ProjectShareModal({ isOpen, onClose, projectId, projectName, isO
     }
     
     try {
-      await shareProject(projectId, email.trim(), role);
+      await shareProject(projectId, email.trim(), role, projectName);
       setEmail('');
       setRole('viewer');
       
-      toast.success(`Project shared with ${email} as ${role}`);
+      toast.success(`Project shared with ${email} as ${role}. Invitation email sent!`);
     } catch (error) {
       toast.error('Failed to share project');
     }
@@ -158,7 +161,7 @@ export function ProjectShareModal({ isOpen, onClose, projectId, projectName, isO
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-sm">People with access</h3>
-              <Badge variant="secondary">{shares.length + 1} members</Badge>
+              <Badge variant="secondary">{members.length + shares.length} total</Badge>
             </div>
             
             <div className="space-y-2">
@@ -178,28 +181,62 @@ export function ProjectShareModal({ isOpen, onClose, projectId, projectName, isO
                 </div>
               </Card>
 
-              {/* Shared Users */}
-              {shares.map((share) => (
-                <Card key={share.id} className="p-3">
+              {/* Project Members (Accepted) */}
+              {members.filter(member => member.role !== 'owner').map((member) => (
+                <Card key={`member-${member.id}`} className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                        {share.role === 'editor' ? (
-                          <Edit className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                        {member.role === 'editor' ? (
+                          <Edit className="w-4 h-4 text-green-600" />
                         ) : (
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 text-green-600" />
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{share.shared_with_email}</p>
+                        <p className="font-medium text-sm">
+                          {member.user?.full_name || member.user?.email}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          Shared {new Date(share.shared_at).toLocaleDateString()} • {share.status}
+                          Joined {new Date(member.joined_at).toLocaleDateString()} • Active
                         </p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {isOwner && (
+                      <Badge variant={member.role === 'editor' ? 'default' : 'secondary'}>
+                        {member.role}
+                      </Badge>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {/* Pending Invitations */}
+              {shares.map((share) => (
+                <Card key={`invitation-${share.id}`} className="p-3 border-dashed">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                        {share.role === 'editor' ? (
+                          <Edit className="w-4 h-4 text-orange-600" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-orange-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{share.shared_with_email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Invited {new Date(share.shared_at).toLocaleDateString()} • {share.status}
+                          {share.expires_at && (
+                            <> • Expires {new Date(share.expires_at).toLocaleDateString()}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {isOwner && share.status === 'pending' && (
                         <Select
                           value={share.role}
                           onValueChange={(newRole: 'viewer' | 'editor') => handleUpdateRole(share.id, newRole)}
@@ -214,7 +251,7 @@ export function ProjectShareModal({ isOpen, onClose, projectId, projectName, isO
                         </Select>
                       )}
                       
-                      {!isOwner && (
+                      {(!isOwner || share.status !== 'pending') && (
                         <Badge variant={share.role === 'editor' ? 'default' : 'secondary'}>
                           {share.role}
                         </Badge>

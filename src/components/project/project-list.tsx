@@ -112,7 +112,10 @@ export function ProjectList() {
           className="space-y-2"
         >
           <h3 className="text-lg font-semibold">Current Project</h3>
-          <Card className="p-4 border-primary bg-primary/5">
+          <Card 
+            className="p-4 border-primary bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+            onClick={() => handleOpenProject(currentProject)}
+          >
             <div className="flex items-center justify-between">
               <div className="space-y-1 flex-1">
                 <h4 className="font-semibold">{currentProject.name}</h4>
@@ -135,17 +138,34 @@ export function ProjectList() {
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenKnowledgeManager(currentProject)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenProject(currentProject);
+                  }}
                   className="h-8 px-3"
                 >
-                  <Database className="w-3 h-3 mr-1" />
-                  Manage Knowledge
+                  <FolderOpen className="w-3 h-3 mr-1" />
+                  Open Project
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleShareProject(currentProject)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenKnowledgeManager(currentProject);
+                  }}
+                  className="h-8 px-3"
+                >
+                  <Database className="w-3 h-3 mr-1" />
+                  Knowledge
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShareProject(currentProject);
+                  }}
                   className="h-8 w-8 p-0"
                 >
                   <Share className="w-3 h-3" />
@@ -187,10 +207,17 @@ export function ProjectList() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <div className={`
-                flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-md transition-all duration-200
-                ${currentProject?.id === project.id ? 'ring-2 ring-primary bg-blue-50' : 'hover:bg-gray-50'}
-              `}>
+              <div 
+                className={`
+                  flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer
+                  ${currentProject?.id === project.id ? 'ring-2 ring-primary bg-blue-50' : 'hover:bg-gray-50'}
+                `}
+                onClick={() => {
+                  if (currentProject?.id !== project.id) {
+                    handleOpenProject(project);
+                  }
+                }}
+              >
                 {/* Left side - Project info */}
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg flex-shrink-0">
@@ -228,7 +255,10 @@ export function ProjectList() {
                 <div className="flex items-center gap-2 ml-4">
                   <Button
                     size="sm"
-                    onClick={() => handleOpenProject(project)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenProject(project);
+                    }}
                     disabled={currentProject?.id === project.id}
                     className="px-4"
                   >
@@ -239,7 +269,10 @@ export function ProjectList() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleOpenKnowledgeManager(project)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenKnowledgeManager(project);
+                    }}
                     className="px-4"
                   >
                     <Database className="w-4 h-4 mr-2" />
@@ -249,7 +282,10 @@ export function ProjectList() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleShareProject(project)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShareProject(project);
+                    }}
                     className="w-10 h-10 p-0"
                   >
                     <Share className="w-4 h-4" />
@@ -258,7 +294,10 @@ export function ProjectList() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleDeleteProject(project.id, project.name)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteProject(project.id, project.name);
+                    }}
                     className="w-10 h-10 p-0 text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />

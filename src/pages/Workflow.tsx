@@ -199,6 +199,22 @@ function WorkflowWithProject() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="w-80 border-r border-border bg-card flex-shrink-0"
           >
+          {/* Back to Projects Button */}
+          <div className="border-b border-border p-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start"
+              onClick={() => {
+                const { setCurrentProject } = useProjectStore.getState();
+                setCurrentProject(null);
+              }}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Projects
+            </Button>
+          </div>
+          
           {/* Framework Selector Header */}
           <div className="border-b border-border p-4 space-y-4">
             <div className="flex items-center justify-between">

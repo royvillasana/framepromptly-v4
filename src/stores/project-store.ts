@@ -372,8 +372,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         .eq('id', projectId);
 
       if (error) {
-        // If column doesn't exist yet, gracefully handle it
-        console.warn('Enhanced settings column may not exist yet:', error);
+        // If column doesn't exist yet, store in localStorage as fallback
+        if (error.code === 'PGRST204' && error.message.includes("enhanced_settings")) {
+          console.warn('Enhanced settings column not found, using localStorage fallback');
+          localStorage.setItem(`enhanced_settings_${projectId}`, JSON.stringify(settings));
+          
+          // Update local state only
+          set(state => ({
+            projects: state.projects.map(p => 
+              p.id === projectId 
+                ? { ...p, enhanced_settings: settings }
+                : p
+            ),
+            currentProject: state.currentProject?.id === projectId 
+              ? { ...state.currentProject, enhanced_settings: settings }
+              : state.currentProject
+          }));
+          return;
+        }
         throw error;
       }
 
@@ -398,7 +414,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   getEnhancedSettings: (projectId: string) => {
     const state = get();
     const project = state.projects.find(p => p.id === projectId) || state.currentProject;
-    return project?.enhanced_settings || null;
+    
+    // First try to get from project data
+    if (project?.enhanced_settings) {
+      return project.enhanced_settings;
+    }
+    
+    // Fallback to localStorage if database column doesn't exist yet
+    try {
+      const stored = localStorage.getItem(`enhanced_settings_${projectId}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
   },
 
   clearError: () => set({ error: null })

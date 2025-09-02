@@ -19,6 +19,8 @@ import TestInstructions from "./pages/TestInstructions";
 import ToolPromptDemo from "./pages/ToolPromptDemo";
 import AIStressTest from "./pages/AIStressTest";
 import Board from "./pages/Board";
+import Profile from "./pages/Profile";
+import Invitation from "./pages/Invitation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +64,8 @@ const App = () => {
           <Route path="/tool-prompt-demo" element={<ToolPromptDemo />} />
           <Route path="/aistresstest" element={<AIStressTest />} />
           <Route path="/board" element={<Board />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/invitation" element={<Invitation />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

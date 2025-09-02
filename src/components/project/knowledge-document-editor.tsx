@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,85 @@ import {
   AlignLeft, AlignCenter, AlignRight, Plus, Upload, Trash2,
   Wand2, Loader2, CheckCircle, AlertCircle
 } from 'lucide-react';
+
+// Content editable component that preserves natural text direction
+interface ContentEditableDivProps {
+  initialContent: string;
+  placeholder: string;
+  onContentChange: (content: string) => void;
+  onTextSelection: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
+  initialContent,
+  placeholder,
+  onContentChange,
+  onTextSelection,
+  className,
+  style
+}) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const lastContentRef = useRef<string>('');
+
+  // Set initial content
+  useEffect(() => {
+    if (divRef.current && initialContent !== lastContentRef.current) {
+      const selection = window.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+      const cursorPosition = range ? range.startOffset : 0;
+      
+      divRef.current.textContent = initialContent || '';
+      lastContentRef.current = initialContent || '';
+      
+      // Restore cursor position if content was updated programmatically
+      if (range && divRef.current.firstChild) {
+        try {
+          const newRange = document.createRange();
+          const textNode = divRef.current.firstChild;
+          const maxOffset = textNode.textContent?.length || 0;
+          newRange.setStart(textNode, Math.min(cursorPosition, maxOffset));
+          newRange.setEnd(textNode, Math.min(cursorPosition, maxOffset));
+          selection?.removeAllRanges();
+          selection?.addRange(newRange);
+        } catch (e) {
+          // Ignore range errors
+        }
+      }
+    }
+  }, [initialContent]);
+
+  const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    const content = e.currentTarget.textContent || '';
+    
+    // Only update if content actually changed
+    if (content !== lastContentRef.current) {
+      lastContentRef.current = content;
+      onContentChange(content);
+    }
+  }, [onContentChange]);
+
+  return (
+    <div
+      ref={divRef}
+      contentEditable
+      suppressContentEditableWarning
+      dir="ltr"
+      onInput={handleInput}
+      onMouseUp={onTextSelection}
+      onKeyUp={onTextSelection}
+      className={className}
+      style={{
+        ...style,
+        textAlign: 'left',
+        direction: 'ltr',
+        unicodeBidi: 'plaintext'
+      }}
+      placeholder={placeholder}
+    />
+  );
+};
 
 interface KnowledgeDocumentEditorProps {
   projectId: string;
@@ -62,7 +141,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
     // Add empty section if no entries exist
     if (sections.length === 0) {
       sections.push({
-        id: 'new-section-1',
+        id: 'new-1',
         title: 'Project Knowledge Base',
         content: 'Start writing your project knowledge here...',
         type: 'text',
@@ -146,7 +225,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
   // Add new section
   const addNewSection = () => {
     const newSection: DocumentSection = {
-      id: `new-section-${Date.now()}`,
+      id: `new-${Date.now()}`,
       title: 'New Section',
       content: 'Enter your content here...',
       type: 'text',
@@ -252,14 +331,14 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
       const { fetchEntries } = useKnowledgeStore.getState();
       
       for (const section of modifiedSections) {
-        if (section.originalEntryId) {
+        if (section.originalEntryId && !section.id.startsWith('new-')) {
           // Update existing entry
           await updateEntry(section.originalEntryId, {
             title: section.title,
             content: section.content
           });
         } else {
-          // Create new entry
+          // Create new entry (for sections with temporary IDs)
           await addTextEntry(projectId, section.title, section.content);
         }
       }
@@ -267,12 +346,7 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
       // Refresh entries to get the latest data with correct IDs
       await fetchEntries(projectId);
       
-      // Reset modified flags
-      setDocumentSections(prev => prev.map(section => ({
-        ...section,
-        isModified: false
-      })));
-      
+      // Reset modified flags - this will rebuild the sections from fresh data
       setHasUnsavedChanges(false);
       
       toast({
@@ -447,30 +521,24 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
                   </div>
 
                   {/* Section Content */}
-                  <div
-                    contentEditable
-                    suppressContentEditableWarning
-                    dir="ltr"
-                    onInput={(e) => {
-                      const content = e.currentTarget.textContent || '';
-                      handleContentChange(section.id, 'content', content);
-                    }}
-                    onMouseUp={handleTextSelection}
-                    onKeyUp={handleTextSelection}
+                  <ContentEditableDiv
+                    key={section.id}
+                    initialContent={section.content || ''}
+                    placeholder="Start writing..."
+                    onContentChange={(content) => handleContentChange(section.id, 'content', content)}
+                    onTextSelection={handleTextSelection}
                     className="min-h-[120px] p-0 focus:outline-none bg-transparent text-gray-900 leading-relaxed"
                     style={{ 
                       fontFamily: '"Times New Roman", serif', 
                       fontSize: '16px', 
                       lineHeight: '1.8',
-                      textAlign: 'left !important',
-                      direction: 'ltr !important',
+                      textAlign: 'left',
+                      direction: 'ltr',
                       unicodeBidi: 'embed',
                       writingMode: 'horizontal-tb',
                       marginBottom: '24px'
                     }}
-                  >
-                    {section.content || 'Start writing...'}
-                  </div>
+                  />
 
                   {index < documentSections.length - 1 && (
                     <div className="mt-12 mb-8">

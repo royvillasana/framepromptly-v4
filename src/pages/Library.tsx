@@ -384,7 +384,7 @@ export default function Library() {
               </Button>
             </div>
             <p className="text-muted-foreground">
-              Manage and reuse your saved prompts across different projects and workflows.
+              Manage and reuse your saved prompts across different projects and workflows. View as detailed list with all prompt information.
             </p>
           </div>
 
@@ -448,7 +448,7 @@ export default function Library() {
             </div>
           </Card>
 
-          {/* Prompts Grid */}
+          {/* Prompts List */}
           <div className="flex-1 overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center h-full">
@@ -471,22 +471,34 @@ export default function Library() {
                 </div>
               </div>
             ) : (
-              <ScrollArea className="h-full w-full">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-6 px-1">
-                  {filteredPrompts.map((prompt) => (
-                    <motion.div
-                      key={prompt.id}
-                      initial={{ scale: 0.95, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Card 
-                        className="p-4 hover:shadow-lg transition-shadow cursor-pointer group"
+              <Card className="flex-1 overflow-hidden">
+                <div className="border-b bg-muted/50 px-6 py-3">
+                  <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground">
+                    <div className="col-span-4">Title & Description</div>
+                    <div className="col-span-2">Framework</div>
+                    <div className="col-span-2">Stage</div>
+                    <div className="col-span-2">Tool</div>
+                    <div className="col-span-1">Created</div>
+                    <div className="col-span-1 text-right">Actions</div>
+                  </div>
+                </div>
+                
+                <ScrollArea className="flex-1">
+                  <div className="divide-y">
+                    {filteredPrompts.map((prompt) => (
+                      <motion.div
+                        key={prompt.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="px-6 py-4 hover:bg-muted/30 cursor-pointer group transition-colors"
                         onClick={() => handleExpandPrompt(prompt)}
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1 min-w-0">
+                        <div className="grid grid-cols-12 gap-4 items-start">
+                          {/* Title & Description */}
+                          <div className="col-span-4">
                             <div className="flex items-center gap-2 mb-1">
+                              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
                               <h3 className="font-semibold text-sm truncate">
                                 {prompt.title}
                               </h3>
@@ -496,92 +508,101 @@ export default function Library() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
+                            <p className="text-xs text-muted-foreground line-clamp-2 ml-6">
                               {prompt.description}
                             </p>
+                            <div className="mt-2 ml-6">
+                              <p className="text-xs text-muted-foreground line-clamp-1 font-mono bg-muted/50 px-2 py-1 rounded">
+                                {prompt.content}
+                              </p>
+                            </div>
+                            {/* Variables */}
+                            {prompt.variables.length > 0 && (
+                              <div className="mt-2 ml-6">
+                                <div className="flex flex-wrap gap-1">
+                                  {prompt.variables.slice(0, 2).map((variable) => (
+                                    <Badge key={variable} variant="outline" className="text-xs">
+                                      {variable}
+                                    </Badge>
+                                  ))}
+                                  {prompt.variables.length > 2 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{prompt.variables.length - 2} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <Sparkles className="w-4 h-4 text-primary flex-shrink-0 ml-2" />
-                        </div>
-
-                        {/* Framework, Stage, Tool badges */}
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          <Badge variant="outline" className="text-xs">
-                            {prompt.framework}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {prompt.stage}
-                          </Badge>
-                          <Badge variant="default" className="text-xs">
-                            {prompt.tool}
-                          </Badge>
-                        </div>
-
-                        {/* Content preview */}
-                        <div className="mb-3">
-                          <p className="text-xs text-muted-foreground line-clamp-3 font-mono bg-muted/50 p-2 rounded">
-                            {prompt.content}
-                          </p>
-                        </div>
-
-                        {/* Variables */}
-                        {prompt.variables.length > 0 && (
-                          <div className="mb-3">
-                            <p className="text-xs font-medium mb-1">Variables:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {prompt.variables.slice(0, 3).map((variable) => (
-                                <Badge key={variable} variant="outline" className="text-xs">
-                                  {variable}
-                                </Badge>
-                              ))}
-                              {prompt.variables.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{prompt.variables.length - 3} more
-                                </Badge>
-                              )}
+                          
+                          {/* Framework */}
+                          <div className="col-span-2">
+                            <Badge variant="outline" className="text-xs">
+                              {prompt.framework}
+                            </Badge>
+                          </div>
+                          
+                          {/* Stage */}
+                          <div className="col-span-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {prompt.stage}
+                            </Badge>
+                          </div>
+                          
+                          {/* Tool */}
+                          <div className="col-span-2">
+                            <Badge variant="default" className="text-xs">
+                              {prompt.tool}
+                            </Badge>
+                          </div>
+                          
+                          {/* Created Date */}
+                          <div className="col-span-1">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(prompt.created_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="col-span-1 flex justify-end">
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyPrompt(prompt);
+                                }}
+                                className="h-8 w-8 p-0"
+                                title="Copy prompt"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                              
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePrompt(prompt.id);
+                                }}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                title="Delete prompt"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             </div>
                           </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex items-center justify-between pt-3 border-t opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(prompt.created_at).toLocaleDateString()}
-                          </span>
-                          
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopyPrompt(prompt);
-                              }}
-                              className="h-8 w-8 p-0"
-                              title="Copy prompt"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                            
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeletePrompt(prompt.id);
-                              }}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              title="Delete prompt"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
                         </div>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-                <ScrollBar orientation="vertical" className="w-3 border-l border-l-transparent p-[2px]" />
-              </ScrollArea>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="vertical" className="w-3 border-l border-l-transparent p-[2px]" />
+                </ScrollArea>
+              </Card>
             )}
           </div>
         </motion.div>

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { cn } from "@/lib/utils";
-import { Zap, Menu, User, LogOut, BarChart, BookOpen } from "lucide-react";
+import { Zap, Menu, User, LogOut, BarChart, BookOpen, Settings, FlaskConical } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,9 +67,6 @@ export function Navigation({ className }: NavigationProps) {
             // Navigation for logged-in users
             <>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/workflow">Workflows</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
                 <Link to="/frameworks" className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4" />
                   Frameworks
@@ -80,12 +77,6 @@ export function Navigation({ className }: NavigationProps) {
               </Button>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/projects">Projects</Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/metrics" className="flex items-center gap-2">
-                  <BarChart className="w-4 h-4" />
-                  Metrics
-                </Link>
               </Button>
             </>
           ) : (
@@ -117,11 +108,30 @@ export function Navigation({ className }: NavigationProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                Profile
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                Settings
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/metrics" className="flex items-center">
+                  <BarChart className="mr-2 h-4 w-4" />
+                  Metrics
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/aistresstest" className="flex items-center">
+                  <FlaskConical className="mr-2 h-4 w-4" />
+                  AI Stress Test
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>
