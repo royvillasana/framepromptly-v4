@@ -189,7 +189,19 @@ function ExpandedPromptOverlayComponent({
 
   // Function to save conversation to database (memoized to prevent infinite loops)
   const saveConversationToDatabase = useCallback(async (messages: ConversationMessage[]) => {
-    if (!messages.length || !prompt.id) return;
+    if (!messages.length || !prompt.id) {
+      console.log('💾 Skipping conversation save: no messages or prompt ID', {
+        messagesLength: messages.length,
+        promptId: prompt.id
+      });
+      return;
+    }
+    
+    console.log('💾 Saving conversation to database:', {
+      promptId: prompt.id,
+      messagesCount: messages.length,
+      messageTypes: messages.map(m => m.type)
+    });
     
     try {
       // Convert messages to serializable format for database storage
@@ -200,25 +212,44 @@ function ExpandedPromptOverlayComponent({
         timestamp: msg.timestamp.toISOString()
       }));
 
-      // Store conversation in ai_response field as JSON for now (until migration is applied)
-      const conversationJson = JSON.stringify({
-        type: 'conversation',
-        messages: conversationData
-      });
+      console.log('💾 Conversation data to save:', conversationData.length, 'messages');
 
+      // Update to use the new conversation_history field instead of ai_response
       const { error } = await supabase
         .from('prompts')
         .update({ 
-          ai_response: conversationJson,
+          conversation_history: conversationData,
           updated_at: new Date().toISOString()
         })
         .eq('id', prompt.id);
 
       if (error) {
-        console.error('Error saving conversation to database:', error);
+        console.error('💾 Error saving conversation to database:', error);
+        // Fallback to old method if conversation_history field doesn't exist
+        console.log('💾 Trying fallback save to ai_response field...');
+        const conversationJson = JSON.stringify({
+          type: 'conversation',
+          messages: conversationData
+        });
+
+        const { error: fallbackError } = await supabase
+          .from('prompts')
+          .update({ 
+            ai_response: conversationJson,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', prompt.id);
+
+        if (fallbackError) {
+          console.error('💾 Fallback save also failed:', fallbackError);
+        } else {
+          console.log('💾 Fallback save successful');
+        }
+      } else {
+        console.log('💾 Conversation saved successfully to conversation_history field');
       }
     } catch (error) {
-      console.error('Failed to save conversation:', error);
+      console.error('💾 Failed to save conversation:', error);
     }
   }, [prompt.id]);
 
@@ -473,9 +504,17 @@ function ExpandedPromptOverlayComponent({
 
   // Sync conversation messages with the store and update active version (optimized)
   useEffect(() => {
+    console.log('💬 Conversation effect triggered:', {
+      currentLength: conversationMessages.length,
+      lastLength: lastConversationLengthRef.current,
+      promptId: prompt.id,
+      hasMessages: conversationMessages.length > 0
+    });
+    
     // Only update if conversation has actually changed
     if (lastConversationLengthRef.current !== conversationMessages.length || 
         conversationMessages.length === 0) {
+      console.log('💬 Conversation changed, updating store and saving...');
       lastConversationLengthRef.current = conversationMessages.length;
       
       updatePromptConversation(prompt.id, conversationMessages);
@@ -491,12 +530,18 @@ function ExpandedPromptOverlayComponent({
       
       // Debounce database saves to prevent excessive calls
       if (conversationMessages.length > 0 && prompt.id) {
+        console.log('💬 Setting up database save timer for', conversationMessages.length, 'messages');
         const saveTimer = setTimeout(() => {
+          console.log('💬 Timer triggered, calling saveConversationToDatabase');
           saveConversationToDatabase(conversationMessages);
         }, 1000); // Wait 1 second before saving
         
         return () => clearTimeout(saveTimer);
+      } else {
+        console.log('💬 Skipping database save: no messages or prompt ID');
       }
+    } else {
+      console.log('💬 No conversation changes detected, skipping save');
     }
   }, [conversationMessages, prompt.id, updatePromptConversation, saveConversationToDatabase]);
 
@@ -720,7 +765,7 @@ function ExpandedPromptOverlayComponent({
     const userMessage: ConversationMessage = {
       id: `prompt-execution-${Date.now()}`,
       type: 'user',
-      content: promptContent,
+      content: promptContent, // Show the full prompt content that will be executed
       timestamp: new Date()
     };
     
@@ -739,19 +784,20 @@ function ExpandedPromptOverlayComponent({
     setConversationMessages(prev => [...prev, typingIndicator]);
     
     try {
-      // Call the AI conversation function with the generated prompt
+      // Call the AI conversation function with the AI-generated content as a completely new prompt
       const { data, error } = await supabase.functions.invoke('ai-conversation', {
         body: {
-          userMessage: promptContent,
-          initialPrompt: currentPromptContent,
-          conversationHistory: conversationMessages.filter(msg => msg.id !== 'initial'),
+          userMessage: promptContent, // Use the AI-generated content as the new user prompt
+          initialPrompt: "", // No initial prompt context - treat this as a brand new conversation
+          conversationHistory: [], // Completely fresh start
           projectId: currentProject?.id,
           knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
           frameworkContext: {
             framework: prompt.context.framework.name,
             stage: prompt.context.stage.name,
             tool: prompt.context.tool.name
-          }
+          },
+          executeAsNewPrompt: true // Flag to indicate this should be treated as executing a new prompt
         }
       });
 
@@ -766,22 +812,23 @@ function ExpandedPromptOverlayComponent({
       // Remove typing indicator
       setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
       
-      // Create single AI response message
+      // Create AI response message with the full response (no cropping)
       const aiMessage: ConversationMessage = {
-        id: `ai-response-${Date.now()}`,
+        id: `ai-execution-response-${Date.now()}`,
         type: 'ai',
-        content: data.response,
+        content: data.response, // Full AI response without any cropping
         timestamp: new Date()
       };
       
       setConversationMessages(prev => [...prev, aiMessage]);
       
       console.log('💬 Prompt Execution Response:', {
-        length: data.response.length
+        originalPromptLength: promptContent.length,
+        responseLength: data.response.length
       });
       
       toast.success('Prompt executed successfully!', {
-        description: 'AI has responded to your prompt'
+        description: 'AI has executed the prompt and provided a new response'
       });
       
     } catch (error) {

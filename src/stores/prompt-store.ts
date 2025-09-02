@@ -768,11 +768,22 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         let conversation: ConversationMessage[] | undefined;
         let aiResponse = dbPrompt.ai_response;
 
-        // Handle conversation data stored in ai_response field (temporary workaround)
-        if (dbPrompt.ai_response && typeof dbPrompt.ai_response === 'string') {
+        // Handle conversation_history field (primary method)
+        if (dbPrompt.conversation_history && Array.isArray(dbPrompt.conversation_history)) {
+          console.log('📥 Loading conversation from conversation_history field:', dbPrompt.conversation_history.length, 'messages');
+          conversation = (dbPrompt.conversation_history as any[]).map(msg => ({
+            id: msg.id,
+            type: msg.type,
+            content: msg.content,
+            timestamp: new Date(msg.timestamp)
+          }));
+        }
+        // Fallback: Handle conversation data stored in ai_response field (legacy support)
+        else if (dbPrompt.ai_response && typeof dbPrompt.ai_response === 'string') {
           try {
             const parsedResponse = JSON.parse(dbPrompt.ai_response);
             if (parsedResponse.type === 'conversation' && Array.isArray(parsedResponse.messages)) {
+              console.log('📥 Loading conversation from ai_response field (fallback):', parsedResponse.messages.length, 'messages');
               conversation = parsedResponse.messages.map((msg: any) => ({
                 id: msg.id,
                 type: msg.type,
@@ -785,16 +796,6 @@ export const usePromptStore = create<PromptState>((set, get) => ({
             // If parsing fails, treat as regular ai_response
             aiResponse = dbPrompt.ai_response;
           }
-        }
-
-        // Handle conversation_history field (future migration)
-        if (dbPrompt.conversation_history && Array.isArray(dbPrompt.conversation_history)) {
-          conversation = (dbPrompt.conversation_history as any[]).map(msg => ({
-            id: msg.id,
-            type: msg.type,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp)
-          }));
         }
 
         return {

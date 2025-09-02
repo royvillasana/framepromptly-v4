@@ -19,14 +19,16 @@ serve(async (req) => {
       initialPrompt,
       conversationHistory,
       projectId,
-      knowledgeContext
+      knowledgeContext,
+      executeAsNewPrompt
     } = await req.json();
 
     console.log('AI Conversation request:', { 
       projectId, 
       hasInitialPrompt: !!initialPrompt,
       hasKnowledge: !!knowledgeContext?.length,
-      conversationLength: conversationHistory?.length || 0
+      conversationLength: conversationHistory?.length || 0,
+      executeAsNewPrompt: !!executeAsNewPrompt
     });
 
     // Check if this is a stress test request (allow anonymous access)
@@ -99,7 +101,19 @@ serve(async (req) => {
     const messages = [
       {
         role: 'system',
-        content: `You are a professional UX methodology expert and AI assistant helping with design and workflow optimization. Generate comprehensive, practical responses for UX practitioners.
+        content: executeAsNewPrompt ? 
+          `You are a helpful AI assistant. The user is giving you a prompt/instruction that they want you to execute and respond to. This is NOT just a description - they want you to actually perform the task, answer the questions, or follow the instructions contained in their message.
+
+IMPORTANT: 
+- If they provide a task list, complete each task
+- If they ask questions, answer them specifically 
+- If they give you a scenario to analyze, provide the analysis
+- If they want you to create something, create it
+- If they want you to explain something, provide the explanation
+- Do NOT just repeat or restate their prompt - actually do what they're asking for
+
+${contextString ? `KNOWLEDGE BASE CONTEXT:\n${contextString}\n\n` : ''}Execute their request and provide the actual deliverable they're asking for.` :
+          `You are a professional UX methodology expert and AI assistant helping with design and workflow optimization. Generate comprehensive, practical responses for UX practitioners.
 
 Your response should be:
 - Professional and actionable
@@ -124,9 +138,20 @@ ${initialPrompt ? `INITIAL PROMPT CONTEXT:\n${initialPrompt}\n\n` : ''}${context
     }
 
     // Add current user message
+    const finalUserMessage = executeAsNewPrompt 
+      ? `Please execute the following prompt/instruction and provide the actual results:\n\n${userMessage}`
+      : userMessage;
+      
     messages.push({
       role: 'user',
-      content: userMessage
+      content: finalUserMessage
+    });
+
+    console.log('Final messages being sent to OpenAI:', {
+      systemPromptLength: messages[0].content.length,
+      userMessageLength: finalUserMessage.length,
+      executeAsNewPrompt,
+      totalMessages: messages.length
     });
 
     // Generate AI response using OpenAI with model fallback
