@@ -74,6 +74,7 @@ export interface WorkflowState {
   updateNode: (id: string, data: any) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
   updateNodeDimensions: (id: string, dimensions: { width: number; height: number }) => void;
+  addKnowledgeDocumentNode: (knowledgeEntry: any, position?: { x: number; y: number }) => void;
   saveWorkflowToStorage: () => void;
   loadWorkflowFromStorage: () => void;
   updateNodeCustomization: (nodeId: string, customization: Partial<NodeCustomization>) => void;
@@ -185,6 +186,55 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       
       return { nodes: updatedNodes };
     });
+  },
+
+  addKnowledgeDocumentNode: (knowledgeEntry, position) => {
+    const state = get();
+    
+    // Generate unique node ID
+    const nodeId = `knowledge-document-${knowledgeEntry.id}-${Date.now()}`;
+    
+    // Calculate smart position if none provided
+    const defaultPosition = position || (() => {
+      // Position knowledge nodes to the left of tool nodes
+      const toolNodes = state.nodes.filter(node => node.type === 'tool');
+      if (toolNodes.length > 0) {
+        // Find leftmost tool node and position knowledge node to its left
+        const leftmostTool = toolNodes.reduce((leftmost, current) => 
+          current.position.x < leftmost.position.x ? current : leftmost
+        );
+        return {
+          x: leftmostTool.position.x - 400, // Position 400px to the left
+          y: leftmostTool.position.y + (Math.random() - 0.5) * 200 // Slight vertical offset
+        };
+      }
+      
+      // Default position if no tool nodes exist
+      const existingKnowledgeNodes = state.nodes.filter(node => node.type === 'knowledge-document');
+      return {
+        x: 100,
+        y: 100 + existingKnowledgeNodes.length * 150
+      };
+    })();
+
+    const knowledgeNode = {
+      id: nodeId,
+      type: 'knowledge-document',
+      position: defaultPosition,
+      data: {
+        knowledgeEntry,
+        size: 'preview', // Default size
+        connectedTools: [],
+        isEditing: false
+      },
+      draggable: true,
+      selectable: true
+    };
+
+    // Add the node
+    state.addNode(knowledgeNode);
+    
+    console.log('Added knowledge document node:', nodeId, knowledgeEntry.title);
   },
 
   saveWorkflowToStorage: () => {

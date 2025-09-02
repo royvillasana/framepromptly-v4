@@ -24,6 +24,7 @@ import { ToolNode } from './tool-node';
 import { PromptNode } from './prompt-node';
 import { ProjectNode } from './project-node';
 import { ContextNode } from './context-node';
+import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { motion } from 'framer-motion';
 
@@ -31,9 +32,32 @@ import { motion } from 'framer-motion';
 const staticNodeTypes = {
   stage: StageNode,
   framework: FrameworkNode,
+  tool: ToolNode,
   prompt: PromptNode,
   project: ProjectNode,
   context: ContextNode,
+  'knowledge-document': KnowledgeDocumentNode,
+};
+
+// Connection validation function
+const isValidConnection = (connection: Connection, nodes: Node[]) => {
+  const sourceNode = nodes.find(n => n.id === connection.source);
+  const targetNode = nodes.find(n => n.id === connection.target);
+  
+  if (!sourceNode || !targetNode) return false;
+  
+  // Knowledge documents can only connect TO tools
+  if (sourceNode.type === 'knowledge-document') {
+    return targetNode.type === 'tool';
+  }
+  
+  // Prevent tools from connecting to knowledge documents
+  if (targetNode.type === 'knowledge-document') {
+    return false;
+  }
+  
+  // Allow all other connection types (existing workflow logic)
+  return true;
 };
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
@@ -113,15 +137,34 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         return;
       }
 
+      // Validate the connection
+      if (!isValidConnection(params, flowNodes)) {
+        console.log('Connection rejected - invalid node types:', params);
+        return;
+      }
+
       // Create unique edge ID with timestamp to avoid duplicates
       const edgeId = `edge-${params.source}-${params.target}-${Date.now()}`;
+      
+      // Get source and target nodes to determine edge styling
+      const sourceNode = flowNodes.find(n => n.id === params.source);
+      const targetNode = flowNodes.find(n => n.id === params.target);
+      
+      // Special styling for knowledge-to-tool connections
+      const isKnowledgeToTool = sourceNode?.type === 'knowledge-document' && targetNode?.type === 'tool';
       
       const newEdge = {
         ...params,
         id: edgeId,
         type: 'smoothstep',
         animated: true,
-        style: { stroke: 'white', strokeWidth: 2 },
+        style: isKnowledgeToTool 
+          ? { stroke: '#f59e0b', strokeWidth: 3, strokeDasharray: '5,5' } // Amber dashed line
+          : { stroke: 'white', strokeWidth: 2 },
+        label: isKnowledgeToTool ? 'Knowledge' : undefined,
+        labelStyle: isKnowledgeToTool 
+          ? { fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' } 
+          : undefined,
       } as Edge;
       
       console.log('Creating new edge:', {
@@ -135,7 +178,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       setFlowEdges((eds) => addEdge(newEdge, eds));
       addStoreEdge(newEdge);
     },
-    [setFlowEdges, addStoreEdge]
+    [setFlowEdges, addStoreEdge, flowNodes]
   );
 
   const onNodesChangeHandler = useCallback(

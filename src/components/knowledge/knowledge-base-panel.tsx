@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
 import { useProjectStore } from '@/stores/project-store';
+import { useWorkflowStore } from '@/stores/workflow-store';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Upload, FileText, Image, Trash2, Edit3 } from 'lucide-react';
+import { Plus, Upload, FileText, Image, Trash2, Edit3, MousePointer2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { Label } from '@/components/ui/label';
 export const KnowledgeBasePanel = () => {
   const { toast } = useToast();
   const { currentProject } = useProjectStore();
+  const { addKnowledgeDocumentNode } = useWorkflowStore();
   const { 
     entries, 
     isLoading, 
@@ -119,6 +121,23 @@ export const KnowledgeBasePanel = () => {
       });
     } catch (error) {
       console.error('Error updating entry:', error);
+    }
+  };
+
+  const handleAddToCanvas = (entry: any) => {
+    try {
+      addKnowledgeDocumentNode(entry);
+      toast({
+        title: "Success",
+        description: `${entry.title} added to workflow canvas`
+      });
+    } catch (error) {
+      console.error('Error adding knowledge to canvas:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add knowledge document to canvas",
+        variant: "destructive"
+      });
     }
   };
 
@@ -301,6 +320,15 @@ export const KnowledgeBasePanel = () => {
                 
                 {/* Action Buttons Section */}
                 <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleAddToCanvas(entry)}
+                    className="text-xs bg-blue-600 hover:bg-blue-700"
+                  >
+                    <MousePointer2 className="h-3 w-3 mr-1" />
+                    Add to Canvas
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"

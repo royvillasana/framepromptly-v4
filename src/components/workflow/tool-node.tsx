@@ -39,7 +39,7 @@ interface ToolNodeProps {
 
 export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
   const { generatePrompt, setCurrentPrompt, getEnhancedTemplate, generateEnhancedPrompt } = usePromptStore();
-  const { addNode, addEdge, nodes, updateNode } = useWorkflowStore();
+  const { addNode, addEdge, nodes, edges, updateNode } = useWorkflowStore();
   const { currentProject, getEnhancedSettings } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
   const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab } = data;
@@ -91,8 +91,29 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       return;
     }
 
-    // Check if tool has linked knowledge
-    if (linkedKnowledge.length === 0) {
+    // Get knowledge from both linked entries AND connected knowledge document nodes
+    const currentEdges = useWorkflowStore.getState().edges;
+    const connectedKnowledgeNodes = currentEdges
+      .filter(edge => edge.target === id && edge.source.startsWith('knowledge-document-'))
+      .map(edge => {
+        const sourceNode = nodes.find(node => node.id === edge.source);
+        return sourceNode?.data?.knowledgeEntry;
+      })
+      .filter(Boolean);
+
+    const allLinkedKnowledge = [...linkedKnowledge];
+    const allKnowledgeEntries = [...entries.filter(entry => linkedKnowledge.includes(entry.id))];
+
+    // Add knowledge from connected canvas nodes
+    connectedKnowledgeNodes.forEach(knowledgeEntry => {
+      if (knowledgeEntry && !allLinkedKnowledge.includes(knowledgeEntry.id)) {
+        allLinkedKnowledge.push(knowledgeEntry.id);
+        allKnowledgeEntries.push(knowledgeEntry);
+      }
+    });
+
+    // Check if tool has any linked knowledge (traditional or canvas-connected)
+    if (allLinkedKnowledge.length === 0) {
       // Check if project has any knowledge entries
       if (entries.length === 0) {
         // No knowledge in project - fetch first to be sure
@@ -119,9 +140,8 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       // Step 3: Generating Prompt
       setCurrentStep(3);
       
-      // Get linked knowledge content
-      const knowledgeContext = entries
-        .filter(entry => linkedKnowledge.includes(entry.id))
+      // Get linked knowledge content from all sources
+      const knowledgeContext = allKnowledgeEntries
         .map(entry => `${entry.title}: ${entry.content}`)
         .join('\n\n');
 
@@ -158,14 +178,15 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       // Step 4: Executing AI Request
       setCurrentStep(4);
       
-      const knowledgeData = entries
-        .filter(entry => linkedKnowledge.includes(entry.id))
+      const knowledgeData = allKnowledgeEntries
         .map(entry => ({ id: entry.id, title: entry.title, content: entry.content }));
       
       console.log('Knowledge Base Integration Debug:', {
         totalEntries: entries.length,
-        linkedKnowledgeIds: linkedKnowledge,
-        filteredKnowledgeCount: knowledgeData.length,
+        traditionalLinkedKnowledgeIds: linkedKnowledge,
+        connectedCanvasNodesCount: connectedKnowledgeNodes.length,
+        allLinkedKnowledgeIds: allLinkedKnowledge,
+        finalKnowledgeCount: knowledgeData.length,
         knowledgeData: knowledgeData.map(k => ({ 
           id: k.id, 
           title: k.title, 
@@ -442,21 +463,34 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           {/* Knowledge Status */}
           <div className="flex-1 flex flex-col min-h-0 mb-3">
             <div className="flex items-center gap-2 flex-shrink-0 mb-2">
-              {linkedKnowledge.length > 0 ? (
-                <>
-                  <BookOpen className="w-3 h-3" style={{ color: colors.text.secondary }} />
-                  <span className="text-xs" style={{ color: colors.text.light }}>
-                    {linkedKnowledge.length} knowledge {linkedKnowledge.length === 1 ? 'entry' : 'entries'} linked
-                  </span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-3 h-3 text-orange-500" />
-                  <span className="text-xs text-orange-500">
-                    No knowledge linked - will prompt to add
-                  </span>
-                </>
-              )}
+              {(() => {
+                // Calculate total knowledge including canvas connections
+                const connectedKnowledgeCount = edges.filter(edge => 
+                  edge.target === id && edge.source.startsWith('knowledge-document-')
+                ).length;
+                const totalKnowledge = linkedKnowledge.length + connectedKnowledgeCount;
+                
+                return totalKnowledge > 0 ? (
+                  <>
+                    <BookOpen className="w-3 h-3" style={{ color: colors.text.secondary }} />
+                    <span className="text-xs" style={{ color: colors.text.light }}>
+                      {totalKnowledge} knowledge {totalKnowledge === 1 ? 'entry' : 'entries'} 
+                      {connectedKnowledgeCount > 0 && (
+                        <span className="text-blue-600 ml-1">
+                          ({connectedKnowledgeCount} from canvas)
+                        </span>
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3 h-3 text-orange-500" />
+                    <span className="text-xs text-orange-500">
+                      No knowledge linked - will prompt to add
+                    </span>
+                  </>
+                );
+              })()}
             </div>
             {linkedKnowledge.length > 0 && (
               <div className="flex-grow max-h-16 overflow-y-auto">

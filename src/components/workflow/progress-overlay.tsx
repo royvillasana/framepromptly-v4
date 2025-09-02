@@ -86,50 +86,50 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed top-4 right-4 z-50 pointer-events-none"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="w-full max-w-2xl"
+            className="w-96 max-w-sm pointer-events-auto"
           >
-            <Card className="p-8 shadow-2xl bg-white/95 backdrop-blur-sm border-0">
-              <div className="space-y-6">
+            <Card className="p-4 shadow-2xl bg-white/95 backdrop-blur-sm border border-gray-200/50">
+              <div className="space-y-4">
                 {/* Header */}
                 <div className="text-center">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 mb-4 border border-blue-200/50"
+                    className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 mb-3 border border-blue-200/50"
                   >
-                    <Sparkles className="w-8 h-8 text-blue-600" />
+                    <Sparkles className="w-5 h-5 text-blue-600" />
                   </motion.div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Generating AI Prompt</h3>
-                  <p className="text-base text-gray-600">
-                    Creating intelligent prompts for your UX workflow using advanced AI methodologies
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Generating AI Prompt</h3>
+                  <p className="text-sm text-gray-600">
+                    Creating intelligent prompts for your workflow
                   </p>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="space-y-3">
-                  <div className="flex justify-between text-base">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-600 font-medium">Progress</span>
                     <span className="font-bold text-blue-600">{Math.round(progress)}%</span>
                   </div>
-                  <Progress value={progress} className="h-3 bg-gray-100" />
+                  <Progress value={progress} className="h-2 bg-gray-100" />
                 </div>
 
                 {/* Steps */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {steps.map((step, index) => (
                     <motion.div
                       key={step.id}
                       initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ delay: index * 0.1 }}
-                      className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                      className={`flex items-center gap-2 p-2 rounded-md transition-colors ${
                         step.status === 'active' 
                           ? 'bg-primary/5 border border-primary/20' 
                           : step.status === 'completed'
@@ -137,7 +137,7 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
                           : 'bg-muted/30'
                       }`}
                     >
-                      <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                      <div className={`flex items-center justify-center w-6 h-6 rounded-full ${
                         step.status === 'active' 
                           ? 'bg-primary text-primary-foreground' 
                           : step.status === 'completed'
@@ -145,13 +145,15 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
                           : 'bg-muted text-muted-foreground'
                       }`}>
                         {step.status === 'completed' ? (
-                          <CheckCircle className="w-4 h-4" />
+                          <CheckCircle className="w-3 h-3" />
+                        ) : step.status === 'active' && step.id === 'executing' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
                         ) : (
                           step.icon
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm ${
+                        <p className={`font-medium text-xs ${
                           step.status === 'active' 
                             ? 'text-primary' 
                             : step.status === 'completed'
@@ -160,15 +162,12 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
                         }`}>
                           {step.label}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {step.description}
-                        </p>
                       </div>
                       {step.status === 'active' && (
                         <motion.div
                           animate={{ scale: [1, 1.2, 1] }}
                           transition={{ duration: 1, repeat: Infinity }}
-                          className="w-2 h-2 bg-primary rounded-full"
+                          className="w-2 h-2 bg-primary rounded-full flex-shrink-0"
                         />
                       )}
                     </motion.div>
@@ -180,10 +179,10 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center p-4 bg-success/10 rounded-lg border border-success/20"
+                    className="text-center p-3 bg-success/10 rounded-lg border border-success/20"
                   >
-                    <CheckCircle className="w-8 h-8 text-success mx-auto mb-2" />
-                    <p className="font-medium text-success">Prompt Generated Successfully!</p>
+                    <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
+                    <p className="font-medium text-sm text-success">Generated Successfully!</p>
                     <p className="text-xs text-success/80">Switching to prompt panel...</p>
                   </motion.div>
                 )}
