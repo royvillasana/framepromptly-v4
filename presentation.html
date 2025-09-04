@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FramePromptly - UX Framework Workflow Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .slide {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .slide-content {
+            max-width: 1200px;
+            text-align: center;
+            color: white;
+            z-index: 2;
+        }
+
+        .slide:nth-child(even) {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        .slide:nth-child(3) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .slide:nth-child(4) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .slide:nth-child(5) {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .framework-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .framework-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1.5rem;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 1rem;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .cta-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .navigation {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: white;
+            transform: scale(1.2);
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .tech-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 500;
+            backdrop-filter: blur(5px);
+        }
+
+        .floating-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .shape {
+            position: absolute;
+            opacity: 0.1;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .shape:nth-child(1) {
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            top: 60%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+
+        .shape:nth-child(3) {
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 1rem;
+            }
+            
+            .navigation {
+                display: none;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navigation">
+        <div class="nav-dot active" onclick="scrollToSlide(0)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(1)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(2)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(3)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(4)"></div>
+    </div>
+
+    <!-- Slide 1: Hero -->
+    <div class="slide">
+        <div class="floating-shapes">
+            <div class="shape"><¨</div>
+            <div class="shape">=</div>
+            <div class="shape">¡</div>
+        </div>
+        <div class="slide-content">
+            <h1>FramePromptly</h1>
+            <p class="subtitle">UX Framework Workflow Builder</p>
+            <p style="font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9;">
+                Transform your UX process with AI-powered workflow automation
+            </p>
+            <a href="#features" class="cta-button" onclick="scrollToSlide(1)">Explore Features</a>
+            <a href="#frameworks" class="cta-button" onclick="scrollToSlide(2)">View Frameworks</a>
+        </div>
+    </div>
+
+    <!-- Slide 2: Key Features -->
+    <div class="slide" id="features">
+        <div class="slide-content">
+            <h2>Powerful Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><¯</div>
+                    <h3>Visual Workflow Builder</h3>
+                    <p>Create intuitive UX workflows with drag-and-drop canvas using React Flow</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">></div>
+                    <h3>AI Prompt Generation</h3>
+                    <p>Generate contextual AI prompts based on your UX methodology choices</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">=Ú</div>
+                    <h3>Knowledge Management</h3>
+                    <p>Organize and reference your research, documents, and insights</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">=</div>
+                    <h3>Real-time Collaboration</h3>
+                    <p>Work together with your team on shared projects and workflows</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">=¾</div>
+                    <h3>Auto-save Canvas</h3>
+                    <p>Never lose your work with automatic saving to localStorage and cloud</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">=á</div>
+                    <h3>Secure & Scalable</h3>
+                    <p>Built on Supabase with Row Level Security for enterprise-grade protection</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: UX Frameworks -->
+    <div class="slide" id="frameworks">
+        <div class="slide-content">
+            <h2>9 Built-in UX Frameworks</h2>
+            <p class="subtitle">Choose from industry-standard methodologies</p>
+            <div class="framework-list">
+                <div class="framework-item">
+                    <h4><¨ Design Thinking</h4>
+                    <p>5-stage human-centered approach</p>
+                </div>
+                <div class="framework-item">
+                    <h4>=Ž Double Diamond</h4>
+                    <p>Divergent & convergent thinking</p>
+                </div>
+                <div class="framework-item">
+                    <h4>¡ Google Design Sprint</h4>
+                    <p>5-day process for rapid prototyping</p>
+                </div>
+                <div class="framework-item">
+                    <h4>=e Human-Centered Design</h4>
+                    <p>Focus on user needs and behaviors</p>
+                </div>
+                <div class="framework-item">
+                    <h4>=¼ Jobs-to-Be-Done</h4>
+                    <p>Understand customer motivations</p>
+                </div>
+                <div class="framework-item">
+                    <h4><Ã@ Lean UX</h4>
+                    <p>Fast iteration and validation</p>
+                </div>
+                <div class="framework-item">
+                    <h4>= Agile UX</h4>
+                    <p>Iterative design in development</p>
+                </div>
+                <div class="framework-item">
+                    <h4>d HEART Framework</h4>
+                    <p>Happiness, Engagement, Adoption metrics</p>
+                </div>
+                <div class="framework-item">
+                    <h4><£ Hooked Model</h4>
+                    <p>Building habit-forming products</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Technology Stack -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Modern Tech Stack</h2>
+            <p class="subtitle">Built with cutting-edge technologies</p>
+            <div class="tech-stack">
+                <div class="tech-item">React 18</div>
+                <div class="tech-item">TypeScript</div>
+                <div class="tech-item">Vite</div>
+                <div class="tech-item">React Flow</div>
+                <div class="tech-item">Supabase</div>
+                <div class="tech-item">Tailwind CSS</div>
+                <div class="tech-item">shadcn/ui</div>
+                <div class="tech-item">Zustand</div>
+                <div class="tech-item">Radix UI</div>
+            </div>
+            <div style="margin-top: 3rem;">
+                <h3 style="margin-bottom: 1rem;">Key Capabilities</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4><× Modern Architecture</h4>
+                        <p>Component-based design with TypeScript for type safety</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>=€ Fast Development</h4>
+                        <p>Hot reload with Vite and optimized build process</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>=ñ Responsive Design</h4>
+                        <p>Works seamlessly across desktop, tablet, and mobile</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Get Started -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Start Building Better UX Today</h2>
+            <p class="subtitle">Transform your design process with FramePromptly</p>
+            <div style="margin: 2rem 0;">
+                <p style="font-size: 1.2rem; margin-bottom: 2rem;">
+                    Join designers and teams who are already using FramePromptly to streamline their UX workflows and generate powerful AI-driven insights.
+                </p>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-top: 2rem;">
+                <a href="#" class="cta-button">=€ Try Live Demo</a>
+                <a href="#" class="cta-button">=Ö View Documentation</a>
+                <a href="#" class="cta-button">=¬ Get Support</a>
+            </div>
+            <div style="margin-top: 3rem; opacity: 0.8;">
+                <p>Built with d for UX professionals</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function scrollToSlide(index) {
+            const slides = document.querySelectorAll('.slide');
+            slides[index].scrollIntoView({ behavior: 'smooth' });
+            
+            // Update navigation dots
+            document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+        }
+
+        // Update active dot on scroll
+        window.addEventListener('scroll', () => {
+            const slides = document.querySelectorAll('.slide');
+            const navDots = document.querySelectorAll('.nav-dot');
+            const scrollPos = window.scrollY + window.innerHeight / 2;
+
+            slides.forEach((slide, index) => {
+                const slideTop = slide.offsetTop;
+                const slideBottom = slideTop + slide.offsetHeight;
+                
+                if (scrollPos >= slideTop && scrollPos <= slideBottom) {
+                    navDots.forEach(dot => dot.classList.remove('active'));
+                    navDots[index]?.classList.add('active');
+                }
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const currentActive = document.querySelector('.nav-dot.active');
+            const currentIndex = Array.from(document.querySelectorAll('.nav-dot')).indexOf(currentActive);
+            
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                const nextIndex = Math.min(currentIndex + 1, 4);
+                scrollToSlide(nextIndex);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                const prevIndex = Math.max(currentIndex - 1, 0);
+                scrollToSlide(prevIndex);
+            }
+        });
+    </script>
+</body>
+</html>
