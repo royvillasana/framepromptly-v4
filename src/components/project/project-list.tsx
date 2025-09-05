@@ -8,8 +8,14 @@ import { useProjectStore } from '@/stores/project-store';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectDialog } from './project-dialog';
 import { ProjectShareModal } from './project-share-modal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { motion } from 'framer-motion';
-import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2, Database, Settings, Share } from 'lucide-react';
+import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2, Database, Settings, Share, MoreVertical } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function ProjectList() {
@@ -65,6 +71,10 @@ export function ProjectList() {
   const handleShareProject = (project: Project) => {
     setSelectedProject(project);
     setShareModalOpen(true);
+  };
+
+  const handleProjectSettings = (project: Project) => {
+    navigate(`/project/${project.id}/settings`);
   };
 
   const handleCloseShareModal = () => {
@@ -147,29 +157,58 @@ export function ProjectList() {
                   <FolderOpen className="w-3 h-3 mr-1" />
                   Open Project
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenKnowledgeManager(currentProject);
-                  }}
-                  className="h-8 px-3"
-                >
-                  <Database className="w-3 h-3 mr-1" />
-                  Knowledge
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShareProject(currentProject);
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <Share className="w-3 h-3" />
-                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-8 w-8 p-0"
+                    >
+                      <MoreVertical className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenKnowledgeManager(currentProject);
+                      }}
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      Knowledge
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShareProject(currentProject);
+                      }}
+                    >
+                      <Share className="w-4 h-4 mr-2" />
+                      Share
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProjectSettings(currentProject);
+                      }}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProject(currentProject.id, currentProject.name);
+                      }}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Badge variant="default">Active</Badge>
               </div>
             </div>
@@ -266,42 +305,57 @@ export function ProjectList() {
                     {currentProject?.id === project.id ? 'Current' : 'Open'}
                   </Button>
                   
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenKnowledgeManager(project);
-                    }}
-                    className="px-4"
-                  >
-                    <Database className="w-4 h-4 mr-2" />
-                    Knowledge
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShareProject(project);
-                    }}
-                    className="w-10 h-10 p-0"
-                  >
-                    <Share className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteProject(project.id, project.name);
-                    }}
-                    className="w-10 h-10 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-10 h-10 p-0"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenKnowledgeManager(project);
+                        }}
+                      >
+                        <Database className="w-4 h-4 mr-2" />
+                        Knowledge
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareProject(project);
+                        }}
+                      >
+                        <Share className="w-4 h-4 mr-2" />
+                        Share
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProjectSettings(project);
+                        }}
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project.id, project.name);
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </motion.div>

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { cn } from "@/lib/utils";
-import { Zap, Menu, User, LogOut, BarChart, BookOpen, Settings, FlaskConical } from "lucide-react";
+import { Zap, Menu, User, LogOut, BarChart, BookOpen, Settings, FlaskConical, Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
@@ -81,6 +81,12 @@ export function Navigation({ className }: NavigationProps) {
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/library">Library</Link>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/prompt-builder">
+                    <Brain className="w-4 h-4 mr-2" />
+                    Prompt Builder
+                  </Link>
                 </Button>
               </>
             ) : (

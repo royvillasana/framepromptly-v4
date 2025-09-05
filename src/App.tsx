@@ -11,6 +11,7 @@ import Workflow from "./pages/Workflow";
 import Projects from "./pages/Projects";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import KnowledgeDocument from "./pages/KnowledgeDocument";
+import { ProjectSettings } from "./components/project/project-settings";
 import Library from "./pages/Library";
 import Auth from "./pages/Auth";
 import MetricsDashboard from "./pages/MetricsDashboard";
@@ -21,6 +22,7 @@ import AIStressTest from "./pages/AIStressTest";
 import Board from "./pages/Board";
 import Profile from "./pages/Profile";
 import Invitation from "./pages/Invitation";
+import PromptBuilder from "./pages/PromptBuilder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +58,7 @@ const App = () => {
           <Route path="/projects" element={<Projects />} />
           <Route path="/knowledge/:projectId" element={<KnowledgeBase />} />
           <Route path="/knowledge/:projectId/document/:documentId" element={<KnowledgeDocument />} />
+          <Route path="/project/:projectId/settings" element={<ProjectSettings />} />
           <Route path="/library" element={<Library />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/metrics" element={<MetricsDashboard />} />
@@ -66,6 +69,7 @@ const App = () => {
           <Route path="/board" element={<Board />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/invitation" element={<Invitation />} />
+          <Route path="/prompt-builder" element={<PromptBuilder />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

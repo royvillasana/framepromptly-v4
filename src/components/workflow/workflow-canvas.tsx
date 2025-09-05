@@ -401,7 +401,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       </div>
 
       {/* Zoom Indicator */}
-      <div className="absolute bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium">
+      <div className="fixed bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium z-50">
         {Math.round(zoom * 100)}%
       </div>
 

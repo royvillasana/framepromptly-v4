@@ -81,8 +81,8 @@ export function CanvasToolbar({
   };
 
   return (
-    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-      <Toolbar className="bg-card/95 backdrop-blur-sm">
+    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+      <Toolbar className="bg-card/95 backdrop-blur-sm border shadow-lg">
         {/* Zoom Controls */}
         <ToolbarButton
           onClick={onZoomOut}
