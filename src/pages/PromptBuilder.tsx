@@ -12,27 +12,22 @@ import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PromptBuilderVisualizer } from '@/components/prompt/prompt-builder-visualizer';
 import { useProjectStore } from '@/stores/project-store';
-import { useWorkflowStore } from '@/stores/workflow-store';
 import { motion } from 'framer-motion';
-import { Brain, Settings, Wand2, ArrowLeft, Target, CheckCircle, Sliders } from 'lucide-react';
+import { Brain, Settings, Wand2, ArrowLeft, Target, CheckCircle, Sliders, FileText, Upload, Edit, Database, X } from 'lucide-react';
+import { useKnowledgeStore } from '@/stores/knowledge-store';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function PromptBuilder() {
   const [searchParams] = useSearchParams();
   const { projects, getEnhancedSettings } = useProjectStore();
-  const { frameworks } = useWorkflowStore();
+  const { entries: documents, fetchEntries: fetchDocuments } = useKnowledgeStore();
   
   // Get initial values from URL params or defaults
-  const [selectedFramework, setSelectedFramework] = useState(
-    searchParams.get('framework') || 'Design Thinking'
-  );
-  const [selectedStage, setSelectedStage] = useState(
-    searchParams.get('stage') || 'Empathize'
-  );
   const [selectedTool, setSelectedTool] = useState(
-    searchParams.get('tool') || 'User Interview'
+    searchParams.get('tool') || 'User Interviews'
   );
   const [selectedProjectId, setSelectedProjectId] = useState(
-    searchParams.get('projectId') || (projects[0]?.id || '')
+    searchParams.get('projectId') || (projects?.[0]?.id || '')
   );
 
   // Enhanced prompt state - matching ProjectSettings structure
@@ -65,12 +60,46 @@ export default function PromptBuilder() {
   });
   const [generatedPrompt, setGeneratedPrompt] = useState('');
 
+  // Knowledge Context State
+  const [contextSource, setContextSource] = useState<'none' | 'knowledge' | 'upload' | 'manual'>('none');
+  const [selectedKnowledgeDoc, setSelectedKnowledgeDoc] = useState<string>('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [extractedContent, setExtractedContent] = useState<string>('');
+  const [manualContext, setManualContext] = useState<string>('');
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [knowledgeDocs, setKnowledgeDocs] = useState<any[]>([]);
+
   // Load project settings when project changes
   useEffect(() => {
     if (selectedProjectId) {
       loadProjectSettings();
+      loadKnowledgeDocuments();
     }
   }, [selectedProjectId]);
+
+  const loadKnowledgeDocuments = async () => {
+    if (selectedProjectId) {
+      console.log('Loading knowledge documents for project:', selectedProjectId);
+      try {
+        await fetchDocuments(selectedProjectId);
+        console.log('Knowledge documents loaded:', documents?.length || 0, 'entries');
+      } catch (error) {
+        console.error('Error loading knowledge documents:', error);
+      }
+    }
+  };
+
+  // Update local state when documents change
+  useEffect(() => {
+    setKnowledgeDocs(documents || []);
+  }, [documents]);
+
+  // Set first project as default when projects load
+  useEffect(() => {
+    if (projects && projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
 
   const loadProjectSettings = async () => {
     try {
@@ -109,25 +138,124 @@ export default function PromptBuilder() {
     }
   };
 
-  // Get current framework data
-  const currentFramework = frameworks.find(f => f.name === selectedFramework);
-  const availableStages = currentFramework?.stages || [];
-  const currentStage = availableStages.find(s => s.name === selectedStage);
-  const availableTools = currentStage?.tools || [];
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    
+    setIsProcessingFile(true);
+    setUploadedFile(file);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('projectId', selectedProjectId);
+      
+      // Use the existing Supabase function for document processing
+      const { data, error } = await supabase.functions.invoke('process-document', {
+        body: formData
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      setExtractedContent(data.content || 'No content extracted');
+    } catch (error) {
+      console.error('Error processing file:', error);
+      setExtractedContent(`Error processing file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
 
-  // Sample tools for demo purposes
+  const getContextData = () => {
+    switch (contextSource) {
+      case 'knowledge':
+        if (!documents || !selectedKnowledgeDoc) return null;
+        const selectedDoc = documents.find(doc => doc.id === selectedKnowledgeDoc);
+        return selectedDoc ? `**${selectedDoc.title}**\n\n${selectedDoc.content}` : null;
+      case 'upload':
+        return uploadedFile && extractedContent ? `**${uploadedFile.name}**\n\n${extractedContent}` : null;
+      case 'manual':
+        return manualContext.trim() || null;
+      default:
+        return null;
+    }
+  };
+
+  // Comprehensive UX tools available in the system
   const sampleTools = [
-    'User Interview',
-    'Persona Creation',
-    'Journey Mapping',
-    'Empathy Mapping',
-    'Problem Statement',
+    // Research & Discovery
+    'User Interviews',
+    'Surveys',
+    'Field Studies', 
+    'Diary Studies',
+    'Focus Groups',
+    'Card Sorting',
+    'Tree Testing',
+    'First Click Testing',
+    'Five Second Test',
+    'Competitive Analysis',
+    'Heuristic Evaluation',
+    'Expert Review',
+    
+    // Analysis & Synthesis
+    'Affinity Mapping',
+    'Personas',
+    'User Stories',
+    'Jobs to be Done',
+    'Journey Maps',
+    'Service Blueprints',
+    'Empathy Maps',
+    'Experience Maps',
+    'System Maps',
+    'Stakeholder Maps',
+    
+    // Ideation & Design
     'How Might We',
-    'Ideation Session',
+    'Brainstorming',
+    'Crazy 8s',
+    'Sketching',
     'Storyboarding',
+    'Wireframing',
+    'Prototyping',
+    'Design Studio',
+    'Co-design Workshops',
+    
+    // Validation & Testing
+    'Usability Testing',
+    'A/B Testing',
     'Prototype Testing',
-    'Usability Testing'
+    'Guerrilla Testing',
+    'Remote Testing',
+    'Accessibility Testing',
+    'Performance Testing',
+    'Moderated Testing',
+    'Unmoderated Testing',
+    
+    // Strategy & Planning
+    'Design Principles',
+    'Problem Framing',
+    'Opportunity Mapping',
+    'Feature Prioritization',
+    'Design System Planning',
+    'Content Strategy',
+    'Information Architecture'
   ];
+
+  // Show loading state if projects haven't loaded yet
+  if (!projects) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading AI Prompt Builder...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -176,11 +304,11 @@ export default function PromptBuilder() {
                   <CardTitle>Prompt Configuration</CardTitle>
                 </div>
                 <CardDescription>
-                  Select your framework, stage, and tool to see how the AI prompt is built
+                  Select your project and tool to see how the AI prompt is built
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Project Selection */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Project</label>
@@ -189,53 +317,15 @@ export default function PromptBuilder() {
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                        {projects.length === 0 && (
+                        {projects && projects.length > 0 ? (
+                          projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))
+                        ) : (
                           <SelectItem value="demo" disabled>
-                            No projects found
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Framework Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Framework</label>
-                    <Select value={selectedFramework} onValueChange={setSelectedFramework}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select framework" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {frameworks.map((framework) => (
-                          <SelectItem key={framework.id} value={framework.name}>
-                            {framework.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Stage Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Stage</label>
-                    <Select value={selectedStage} onValueChange={setSelectedStage}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select stage" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableStages.map((stage) => (
-                          <SelectItem key={stage.id} value={stage.name}>
-                            {stage.name}
-                          </SelectItem>
-                        ))}
-                        {availableStages.length === 0 && (
-                          <SelectItem value="demo" disabled>
-                            No stages available
+                            {projects === undefined ? 'Loading projects...' : 'No projects found'}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -249,13 +339,39 @@ export default function PromptBuilder() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select tool" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {(availableTools.length > 0 ? availableTools : sampleTools).map((tool) => (
-                          <SelectItem 
-                            key={typeof tool === 'string' ? tool : tool.name} 
-                            value={typeof tool === 'string' ? tool : tool.name}
-                          >
-                            {typeof tool === 'string' ? tool : tool.name}
+                      <SelectContent className="max-h-80">
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">Research & Discovery</div>
+                        {sampleTools.slice(0, 12).map((tool) => (
+                          <SelectItem key={tool} value={tool}>
+                            {tool}
+                          </SelectItem>
+                        ))}
+                        
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-t mt-1">Analysis & Synthesis</div>
+                        {sampleTools.slice(12, 22).map((tool) => (
+                          <SelectItem key={tool} value={tool}>
+                            {tool}
+                          </SelectItem>
+                        ))}
+                        
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-t mt-1">Ideation & Design</div>
+                        {sampleTools.slice(22, 31).map((tool) => (
+                          <SelectItem key={tool} value={tool}>
+                            {tool}
+                          </SelectItem>
+                        ))}
+                        
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-t mt-1">Validation & Testing</div>
+                        {sampleTools.slice(31, 40).map((tool) => (
+                          <SelectItem key={tool} value={tool}>
+                            {tool}
+                          </SelectItem>
+                        ))}
+                        
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-t mt-1">Strategy & Planning</div>
+                        {sampleTools.slice(40).map((tool) => (
+                          <SelectItem key={tool} value={tool}>
+                            {tool}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -267,7 +383,7 @@ export default function PromptBuilder() {
                 <div className="flex items-center gap-2 pt-4 border-t">
                   <Wand2 className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    Change any setting above to see how it affects the AI prompt construction
+                    Change the project or tool above to see how it affects the AI prompt construction
                   </span>
                 </div>
               </CardContent>
@@ -618,14 +734,170 @@ export default function PromptBuilder() {
               </CardContent>
             </Card>
 
+            {/* Knowledge Context Panel */}
+            <Card className="mb-6">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-indigo-600" />
+                  <CardTitle>Knowledge Context (Optional)</CardTitle>
+                </div>
+                <CardDescription>
+                  Add additional context to enhance the AI prompt with specific project knowledge
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Context Source Selection */}
+                <div className="space-y-3">
+                  <Label>Context Source</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Button
+                      variant={contextSource === 'none' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setContextSource('none')}
+                      className="justify-start"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      None
+                    </Button>
+                    <Button
+                      variant={contextSource === 'knowledge' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setContextSource('knowledge')}
+                      className="justify-start"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Knowledge Base
+                    </Button>
+                    <Button
+                      variant={contextSource === 'upload' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setContextSource('upload')}
+                      className="justify-start"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload PDF
+                    </Button>
+                    <Button
+                      variant={contextSource === 'manual' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setContextSource('manual')}
+                      className="justify-start"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Manual Input
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Context Source Content */}
+                {contextSource === 'knowledge' && (
+                  <div className="space-y-2">
+                    <Label>Select Knowledge Document</Label>
+                    <Select value={selectedKnowledgeDoc} onValueChange={setSelectedKnowledgeDoc}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a document from your knowledge base" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {documents && documents.length > 0 ? (
+                          documents.map((doc) => (
+                            <SelectItem key={doc.id} value={doc.id}>
+                              {doc.title}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            {documents === undefined ? 'Loading documents...' : 'No documents found in knowledge base'}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {selectedKnowledgeDoc && documents && (
+                      <div className="p-3 bg-muted/50 rounded-md">
+                        <p className="text-sm font-medium mb-1">Preview:</p>
+                        <p className="text-xs text-muted-foreground line-clamp-3">
+                          {documents.find(doc => doc.id === selectedKnowledgeDoc)?.content?.substring(0, 200) || 'No content preview available'}...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {contextSource === 'upload' && (
+                  <div className="space-y-3">
+                    <Label>Upload PDF Document</Label>
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                        }}
+                        className="hidden"
+                        id="pdf-upload"
+                      />
+                      <label
+                        htmlFor="pdf-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <Upload className="w-8 h-8 text-muted-foreground" />
+                        <p className="text-sm font-medium">Click to upload PDF</p>
+                        <p className="text-xs text-muted-foreground">PDF files only</p>
+                      </label>
+                    </div>
+                    
+                    {isProcessingFile && (
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-sm">Processing PDF...</span>
+                      </div>
+                    )}
+                    
+                    {uploadedFile && extractedContent && (
+                      <div className="p-3 bg-muted/50 rounded-md">
+                        <p className="text-sm font-medium mb-1">Extracted from: {uploadedFile.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-4">
+                          {extractedContent.substring(0, 300)}...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {contextSource === 'manual' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-context">Manual Context Input</Label>
+                    <Textarea
+                      id="manual-context"
+                      value={manualContext}
+                      onChange={(e) => setManualContext(e.target.value)}
+                      placeholder="Enter additional context, requirements, or background information that should influence the AI response..."
+                      className="min-h-[120px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {manualContext.length}/2000 characters
+                    </p>
+                  </div>
+                )}
+
+                {contextSource !== 'none' && (
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Target className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      This context will be added to your AI prompt to provide more specific guidance
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Visualizer */}
             <PromptBuilderVisualizer
-              framework={selectedFramework}
-              stage={selectedStage}
               tool={selectedTool}
               projectContext={projectContext}
               qualitySettings={qualitySettings}
               aiMethodSettings={aiMethodSettings}
+              knowledgeContext={getContextData()}
               onPromptGenerated={setGeneratedPrompt}
             />
           </div>

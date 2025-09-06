@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getEnhancedInstructions } from '@/lib/enhanced-tool-instructions';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PromptSection {
   id: string;
@@ -37,22 +38,20 @@ interface PromptSection {
 }
 
 interface PromptBuilderVisualizerProps {
-  framework?: string;
-  stage?: string;
   tool?: string;
   projectContext?: any;
   qualitySettings?: any;
   aiMethodSettings?: any;
+  knowledgeContext?: string | null;
   onPromptGenerated?: (prompt: string) => void;
 }
 
 export function PromptBuilderVisualizer({
-  framework = "Design Thinking",
-  stage = "Empathize",
-  tool = "User Interview",
+  tool = "User Interviews",
   projectContext = {},
   qualitySettings = {},
   aiMethodSettings = {},
+  knowledgeContext = null,
   onPromptGenerated
 }: PromptBuilderVisualizerProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(['role', 'context']);
@@ -60,6 +59,8 @@ export function PromptBuilderVisualizer({
   const [isBuilding, setIsBuilding] = useState(false);
   const [editingSections, setEditingSections] = useState<string[]>([]);
   const [editedContent, setEditedContent] = useState<Record<string, string>>({});
+  const [aiResponse, setAiResponse] = useState<string>('');
+  const [isRunningPrompt, setIsRunningPrompt] = useState(false);
   const { toast } = useToast();
 
   // Generate prompt sections based on inputs
@@ -67,50 +68,55 @@ export function PromptBuilderVisualizer({
     const sections: PromptSection[] = [];
 
     // Role Section
+    const isResearchTool = tool.toLowerCase().includes('interview') || 
+                          tool.toLowerCase().includes('survey') || 
+                          tool.toLowerCase().includes('study') || 
+                          tool.toLowerCase().includes('research') ||
+                          tool.toLowerCase().includes('testing') ||
+                          tool.toLowerCase().includes('evaluation');
+    
     sections.push({
       id: 'role',
       type: 'role',
       title: 'AI Role & Expertise',
-      content: `You are an expert UX ${tool === 'User Interview' ? 'researcher' : 'designer'} with deep knowledge of ${framework} methodology. You specialize in the ${stage} phase and have extensive experience with ${tool} techniques.`,
-      source: `Framework: ${framework} → Stage: ${stage}`,
+      content: `You are an expert UX ${isResearchTool ? 'researcher' : 'designer'} with extensive experience in ${tool} methodology. You have deep knowledge of user-centered design principles and best practices.`,
+      source: `Tool: ${tool}`,
       icon: <Brain className="w-4 h-4" />,
       color: 'bg-purple-100 border-purple-300 text-purple-800',
       editable: true
     });
 
-    // Context Section
-    const contextParts = [];
-    if (projectContext.targetAudience) {
-      contextParts.push(`Target Audience: ${projectContext.targetAudience}`);
-    }
-    if (projectContext.primaryGoals) {
-      contextParts.push(`Project Goals: ${projectContext.primaryGoals}`);
-    }
-    if (projectContext.keyConstraints) {
-      contextParts.push(`Constraints: ${projectContext.keyConstraints}`);
-    }
+    // Context Section - Include variables that will be replaced
+    const contextContent = `Working on a project with the following context:
+
+Target Audience: [target_audience]
+Project Goals: [project_goals] 
+Key Constraints: [constraints]
+Success Metrics: [success_metrics]
+Team Composition: [team_composition]
+Timeline: [timeline]
+
+Please tailor your response specifically for [target_audience] while keeping [constraints] in mind.`;
 
     sections.push({
       id: 'context',
       type: 'context',
       title: 'Project Context',
-      content: contextParts.length > 0 
-        ? `Working on a project with the following context:\n${contextParts.join('\n')}`
-        : 'No specific project context provided.',
-      source: 'Project Settings → Context Tab',
+      content: contextContent,
+      source: 'Project Settings → Context Tab (with variable replacement)',
       icon: <Target className="w-4 h-4" />,
       color: 'bg-blue-100 border-blue-300 text-blue-800',
       editable: true
     });
 
     // Task Section
-    const taskDescription = getTaskDescription(framework, stage, tool);
+    const taskDescription = getTaskDescription(tool);
     sections.push({
       id: 'task',
       type: 'task',
       title: 'Specific Task',
       content: taskDescription,
-      source: `${framework} → ${stage} → ${tool}`,
+      source: `Tool: ${tool}`,
       icon: <Lightbulb className="w-4 h-4" />,
       color: 'bg-green-100 border-green-300 text-green-800',
       editable: true
@@ -154,6 +160,20 @@ export function PromptBuilderVisualizer({
       editable: true
     });
 
+    // Knowledge Context Section (if provided)
+    if (knowledgeContext) {
+      sections.push({
+        id: 'knowledge',
+        type: 'context',
+        title: 'Knowledge Context',
+        content: `Additional project knowledge has been provided:\n\n${knowledgeContext}\n\nPlease integrate this information into your recommendations and ensure your response is aligned with this context.`,
+        source: 'Knowledge Base / Uploaded Document / Manual Input',
+        icon: <FileText className="w-4 h-4" />,
+        color: 'bg-violet-100 border-violet-300 text-violet-800',
+        editable: true
+      });
+    }
+
     // Examples Section (if applicable)
     const examples = getExamples(tool);
     if (examples) {
@@ -172,7 +192,7 @@ export function PromptBuilderVisualizer({
     return sections;
   };
 
-  const getTaskDescription = (framework: string, stage: string, tool: string): string => {
+  const getTaskDescription = (tool: string): string => {
     // Convert tool name to a format that matches the enhanced instructions
     const normalizedTool = tool.toLowerCase()
       .replace(/\s+/g, '-')
@@ -186,24 +206,46 @@ export function PromptBuilderVisualizer({
     if (instructions && instructions.length > 0) {
       // Use the first few core instructions as the task description
       const coreInstructions = instructions.slice(0, 3).join(' ');
-      return `${tool} for ${stage} phase of ${framework}: ${coreInstructions}`;
+      return `${tool} methodology: ${coreInstructions}
+
+Focus on [target_audience] and ensure your recommendations align with [project_goals]. Consider [constraints] when making suggestions.`;
     }
 
-    // Fallback to generic descriptions
-    const tasks = {
-      'User Interview': `Generate a comprehensive user interview guide for the ${stage} phase of ${framework}. Include opening questions, main inquiry areas, and follow-up prompts that will help gather deep insights about user needs, behaviors, and pain points.`,
-      'Persona Creation': `Create detailed user personas based on research findings for the ${stage} phase. Include demographic information, goals, frustrations, behaviors, and key quotes that represent this user segment.`,
-      'Journey Mapping': `Develop a user journey map that captures the user's experience across all touchpoints. Focus on emotions, pain points, and opportunities for improvement during the ${stage} phase.`,
-      'Empathy Mapping': `Create empathy maps that capture what users think, feel, see, say, hear, and do. Focus on emotional insights and user motivations during the ${stage} phase.`,
-      'Affinity Mapping': `Apply systematic thematic analysis to organize qualitative research data into meaningful clusters and themes for the ${stage} phase.`,
-      'How Might We': `Frame problems as innovation opportunities using structured "How might we..." questions for the ${stage} phase.`,
-      'Brainstorming': `Conduct structured ideation sessions using proven creative techniques for the ${stage} phase of ${framework}.`,
-      'Problem Statement': `Define clear, actionable problem statements using user research insights for the ${stage} phase.`,
-      'Usability Testing': `Design and conduct usability tests with measurable success criteria for the ${stage} phase.`,
-      'Surveys': `Design comprehensive user surveys using validated question formats for the ${stage} phase.`
+    // Fallback to generic descriptions with comprehensive tool coverage
+    const tasks: Record<string, string> = {
+      // Research & Discovery
+      'User Interviews': `Generate a comprehensive user interview guide for [target_audience]. Include opening questions, main inquiry areas, and follow-up prompts that will help gather deep insights about user needs, behaviors, and pain points related to [project_goals]. Consider [constraints] when designing the interview approach.`,
+      'Surveys': `Design comprehensive user surveys using validated question formats for [target_audience]. Include appropriate scales, skip logic, and clear instructions to gather insights about [project_goals].`,
+      'Field Studies': `Plan and conduct field studies to observe [target_audience] in their natural environment. Focus on understanding context, behaviors, and pain points related to [project_goals].`,
+      'Competitive Analysis': `Conduct systematic competitive analysis to understand the market landscape and identify opportunities for [project_goals]. Compare features, user experience, and positioning.`,
+      'Heuristic Evaluation': `Perform heuristic evaluation using established UX principles to identify usability issues and improvement opportunities for [target_audience].`,
+      
+      // Analysis & Synthesis
+      'Affinity Mapping': `Apply systematic thematic analysis to organize qualitative research data into meaningful clusters and themes related to [project_goals].`,
+      'Personas': `Create detailed user personas for [target_audience] based on research findings. Include demographic information, goals, frustrations, behaviors, and key quotes.`,
+      'Journey Maps': `Develop comprehensive user journey maps that capture [target_audience] experience across all touchpoints. Focus on emotions, pain points, and opportunities for improvement.`,
+      'Empathy Maps': `Create empathy maps that capture what [target_audience] thinks, feels, sees, says, hears, and does. Focus on emotional insights and user motivations.`,
+      'User Stories': `Write clear, actionable user stories from the perspective of [target_audience] that support [project_goals]. Include acceptance criteria and priority levels.`,
+      
+      // Ideation & Design
+      'How Might We': `Frame problems as innovation opportunities using structured "How might we..." questions that address [target_audience] needs and [project_goals].`,
+      'Brainstorming': `Conduct structured ideation sessions using proven creative techniques to generate solutions for [target_audience] that align with [project_goals].`,
+      'Sketching': `Create rapid sketches and wireframes to explore design solutions for [target_audience]. Focus on key user flows and interface concepts.`,
+      'Prototyping': `Develop interactive prototypes to test design concepts with [target_audience]. Create realistic scenarios that demonstrate key functionality.`,
+      'Storyboarding': `Create visual narratives that illustrate [target_audience] interactions and experiences. Show key moments in the user journey.`,
+      
+      // Validation & Testing
+      'Usability Testing': `Design and conduct usability tests with [target_audience] to validate design decisions. Include measurable success criteria and clear testing protocols.`,
+      'A/B Testing': `Plan A/B tests to compare design alternatives for [target_audience]. Define success metrics and statistical significance requirements.`,
+      'Prototype Testing': `Test interactive prototypes with [target_audience] to validate design concepts and identify improvement opportunities.`,
+      
+      // Strategy & Planning
+      'Design Principles': `Establish design principles that guide decision-making for [target_audience] and support [project_goals]. Include rationale and application examples.`,
+      'Content Strategy': `Develop content strategy that serves [target_audience] needs and supports [project_goals]. Include content types, voice, and governance.`,
+      'Information Architecture': `Design information architecture that makes sense to [target_audience] and supports [project_goals]. Include navigation, categorization, and labeling.`
     };
     
-    return tasks[tool as keyof typeof tasks] || `Apply ${tool} methodology appropriate for the ${stage} phase of ${framework}, following UX best practices and established frameworks.`;
+    return tasks[tool] || `Apply ${tool} methodology following UX best practices and established frameworks. Focus on [target_audience] needs and ensure alignment with [project_goals]. Consider [constraints] in your recommendations.`;
   };
 
   const getFormatInstructions = (aiSettings: any): string => {
@@ -277,21 +319,57 @@ export function PromptBuilderVisualizer({
     const sections = generatePromptSections();
     setPromptSections(sections);
     buildFinalPrompt(sections);
-  }, [framework, stage, tool, projectContext, qualitySettings, aiMethodSettings]);
+  }, [tool, projectContext, qualitySettings, aiMethodSettings, knowledgeContext]);
 
   const buildFinalPrompt = (sections: PromptSection[]) => {
     setIsBuilding(true);
     // Simulate building process
     setTimeout(() => {
-      const prompt = sections
+      let prompt = sections
         .map(section => section.content)
         .join('\n\n');
+      
+      // Replace variables with project context values
+      prompt = replaceVariablesWithContext(prompt);
+      
       setFinalPrompt(prompt);
       setIsBuilding(false);
       if (onPromptGenerated) {
         onPromptGenerated(prompt);
       }
     }, 1500);
+  };
+
+  const replaceVariablesWithContext = (prompt: string): string => {
+    let processedPrompt = prompt;
+    
+    // Replace common variables with project context, or default values if empty
+    const replacements = {
+      '[target_audience]': projectContext?.targetAudience || 'general users',
+      '[audience]': projectContext?.targetAudience || 'general users',
+      '[project_goals]': projectContext?.primaryGoals || 'improve user experience',
+      '[goals]': projectContext?.primaryGoals || 'improve user experience',
+      '[constraints]': projectContext?.keyConstraints || 'standard UX best practices',
+      '[limitations]': projectContext?.keyConstraints || 'standard UX best practices',
+      '[success_metrics]': projectContext?.successMetrics || 'user satisfaction and task completion',
+      '[metrics]': projectContext?.successMetrics || 'user satisfaction and task completion',
+      '[team]': projectContext?.teamComposition || 'UX team',
+      '[team_composition]': projectContext?.teamComposition || 'UX team',
+      '[timeline]': projectContext?.timeline || 'standard project timeline',
+      '[timeframe]': projectContext?.timeline || 'standard project timeline'
+    };
+    
+    // Apply all replacements
+    Object.entries(replacements).forEach(([variable, value]) => {
+      const regex = new RegExp(escapeRegExp(variable), 'gi');
+      processedPrompt = processedPrompt.replace(regex, value);
+    });
+    
+    return processedPrompt;
+  };
+
+  const escapeRegExp = (string: string): string => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   };
 
   const toggleSection = (sectionId: string) => {
@@ -310,13 +388,121 @@ export function PromptBuilderVisualizer({
     });
   };
 
-  const runPrompt = () => {
-    // This would integrate with an AI service
-    console.log('Running prompt:', finalPrompt);
-    toast({
-      title: "Running Prompt",
-      description: "This would send the prompt to your AI service"
-    });
+  const runPrompt = async () => {
+    if (!finalPrompt.trim()) {
+      toast({
+        title: "No prompt to run",
+        description: "Please wait for the prompt to be generated first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsRunningPrompt(true);
+    setAiResponse('');
+
+    try {
+      // Use the Supabase function like the canvas workflow does
+      console.log('Calling generate-ai-prompt with:', {
+        promptContent: finalPrompt.substring(0, 100) + '...',
+        toolName: tool
+      });
+
+      // Prepare knowledge context for the API call
+      const knowledgeContextForAPI = knowledgeContext ? [{
+        title: 'Additional Context',
+        content: knowledgeContext
+      }] : null;
+
+      const { data: aiResult, error: aiError } = await supabase.functions.invoke('generate-ai-prompt', {
+        body: {
+          promptContent: finalPrompt,
+          variables: {},
+          projectId: 'ai-stress-test-prompt-builder', // Use stress test format to avoid auth issues
+          frameworkName: 'Custom',
+          stageName: 'Analysis', 
+          toolName: tool,
+          knowledgeContext: knowledgeContextForAPI
+        }
+      });
+
+      console.log('Function response:', { aiResult, aiError });
+
+      if (aiError) {
+        console.error('Function error details:', aiError);
+        throw new Error(aiError.message || `Function error: ${JSON.stringify(aiError)}`);
+      }
+
+      // Debug the response structure
+      console.log('aiResult structure:', {
+        keys: Object.keys(aiResult || {}),
+        aiResponse: aiResult?.aiResponse,
+        response: aiResult?.response,
+        result: aiResult?.result,
+        fullResult: aiResult
+      });
+
+      const responseText = aiResult?.aiResponse || aiResult?.response || aiResult?.result;
+      if (!responseText) {
+        console.error('No response text found in any expected fields:', aiResult);
+        setAiResponse('No AI response received. Check console for debugging information.');
+      } else {
+        setAiResponse(responseText);
+      }
+      
+      toast({
+        title: "Prompt executed successfully",
+        description: "AI response generated below"
+      });
+    } catch (error) {
+      console.error('Error running prompt:', error);
+      let errorMessage = 'Failed to generate AI response';
+      let helpText = `📋 **How to fix this:**
+
+1. **For Development**: Add your OpenAI API key to the Supabase environment:
+   - Go to your Supabase project dashboard
+   - Navigate to Settings → Edge Functions
+   - Add environment variable: \`OPENAI_API_KEY=your_key_here\`
+
+2. **Alternative**: Copy the generated prompt above and test it directly in:
+   - ChatGPT (https://chat.openai.com)
+   - Claude (https://claude.ai)
+   - Any other AI assistant
+
+3. **For Production**: Ensure all environment variables are configured in your deployment environment.`;
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Check for common issues and provide helpful messages
+        if (error.message.includes('OpenAI API key not configured')) {
+          errorMessage = 'OpenAI API key is not configured on the server.';
+        } else if (error.message.includes('Edge Function returned a non-2xx status code')) {
+          errorMessage = 'Server configuration issue - likely missing OpenAI API key.';
+        } else if (error.message.includes('Invalid authentication')) {
+          errorMessage = 'Authentication failed. Please try logging in again.';
+          helpText = 'Please refresh the page and log in again.';
+        }
+      }
+      
+      setAiResponse(`❌ **Error**: ${errorMessage}
+
+${helpText}
+
+🔍 **Technical Details**: 
+- Error type: ${error instanceof Error ? error.constructor.name : 'Unknown'}
+- Timestamp: ${new Date().toISOString()}
+
+💡 **The generated prompt above is ready to use** - you can copy it and paste it into any AI assistant to get your UX methodology guidance!`);
+      
+      toast({
+        title: "Error running prompt",
+        description: "See response area for troubleshooting steps",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRunningPrompt(false);
+    }
   };
 
   const startEditing = (sectionId: string, currentContent: string) => {
@@ -520,9 +706,9 @@ export function PromptBuilderVisualizer({
                 <Copy className="w-4 h-4 mr-2" />
                 Copy
               </Button>
-              <Button size="sm" onClick={runPrompt}>
+              <Button size="sm" onClick={runPrompt} disabled={isRunningPrompt || isBuilding}>
                 <Play className="w-4 h-4 mr-2" />
-                Run
+                {isRunningPrompt ? 'Running...' : 'Run'}
               </Button>
             </div>
           </div>
@@ -550,6 +736,47 @@ export function PromptBuilderVisualizer({
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Response Section */}
+      {(aiResponse || isRunningPrompt) && (
+        <Card className="border-2 border-green-200">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Brain className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">AI Response</CardTitle>
+                <CardDescription>
+                  Generated using your configured prompt and settings
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              {isRunningPrompt ? (
+                <div className="flex items-center justify-center py-8">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1 }}
+                    className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full"
+                  />
+                  <span className="ml-3 text-sm text-muted-foreground">
+                    Generating AI response...
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <pre className="text-sm whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">
+                    {aiResponse}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 text-center">
