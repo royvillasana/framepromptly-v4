@@ -27,6 +27,21 @@
             position: relative;
         }
 
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
+        .hero-slide {
+            background: linear-gradient(135deg, hsl(194, 100%, 43%), hsl(211, 100%, 33%), hsl(213, 26%, 18%)) !important;
+        }
+
         .slide-content {
             max-width: 1200px;
             text-align: center;
@@ -57,6 +72,18 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
+        .logo {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 2rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
         h2 {
             font-size: clamp(2rem, 4vw, 3rem);
             font-weight: 600;
@@ -73,17 +100,17 @@
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            gap: 2.5rem;
             margin-top: 3rem;
         }
 
         .feature-card {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(10px);
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
         }
 
         .feature-card:hover {
@@ -104,11 +131,11 @@
         }
 
         .framework-item {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2rem;
             border-radius: 10px;
             backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .cta-button {
@@ -138,6 +165,8 @@
             top: 50%;
             transform: translateY(-50%);
             z-index: 1000;
+            display: flex;
+            flex-direction: column;
         }
 
         .nav-dot {
@@ -148,6 +177,14 @@
             margin: 0.5rem 0;
             cursor: pointer;
             transition: all 0.3s ease;
+            border: none;
+            padding: 0;
+            display: block;
+        }
+
+        .nav-dot:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8);
         }
 
         .nav-dot.active {
@@ -165,7 +202,7 @@
 
         .tech-item {
             background: rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.25rem;
             border-radius: 25px;
             font-weight: 500;
             backdrop-filter: blur(5px);
@@ -183,7 +220,7 @@
 
         .shape {
             position: absolute;
-            opacity: 0.1;
+            opacity: 0.08;
             animation: float 6s ease-in-out infinite;
         }
 
@@ -221,27 +258,33 @@
             
             .feature-grid {
                 grid-template-columns: 1fr;
+                margin: 1rem;
+            }
+            
+            .feature-card, .framework-item {
+                margin: 0 1rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="navigation">
-        <div class="nav-dot active" onclick="scrollToSlide(0)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(1)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(2)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(3)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(4)"></div>
-    </div>
+    <nav class="navigation" role="navigation" aria-label="Presentation navigation">
+        <button class="nav-dot active" onclick="scrollToSlide(0)" aria-label="Go to slide 1: Introduction"></button>
+        <button class="nav-dot" onclick="scrollToSlide(1)" aria-label="Go to slide 2: Features"></button>
+        <button class="nav-dot" onclick="scrollToSlide(2)" aria-label="Go to slide 3: Frameworks"></button>
+        <button class="nav-dot" onclick="scrollToSlide(3)" aria-label="Go to slide 4: Technology"></button>
+        <button class="nav-dot" onclick="scrollToSlide(4)" aria-label="Go to slide 5: Get Started"></button>
+    </nav>
 
     <!-- Slide 1: Hero -->
-    <div class="slide">
+    <div class="slide hero-slide">
         <div class="floating-shapes">
-            <div class="shape"><�</div>
-            <div class="shape">=</div>
-            <div class="shape">�</div>
+            <div class="shape">🎨</div>
+            <div class="shape">🔄</div>
+            <div class="shape">⚡</div>
         </div>
         <div class="slide-content">
+            <img src="/logo_web.png" alt="FramePromptly Logo" class="logo">
             <h1>FramePromptly</h1>
             <p class="subtitle">UX Framework Workflow Builder</p>
             <p style="font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9;">
@@ -258,34 +301,34 @@
             <h2>Powerful Features</h2>
             <div class="feature-grid">
                 <div class="feature-card">
-                    <div class="feature-icon"><�</div>
+                    <div class="feature-icon">🎯</div>
                     <h3>Visual Workflow Builder</h3>
-                    <p>Create intuitive UX workflows with drag-and-drop canvas using React Flow</p>
+                    <p>Create intuitive UX workflows with drag-and-drop canvas using React Flow. Connect frameworks, stages, and tools with visual nodes and edges.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">></div>
+                    <div class="feature-icon">🤖</div>
                     <h3>AI Prompt Generation</h3>
-                    <p>Generate contextual AI prompts based on your UX methodology choices</p>
+                    <p>Generate contextual AI prompts based on your UX methodology choices. Each tool provides tailored prompts for maximum effectiveness.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">=�</div>
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Enterprise Security</h3>
+                    <p>Built on Supabase with Row Level Security, multi-tenant isolation, and real-time authentication for enterprise-grade protection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
                     <h3>Knowledge Management</h3>
-                    <p>Organize and reference your research, documents, and insights</p>
+                    <p>Organize research, documents, and insights with intelligent categorization. Upload files, add notes, and reference materials seamlessly.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">=</div>
+                    <div class="feature-icon">🔄</div>
                     <h3>Real-time Collaboration</h3>
-                    <p>Work together with your team on shared projects and workflows</p>
+                    <p>Work together with your team on shared projects. See changes instantly with live cursors, comments, and synchronized workflows.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">=�</div>
-                    <h3>Auto-save Canvas</h3>
-                    <p>Never lose your work with automatic saving to localStorage and cloud</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">=�</div>
-                    <h3>Secure & Scalable</h3>
-                    <p>Built on Supabase with Row Level Security for enterprise-grade protection</p>
+                    <div class="feature-icon">💾</div>
+                    <h3>Smart Auto-save</h3>
+                    <p>Never lose progress with intelligent auto-save to localStorage and cloud. Debounced saving prevents data loss during active editing.</p>
                 </div>
             </div>
         </div>
@@ -298,40 +341,40 @@
             <p class="subtitle">Choose from industry-standard methodologies</p>
             <div class="framework-list">
                 <div class="framework-item">
-                    <h4><� Design Thinking</h4>
-                    <p>5-stage human-centered approach</p>
+                    <h4>🎨 Design Thinking</h4>
+                    <p>5-stage human-centered approach: Empathize, Define, Ideate, Prototype, Test. Perfect for innovation projects.</p>
                 </div>
                 <div class="framework-item">
-                    <h4>=� Double Diamond</h4>
-                    <p>Divergent & convergent thinking</p>
+                    <h4>💎 Double Diamond</h4>
+                    <p>Discover, Define, Develop, Deliver. Structured divergent & convergent thinking for complex problems.</p>
                 </div>
                 <div class="framework-item">
-                    <h4>� Google Design Sprint</h4>
-                    <p>5-day process for rapid prototyping</p>
+                    <h4>⚡ Google Design Sprint</h4>
+                    <p>5-day process for rapid prototyping and validation. Ideal for testing big ideas quickly with real users.</p>
                 </div>
                 <div class="framework-item">
-                    <h4>=e Human-Centered Design</h4>
-                    <p>Focus on user needs and behaviors</p>
+                    <h4>👥 Human-Centered Design</h4>
+                    <p>Deep focus on user needs, behaviors, and contexts. Emphasizes empathy and inclusive design principles.</p>
                 </div>
                 <div class="framework-item">
-                    <h4>=� Jobs-to-Be-Done</h4>
-                    <p>Understand customer motivations</p>
+                    <h4>🏃‍♀️ Lean UX</h4>
+                    <p>Fast iteration and validation cycles. Build-Measure-Learn approach for rapid product development.</p>
                 </div>
                 <div class="framework-item">
-                    <h4><�@ Lean UX</h4>
-                    <p>Fast iteration and validation</p>
+                    <h4>🔄 Agile UX</h4>
+                    <p>Iterative design integrated with development sprints. Continuous user feedback and incremental improvements.</p>
                 </div>
                 <div class="framework-item">
-                    <h4>= Agile UX</h4>
-                    <p>Iterative design in development</p>
+                    <h4>💼 Jobs-to-Be-Done</h4>
+                    <p>Understand why customers hire your product. Focus on functional, emotional, and social job dimensions.</p>
                 </div>
                 <div class="framework-item">
-                    <h4>d HEART Framework</h4>
-                    <p>Happiness, Engagement, Adoption metrics</p>
+                    <h4>❤️ HEART Framework</h4>
+                    <p>Google's UX metrics: Happiness, Engagement, Adoption, Retention, Task success. Data-driven UX decisions.</p>
                 </div>
                 <div class="framework-item">
-                    <h4><� Hooked Model</h4>
-                    <p>Building habit-forming products</p>
+                    <h4>🎣 Hooked Model</h4>
+                    <p>4-step behavior design: Trigger, Action, Variable Reward, Investment. Build habit-forming products ethically.</p>
                 </div>
             </div>
         </div>
@@ -343,29 +386,32 @@
             <h2>Modern Tech Stack</h2>
             <p class="subtitle">Built with cutting-edge technologies</p>
             <div class="tech-stack">
-                <div class="tech-item">React 18</div>
-                <div class="tech-item">TypeScript</div>
-                <div class="tech-item">Vite</div>
-                <div class="tech-item">React Flow</div>
-                <div class="tech-item">Supabase</div>
-                <div class="tech-item">Tailwind CSS</div>
-                <div class="tech-item">shadcn/ui</div>
-                <div class="tech-item">Zustand</div>
-                <div class="tech-item">Radix UI</div>
+                <div class="tech-item">⚛️ React 18 - Component-based UI</div>
+                <div class="tech-item">📘 TypeScript - Type-safe development</div>
+                <div class="tech-item">⚡ Vite - Lightning-fast build tool</div>
+                <div class="tech-item">🔀 React Flow - Interactive node editor</div>
+                <div class="tech-item">🗄️ Supabase - PostgreSQL database & Auth</div>
+                <div class="tech-item">🎨 Tailwind CSS - Utility-first styling</div>
+                <div class="tech-item">🧩 shadcn/ui - Modern component library</div>
+                <div class="tech-item">🐻 Zustand - Lightweight state management</div>
+                <div class="tech-item">🎛️ Radix UI - Accessible primitives</div>
+                <div class="tech-item">🔒 Row Level Security - Enterprise-grade security</div>
+                <div class="tech-item">🚀 GitHub Actions - CI/CD pipeline</div>
+                <div class="tech-item">📱 PWA Ready - Progressive Web App</div>
             </div>
             <div style="margin-top: 3rem;">
                 <h3 style="margin-bottom: 1rem;">Key Capabilities</h3>
                 <div class="feature-grid">
                     <div class="feature-card">
-                        <h4><� Modern Architecture</h4>
+                        <h4>🏗️ Modern Architecture</h4>
                         <p>Component-based design with TypeScript for type safety</p>
                     </div>
                     <div class="feature-card">
-                        <h4>=� Fast Development</h4>
+                        <h4>🚀 Fast Development</h4>
                         <p>Hot reload with Vite and optimized build process</p>
                     </div>
                     <div class="feature-card">
-                        <h4>=� Responsive Design</h4>
+                        <h4>📱 Responsive Design</h4>
                         <p>Works seamlessly across desktop, tablet, and mobile</p>
                     </div>
                 </div>
@@ -384,12 +430,12 @@
                 </p>
             </div>
             <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-top: 2rem;">
-                <a href="#" class="cta-button">=� Try Live Demo</a>
-                <a href="#" class="cta-button">=� View Documentation</a>
-                <a href="#" class="cta-button">=� Get Support</a>
+                <a href="http://localhost:8080/" target="_blank" class="cta-button">🚀 Try Live Demo</a>
+                <a href="#" class="cta-button">📖 View Documentation</a>
+                <a href="#" class="cta-button">💬 Get Support</a>
             </div>
             <div style="margin-top: 3rem; opacity: 0.8;">
-                <p>Built with d for UX professionals</p>
+                <p>Built with ❤️ for UX professionals</p>
             </div>
         </div>
     </div>
