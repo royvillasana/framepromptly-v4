@@ -191,22 +191,14 @@ export const useSharingStore = create<SharingState>((set, get) => ({
 
   fetchProjectMembers: async (projectId: string) => {
     try {
-      // Fetch actual members (users who have accepted invitations)
+      // Fetch actual members using RPC function that properly joins with auth.users
       const { data: members, error: memberError } = await supabase
-        .from('project_members')
-        .select(`
-          *,
-          user:user_id (
-            email,
-            raw_user_meta_data
-          )
-        `)
-        .eq('project_id', projectId);
+        .rpc('get_project_members_with_users', { project_uuid: projectId });
 
       if (memberError) {
-        // If project_members table doesn't exist, return empty members
-        if (memberError.code === 'PGRST205' && memberError.message?.includes('project_members')) {
-          console.warn('Project members table not configured yet. Project sharing features are disabled.');
+        // If function doesn't exist, return empty members
+        if (memberError.code === 'PGRST0' || memberError.message?.includes('function')) {
+          console.warn('Project members RPC function not configured yet. Project sharing features are disabled.');
           set(state => ({ ...state, members: [] }));
           return;
         }
@@ -222,8 +214,8 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         joined_at: member.joined_at,
         added_by: member.added_by,
         user: {
-          email: member.user?.email || '',
-          full_name: member.user?.raw_user_meta_data?.full_name || ''
+          email: member.user_email || '',
+          full_name: '' // RPC doesn't return full_name yet
         }
       }));
 

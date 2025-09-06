@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,24 +7,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, Mail } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, signUp, signIn, signInWithGoogle, loading } = useAuth();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   
+  // Get invitation parameters
+  const invitationToken = searchParams.get('invitation');
+  const invitedEmail = searchParams.get('email');
+  const mode = searchParams.get('mode'); // 'signin' or default to signup
+  
   // Form states
-  const [signInForm, setSignInForm] = useState({ email: '', password: '' });
-  const [signUpForm, setSignUpForm] = useState({ email: '', password: '', displayName: '' });
+  const [signInForm, setSignInForm] = useState({ 
+    email: invitedEmail || '', 
+    password: '' 
+  });
+  const [signUpForm, setSignUpForm] = useState({ 
+    email: invitedEmail || '', 
+    password: '', 
+    displayName: '' 
+  });
 
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      navigate('/workflow');
+      // If there's an invitation token, redirect to the invitation page
+      if (invitationToken) {
+        navigate(`/invitation?token=${invitationToken}`);
+      } else {
+        navigate('/workflow');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, invitationToken]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +63,11 @@ export default function Auth() {
           title: 'Welcome back!',
           description: 'You have been signed in successfully.'
         });
+        
+        // Redirect to invitation if there's a token
+        if (invitationToken) {
+          navigate(`/invitation?token=${invitationToken}`);
+        }
       }
     } catch (error) {
       toast({
@@ -74,10 +98,20 @@ export default function Auth() {
           variant: 'destructive'
         });
       } else {
+        const message = invitationToken 
+          ? 'Account created! Please check your email to verify, then you can accept your project invitation.'
+          : 'Please check your email to verify your account.';
+        
         toast({
           title: 'Account created!',
-          description: 'Please check your email to verify your account.'
+          description: message
         });
+        
+        // For invitation flow, still redirect to invitation page after signup
+        if (invitationToken) {
+          // Note: User will need to verify email first, then the invitation page will handle acceptance
+          navigate(`/invitation?token=${invitationToken}`);
+        }
       }
     } catch (error) {
       toast({
@@ -130,7 +164,23 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          {/* Show invitation context if present */}
+          {invitationToken && (
+            <Alert className="mb-4">
+              <Users className="h-4 w-4" />
+              <AlertDescription>
+                You've been invited to join a project! 
+                {invitedEmail && (
+                  <span className="block text-sm mt-1 opacity-75">
+                    <Mail className="w-3 h-3 inline mr-1" />
+                    Invited: {invitedEmail}
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <Tabs defaultValue={mode === 'signin' ? 'signin' : 'signup'} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>

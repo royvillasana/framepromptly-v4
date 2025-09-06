@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Navigation } from '@/components/ui/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProjectStore } from '@/stores/project-store';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Target, CheckCircle, Brain, Settings, Save } from 'lucide-react';
+import { ArrowLeft, Target, CheckCircle, Brain, Settings, Save, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,14 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
+import { ProjectInvitations } from './project-invitations';
 
 export function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { projects, fetchProjects, saveEnhancedSettings, getEnhancedSettings } = useProjectStore();
   const [project, setProject] = useState(projects.find(p => p.id === projectId));
-  const [activeTab, setActiveTab] = useState('context');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'context');
 
   // Enhanced prompt state
   const [selectedIndustry, setSelectedIndustry] = useState<string>('general');
@@ -63,6 +65,32 @@ export function ProjectSettings() {
       loadEnhancedSettings();
     }
   }, [projectId, projects, fetchProjects]);
+
+  // Handle hash fragment scrolling
+  useEffect(() => {
+    const handleHashScroll = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        // Small delay to ensure the component has rendered
+        setTimeout(() => {
+          const element = document.querySelector(hash);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+    };
+
+    // Handle initial load and navigation
+    handleHashScroll();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashScroll);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashScroll);
+    };
+  }, [activeTab]); // Re-run when tab changes to handle cross-tab navigation
 
   const loadEnhancedSettings = async () => {
     if (!projectId) return;
@@ -263,9 +291,16 @@ export function ProjectSettings() {
         {/* Settings Tabs */}
         <div className="p-6">
           <div className="max-w-7xl mx-auto">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={(value) => {
+              setActiveTab(value);
+              setSearchParams(prev => {
+                const newParams = new URLSearchParams(prev);
+                newParams.set('tab', value);
+                return newParams;
+              });
+            }} className="w-full">
               <div className="flex items-center justify-between mb-6">
-                <TabsList className="grid w-fit grid-cols-3 bg-gray-100 p-1 rounded-lg">
+                <TabsList className="grid w-fit grid-cols-4 bg-gray-100 p-1 rounded-lg">
                   <TabsTrigger 
                     value="context"
                     className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
@@ -286,6 +321,13 @@ export function ProjectSettings() {
                   >
                     <Brain className="w-4 h-4 mr-2" />
                     AI Methods
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="team"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Team
                   </TabsTrigger>
                 </TabsList>
 
@@ -760,7 +802,7 @@ export function ProjectSettings() {
                   </Card>
 
                   {/* Advanced Parameters */}
-                  <Card>
+                  <Card id="advanced-generation-parameters">
                     <CardHeader>
                       <CardTitle>Advanced Generation Parameters</CardTitle>
                       <CardDescription>
@@ -914,6 +956,14 @@ export function ProjectSettings() {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* Team Tab */}
+              <TabsContent value="team" className="mt-0">
+                <ProjectInvitations 
+                  projectId={projectId || ''} 
+                  projectName={project?.name || 'Project'} 
+                />
               </TabsContent>
             </Tabs>
           </div>

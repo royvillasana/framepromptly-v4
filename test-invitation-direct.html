@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Invitation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; background: #f9f9f9; }
+        .error { border-color: #f00; background: #ffe6e6; }
+        .success { border-color: #0a0; background: #e6ffe6; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>Test Invitation System - Debug Mode</h1>
+    <button onclick="testInvitation()">Test Send Invitation</button>
+    <div id="result"></div>
+
+    <!-- Load Supabase JS client FIRST -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Import Supabase client
+        const { createClient } = supabase;
+        
+        // Initialize Supabase client
+        const supabaseClient = createClient(
+            'https://drfaomantrtmtydbelxe.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyZmFvbWFudHJ0bXR5ZGJlbHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMyNDE4NzIsImV4cCI6MjA0ODgxNzg3Mn0.1IgOXgMhxnL7BT_8HBk5MbSSyO-yL5Z1NTsLmZzT1dA'
+        );
+
+        async function testInvitation() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing invitation system...</p>';
+
+            try {
+                console.log('🧪 Starting invitation test...');
+                
+                // Test mode - no authentication required
+                
+                const requestBody = {
+                    projectId: 'test-project-id-123',
+                    projectName: 'Test Project for Debugging',
+                    invitedEmail: 'invite.test@gmail.com',
+                    role: 'viewer'
+                };
+
+                console.log('📤 Sending request to no-auth test function:', requestBody);
+
+                const response = await fetch('https://drfaomantrtmtydbelxe.supabase.co/functions/v1/send-project-invitation-noauth', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyZmFvbWFudHJ0bXR5ZGJlbHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMyNDE4NzIsImV4cCI6MjA0ODgxNzg3Mn0.1IgOXgMhxnL7BT_8HBk5MbSSyO-yL5Z1NTsLmZzT1dA',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log('🔍 Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    headers: Object.fromEntries(response.headers.entries())
+                });
+
+                const responseText = await response.text();
+                console.log('🔍 Raw response text:', responseText);
+
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                    console.log('🔍 Parsed response data:', responseData);
+                } catch (parseError) {
+                    console.error('❌ Could not parse response as JSON:', parseError);
+                    responseData = { error: 'Could not parse response', rawResponse: responseText };
+                }
+
+                // Display results in the UI
+                const resultClass = response.ok ? 'success' : 'error';
+                resultDiv.innerHTML = `
+                    <div class="result ${resultClass}">
+                        <h3>Response Status: ${response.status} ${response.statusText}</h3>
+                        <h4>Response Data:</h4>
+                        <pre>${JSON.stringify(responseData, null, 2)}</pre>
+                        <h4>Raw Response:</h4>
+                        <pre>${responseText}</pre>
+                    </div>
+                `;
+
+                // If there's an error, show additional debugging info
+                if (!response.ok) {
+                    console.error('❌ Request failed with detailed debugging info');
+                    console.error('❌ This should show which step failed in the simplified function');
+                }
+
+            } catch (error) {
+                console.error('❌ Test failed with error:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Test Failed</h3>
+                        <pre>Error: ${error.message}</pre>
+                        <pre>Stack: ${error.stack}</pre>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

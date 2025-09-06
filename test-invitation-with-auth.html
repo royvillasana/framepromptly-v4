@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Invitation System - With Auth</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; background: #f9f9f9; }
+        .error { border-color: #f00; background: #ffe6e6; }
+        .success { border-color: #0a0; background: #e6ffe6; }
+        .auth { border-color: #00f; background: #e6f3ff; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        button { margin: 5px; padding: 10px 15px; }
+        input { margin: 5px; padding: 8px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>Test Invitation System - With Authentication</h1>
+    
+    <div id="auth-section">
+        <h3>Step 1: Sign Up or Sign In</h3>
+        <input type="email" id="email" placeholder="Enter email" value="test.user@example.com">
+        <input type="password" id="password" placeholder="Enter password" value="password123">
+        <br>
+        <button onclick="signUp()">Sign Up</button>
+        <button onclick="signIn()">Sign In</button>
+        <button onclick="signOut()">Sign Out</button>
+    </div>
+
+    <div id="invitation-section">
+        <h3>Step 2: Test Invitation (requires auth)</h3>
+        <input type="email" id="inviteEmail" placeholder="Email to invite" value="invite.test@gmail.com">
+        <select id="inviteRole">
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
+        </select>
+        <br>
+        <button onclick="testInvitation()">Send Invitation</button>
+    </div>
+
+    <div id="result"></div>
+
+    <!-- Load Supabase JS client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Initialize Supabase client with correct keys
+        const { createClient } = supabase;
+        const supabaseClient = createClient(
+            'https://drfaomantrtmtydbelxe.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyZmFvbWFudHJ0bXR5ZGJlbHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTczNTAsImV4cCI6MjA3MTEzMzM1MH0.6oQtHv6OcLkdHvmBPkTnTHEIuF0_GudFxhebVg9atq0'
+        );
+
+        async function signUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="result auth">
+                        <h3>Sign Up Result</h3>
+                        <pre>Success! User created: ${data.user?.email}</pre>
+                        <p>Check your email to verify your account, or try signing in directly.</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Sign Up Failed</h3>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>Sign In Successful!</h3>
+                        <pre>Welcome: ${data.user.email}</pre>
+                        <pre>JWT Token: ${data.session?.access_token?.substring(0, 50)}...</pre>
+                        <p>Now you can test sending invitations!</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Sign In Failed</h3>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function signOut() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const { error } = await supabaseClient.auth.signOut();
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="result auth">
+                        <h3>Signed Out</h3>
+                        <p>You have been signed out successfully.</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Sign Out Failed</h3>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function testInvitation() {
+            const inviteEmail = document.getElementById('inviteEmail').value;
+            const inviteRole = document.getElementById('inviteRole').value;
+            const resultDiv = document.getElementById('result');
+
+            try {
+                // Check if user is authenticated
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                
+                if (userError || !user) {
+                    throw new Error('Please sign in first!');
+                }
+
+                console.log('🧪 Testing invitation with authenticated user:', user.email);
+
+                const requestBody = {
+                    projectId: 'test-project-id-123',
+                    projectName: 'Test Project for Real Auth',
+                    invitedEmail: inviteEmail,
+                    role: inviteRole
+                };
+
+                // Use the original Edge Function with real authentication
+                const { data, error } = await supabaseClient.functions.invoke('send-project-invitation-simple', {
+                    body: requestBody
+                });
+
+                console.log('🔍 Function response:', { data, error });
+
+                if (error) {
+                    throw error;
+                }
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>Invitation Sent Successfully!</h3>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                console.error('❌ Invitation failed:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Invitation Failed</h3>
+                        <pre>Error: ${error.message}</pre>
+                        <p>Make sure you're signed in first!</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

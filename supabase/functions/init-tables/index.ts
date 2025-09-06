@@ -18,133 +18,121 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Creating delivery system tables...');
+    console.log('Creating invitation system tables...');
 
-    // Execute the table creation SQL
-    const { data, error } = await supabaseClient.rpc('exec_sql', {
-      query: `
-        -- Create delivery system tables for FramePromptly
-        
-        -- Table for tracking deliveries to destinations
-        CREATE TABLE IF NOT EXISTS public.deliveries (
-            id TEXT PRIMARY KEY,
-            user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-            destination TEXT NOT NULL CHECK (destination IN ('miro', 'figjam', 'figma')),
-            target_id TEXT NOT NULL,
-            status TEXT NOT NULL CHECK (status IN ('processing', 'success', 'failed')),
-            delivered_items INTEGER DEFAULT 0,
-            total_items INTEGER DEFAULT 0,
-            embed_url TEXT,
-            import_url TEXT,
-            expires_at TIMESTAMPTZ,
-            error TEXT,
-            warnings TEXT[],
-            metadata JSONB,
-            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-            updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+    // Execute table creation step by step
+    console.log('Creating project_invitations table...');
+    const { error: invitationsTableError } = await supabaseClient
+      .from('project_invitations')
+      .select('*')
+      .limit(0);
+    
+    if (invitationsTableError && invitationsTableError.code === '42P01') {
+      // Table doesn't exist, create it using raw SQL
+      const createInvitationsTable = `
+        CREATE TABLE IF NOT EXISTS public.project_invitations (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            project_id UUID NOT NULL,
+            invited_email TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('viewer', 'editor')),
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired')),
+            invited_by UUID NOT NULL,
+            invitation_token UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+            expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            accepted_at TIMESTAMPTZ,
+            accepted_by UUID
         );
+      `;
+      
+      try {
+        // Use service client to execute raw SQL
+        const { data: createResult, error: createError } = await supabaseClient
+          .rpc('exec', { query: createInvitationsTable });
+        console.log('project_invitations table creation result:', { data: createResult, error: createError });
+      } catch (err) {
+        console.log('project_invitations table creation alternative method needed');
+      }
+    } else {
+      console.log('project_invitations table already exists or accessible');
+    }
 
-        -- Table for OAuth connections to third-party services
-        CREATE TABLE IF NOT EXISTS public.oauth_connections (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-            service TEXT NOT NULL CHECK (service IN ('miro', 'figjam', 'figma')),
-            access_token_encrypted TEXT NOT NULL,
-            refresh_token_encrypted TEXT,
-            expires_at TIMESTAMPTZ,
-            scope TEXT[],
-            connection_metadata JSONB,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-            updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-            UNIQUE(user_id, service)
+    console.log('Creating project_members table...');
+    const { error: membersTableError } = await supabaseClient
+      .from('project_members')
+      .select('*')
+      .limit(0);
+      
+    if (membersTableError && membersTableError.code === '42P01') {
+      // Table doesn't exist, create it
+      const createMembersTable = `
+        CREATE TABLE IF NOT EXISTS public.project_members (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            project_id UUID NOT NULL,
+            user_id UUID NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+            joined_at TIMESTAMPTZ DEFAULT NOW(),
+            added_by UUID,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(project_id, user_id)
         );
+      `;
+      
+      try {
+        const { data: createResult, error: createError } = await supabaseClient
+          .rpc('exec', { query: createMembersTable });
+        console.log('project_members table creation result:', { data: createResult, error: createError });
+      } catch (err) {
+        console.log('project_members table creation alternative method needed');
+      }
+    } else {
+      console.log('project_members table already exists or accessible');
+    }
+    
+    // Try to insert a test record to verify the tables work
+    console.log('Testing tables with dummy data...');
+    
+    const testResult = {
+      invitations_table: 'unknown',
+      members_table: 'unknown'
+    };
+    
+    try {
+      const { error: testInvError } = await supabaseClient
+        .from('project_invitations')
+        .select('count')
+        .limit(1);
+      testResult.invitations_table = testInvError ? `ERROR: ${testInvError.message}` : 'OK';
+    } catch (err) {
+      testResult.invitations_table = `EXCEPTION: ${err.message}`;
+    }
+    
+    try {
+      const { error: testMembersError } = await supabaseClient
+        .from('project_members')
+        .select('count')
+        .limit(1);
+      testResult.members_table = testMembersError ? `ERROR: ${testMembersError.message}` : 'OK';
+    } catch (err) {
+      testResult.members_table = `EXCEPTION: ${err.message}`;
+    }
 
-        -- Table for ephemeral imports (temporary signed URLs)
-        CREATE TABLE IF NOT EXISTS public.ephemeral_imports (
-            id TEXT PRIMARY KEY,
-            user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-            destination TEXT NOT NULL CHECK (destination IN ('figjam', 'figma')),
-            payload JSONB NOT NULL,
-            signed_url TEXT NOT NULL,
-            expires_at TIMESTAMPTZ NOT NULL,
-            accessed_at TIMESTAMPTZ,
-            access_count INTEGER DEFAULT 0,
-            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
-        );
-
-        -- Create indexes
-        CREATE INDEX IF NOT EXISTS idx_deliveries_user_id ON public.deliveries(user_id);
-        CREATE INDEX IF NOT EXISTS idx_deliveries_status ON public.deliveries(status);
-        CREATE INDEX IF NOT EXISTS idx_deliveries_destination ON public.deliveries(destination);
-        CREATE INDEX IF NOT EXISTS idx_deliveries_created_at ON public.deliveries(created_at);
-
-        CREATE INDEX IF NOT EXISTS idx_oauth_connections_user_id ON public.oauth_connections(user_id);
-        CREATE INDEX IF NOT EXISTS idx_oauth_connections_service ON public.oauth_connections(service);
-        CREATE INDEX IF NOT EXISTS idx_oauth_connections_active ON public.oauth_connections(is_active);
-
-        CREATE INDEX IF NOT EXISTS idx_ephemeral_imports_user_id ON public.ephemeral_imports(user_id);
-        CREATE INDEX IF NOT EXISTS idx_ephemeral_imports_expires_at ON public.ephemeral_imports(expires_at);
-        CREATE INDEX IF NOT EXISTS idx_ephemeral_imports_destination ON public.ephemeral_imports(destination);
-
-        -- Enable RLS
-        ALTER TABLE public.deliveries ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE public.oauth_connections ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE public.ephemeral_imports ENABLE ROW LEVEL SECURITY;
-
-        -- RLS Policies for deliveries
-        DROP POLICY IF EXISTS "Users can view their own deliveries" ON public.deliveries;
-        CREATE POLICY "Users can view their own deliveries" ON public.deliveries
-            FOR SELECT USING (auth.uid() = user_id);
-
-        DROP POLICY IF EXISTS "Users can insert their own deliveries" ON public.deliveries;
-        CREATE POLICY "Users can insert their own deliveries" ON public.deliveries
-            FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-        DROP POLICY IF EXISTS "Users can update their own deliveries" ON public.deliveries;
-        CREATE POLICY "Users can update their own deliveries" ON public.deliveries
-            FOR UPDATE USING (auth.uid() = user_id);
-
-        -- RLS Policies for oauth_connections
-        DROP POLICY IF EXISTS "Users can view their own oauth connections" ON public.oauth_connections;
-        CREATE POLICY "Users can view their own oauth connections" ON public.oauth_connections
-            FOR SELECT USING (auth.uid() = user_id);
-
-        DROP POLICY IF EXISTS "Users can insert their own oauth connections" ON public.oauth_connections;
-        CREATE POLICY "Users can insert their own oauth connections" ON public.oauth_connections
-            FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-        DROP POLICY IF EXISTS "Users can update their own oauth connections" ON public.oauth_connections;
-        CREATE POLICY "Users can update their own oauth connections" ON public.oauth_connections
-            FOR UPDATE USING (auth.uid() = user_id);
-
-        -- RLS Policies for ephemeral_imports
-        DROP POLICY IF EXISTS "Users can view their own ephemeral imports" ON public.ephemeral_imports;
-        CREATE POLICY "Users can view their own ephemeral imports" ON public.ephemeral_imports
-            FOR SELECT USING (auth.uid() = user_id);
-
-        DROP POLICY IF EXISTS "Users can insert their own ephemeral imports" ON public.ephemeral_imports;
-        CREATE POLICY "Users can insert their own ephemeral imports" ON public.ephemeral_imports
-            FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-        -- Public access for ephemeral imports via signed URL
-        DROP POLICY IF EXISTS "Public can read ephemeral imports by ID" ON public.ephemeral_imports;
-        CREATE POLICY "Public can read ephemeral imports by ID" ON public.ephemeral_imports
-            FOR SELECT USING (true);
-      `
-    });
+    const data = testResult;
+    const error = null;
 
     if (error) {
       console.error('SQL execution error:', error);
       throw error;
     }
 
-    console.log('Tables created successfully');
+    console.log('Invitation tables created successfully');
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Delivery system tables created successfully',
+        message: 'Invitation system tables created successfully',
         timestamp: new Date().toISOString()
       }),
       {

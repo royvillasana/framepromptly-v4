@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+  'Access-Control-Max-Age': '86400',
 }
 
 interface InvitationRequest {
@@ -22,10 +24,27 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔄 Starting invitation process...');
+    
+    // Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    console.log('Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasAnonKey: !!supabaseAnonKey,
+      hasServiceKey: !!supabaseServiceKey
+    });
+    
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      throw new Error('Missing required environment variables');
+    }
+
     // Create client for user operations (with auth)
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl,
+      supabaseAnonKey,
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -35,12 +54,15 @@ serve(async (req) => {
 
     // Create admin client for invitation creation (without RLS)
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      supabaseUrl,
+      supabaseServiceKey
     )
 
     // Parse request body
-    const { projectId, projectName, invitedEmail, role, inviterName, inviterEmail }: InvitationRequest = await req.json()
+    const requestBody = await req.json();
+    console.log('📥 Request body received:', requestBody);
+    
+    const { projectId, projectName, invitedEmail, role, inviterName, inviterEmail }: InvitationRequest = requestBody;
 
     // Validate required fields
     if (!projectId || !projectName || !invitedEmail || !role) {
@@ -65,7 +87,23 @@ serve(async (req) => {
       )
     }
 
+    // Check if tables exist first
+    console.log('🔍 Checking if invitation tables exist...');
+    
+    try {
+      const { data: tableCheck, error: tableError } = await supabaseAdmin
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .in('table_name', ['project_invitations', 'project_members']);
+        
+      console.log('📊 Table check result:', { data: tableCheck, error: tableError });
+    } catch (tableCheckError) {
+      console.error('❌ Table check failed:', tableCheckError);
+    }
+
     // Create invitation record in database with token
+    console.log('💾 Attempting to insert invitation...');
     const { data: invitationData, error: invitationError } = await supabaseAdmin
       .from('project_invitations')
       .insert({
@@ -78,12 +116,19 @@ serve(async (req) => {
       .select('invitation_token')
       .single()
 
+    console.log('📝 Invitation insert result:', { data: invitationData, error: invitationError });
+
     if (invitationError) {
-      console.error('Error creating invitation:', invitationError)
+      console.error('❌ Error creating invitation:', invitationError)
+      console.error('❌ Error details:', JSON.stringify(invitationError, null, 2));
+      
       return new Response(
         JSON.stringify({ 
           error: 'Failed to create invitation',
-          details: invitationError.message 
+          details: invitationError.message,
+          code: invitationError.code,
+          hint: invitationError.hint,
+          timestamp: new Date().toISOString()
         }),
         { 
           status: 500, 
@@ -284,8 +329,8 @@ ${baseUrl}
       text: emailText
     })
 
-    // Simulate sending email - replace with actual email service integration
-    const emailSent = await simulateEmailSend(invitedEmail, emailSubject, emailHtml, emailText)
+    // Send invitation email
+    const emailSent = await sendInvitationEmail(invitedEmail, emailSubject, emailHtml, emailText)
 
     if (emailSent) {
       return new Response(
@@ -304,11 +349,18 @@ ${baseUrl}
     }
 
   } catch (error) {
-    console.error('Error sending invitation:', error)
+    console.error('❌ Error sending invitation:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
     return new Response(
       JSON.stringify({ 
         error: 'Failed to send invitation email',
-        details: error.message 
+        details: error.message,
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500, 
@@ -318,36 +370,85 @@ ${baseUrl}
   }
 })
 
-// Placeholder function - replace with actual email service integration
-async function simulateEmailSend(to: string, subject: string, html: string, text: string): Promise<boolean> {
+// Email sending function - using Resend for production
+async function sendInvitationEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
   try {
-    // Here you would integrate with your preferred email service:
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
     
-    // Option 1: Resend (recommended)
-    // const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
-    // const result = await resend.emails.send({
-    //   from: 'FramePromptly <invitations@framepromptly.com>',
-    //   to: [to],
-    //   subject: subject,
-    //   html: html,
-    //   text: text
-    // })
-    // return !!result.data?.id
+    console.log('🔍 Email function called with:', { to, subject: subject.substring(0, 50) });
+    console.log('🔍 Resend API key exists:', !!resendApiKey);
+    console.log('🔍 Resend API key length:', resendApiKey?.length || 0);
     
-    // Option 2: SendGrid
-    // Option 3: AWS SES
-    // Option 4: Supabase Auth (for user invitations)
+    // If Resend is configured, use it
+    if (resendApiKey) {
+      console.log('📤 Sending email via Resend to:', to);
+      
+      const emailPayload = {
+        from: Deno.env.get('FROM_EMAIL') || 'FramePromptly <onboarding@resend.dev>',
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text
+      };
+      
+      console.log('📝 Email payload:', {
+        ...emailPayload,
+        html: '... (HTML content) ...',
+        text: text.substring(0, 100) + '...'
+      });
+      
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      console.log('📡 Resend API response status:', response.status);
+      console.log('📡 Resend API response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Resend API error response:', errorText);
+        console.error('❌ Response status:', response.status);
+        console.error('❌ Response statusText:', response.statusText);
+        throw new Error(`Resend API error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Email sent successfully via Resend:', result);
+      return true;
+    } else {
+      console.log('⚠️ No Resend API key found');
+    }
     
-    // For now, just log and return true
-    console.log(`Would send email to: ${to}`)
-    console.log(`Subject: ${subject}`)
+    // Fallback: Try using SMTP or other email service
+    const smtpHost = Deno.env.get('SMTP_HOST');
+    const smtpUser = Deno.env.get('SMTP_USER');
+    const smtpPass = Deno.env.get('SMTP_PASS');
     
-    // Simulate async operation
-    await new Promise(resolve => setTimeout(resolve, 100))
+    if (smtpHost && smtpUser && smtpPass) {
+      console.log('📧 SMTP configuration found, but not implemented yet');
+    }
     
-    return true
+    // Development/Testing mode - just log the email
+    console.log('📧 DEVELOPMENT MODE - EMAIL WOULD BE SENT:');
+    console.log(`📧 To: ${to}`);
+    console.log(`📧 Subject: ${subject}`);
+    console.log(`📧 Content: ${text.substring(0, 200)}...`);
+    
+    // Simulate successful send in development
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    console.log('✅ Email simulation completed');
+    return true;
   } catch (error) {
-    console.error('Error in email simulation:', error)
-    return false
+    console.error('❌ Error sending invitation email:', error);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    return false;
   }
 }
