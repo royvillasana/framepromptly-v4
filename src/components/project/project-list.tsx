@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useProjectStore } from '@/stores/project-store';
+import { usePromptStore } from '@/stores/prompt-store';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectDialog } from './project-dialog';
 import { ProjectShareModal } from './project-share-modal';
@@ -15,8 +16,35 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { motion } from 'framer-motion';
-import { FolderOpen, Trash2, Calendar, Layers, Plus, Loader2, Database, Settings, Share, MoreVertical } from 'lucide-react';
+import { FolderOpen, Trash2, Calendar, Plus, Loader2, Database, Settings, Share, MoreVertical, MessageSquare, Target } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+
+// Helper function to get the primary framework from project canvas data
+const getProjectFramework = (project: Project): string | null => {
+  if (!project.canvas_data?.nodes) return null;
+  
+  const frameworkNode = project.canvas_data.nodes.find((node: any) => 
+    node.type === 'framework' && node.data?.framework
+  );
+  
+  return frameworkNode?.data?.framework?.name || null;
+};
+
+// Helper function to get prompts count for a project
+const getPromptsCount = async (projectId: string): Promise<number> => {
+  try {
+    const { count } = await supabase
+      .from('prompts')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId);
+    
+    return count || 0;
+  } catch (error) {
+    console.error('Error fetching prompts count:', error);
+    return 0;
+  }
+};
 
 export function ProjectList() {
   const { 
@@ -28,17 +56,37 @@ export function ProjectList() {
     setCurrentProject, 
     deleteProject 
   } = useProjectStore();
+  const { prompts } = usePromptStore();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [promptsCounts, setPromptsCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
-  const handleOpenProject = (project: Project) => {
-    setCurrentProject(project);
+  // Load prompts counts for all projects
+  useEffect(() => {
+    const loadPromptsCounts = async () => {
+      if (projects.length === 0) return;
+      
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        projects.map(async (project) => {
+          counts[project.id] = await getPromptsCount(project.id);
+        })
+      );
+      
+      setPromptsCounts(counts);
+    };
+
+    loadPromptsCounts();
+  }, [projects]);
+
+  const handleOpenProject = async (project: Project) => {
+    await setCurrentProject(project);
     navigate('/workflow');
     toast({
       title: "Project Opened",
@@ -136,13 +184,26 @@ export function ProjectList() {
                 )}
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <Layers className="w-3 h-3" />
-                    {currentProject.canvas_data?.nodes?.length || 0} nodes
+                    <MessageSquare className="w-3 h-3" />
+                    {promptsCounts[currentProject.id] || 0} prompts
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Updated {formatDistanceToNow(new Date(currentProject.updated_at), { addSuffix: true })}
-                  </div>
+                  {getProjectFramework(currentProject) && (
+                    <Badge variant="secondary" className="text-xs py-0 px-2">
+                      <Target className="w-3 h-3 mr-1" />
+                      {getProjectFramework(currentProject)}
+                    </Badge>
+                  )}
+                  {currentProject.last_opened ? (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Last opened {formatDistanceToNow(new Date(currentProject.last_opened), { addSuffix: true })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Updated {formatDistanceToNow(new Date(currentProject.updated_at), { addSuffix: true })}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -279,13 +340,26 @@ export function ProjectList() {
                     
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
-                        <Layers className="w-3 h-3" />
-                        {project.canvas_data?.nodes?.length || 0} nodes
+                        <MessageSquare className="w-3 h-3" />
+                        {promptsCounts[project.id] || 0} prompts
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
-                      </div>
+                      {getProjectFramework(project) && (
+                        <Badge variant="secondary" className="text-xs py-0 px-2">
+                          <Target className="w-3 h-3 mr-1" />
+                          {getProjectFramework(project)}
+                        </Badge>
+                      )}
+                      {project.last_opened ? (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Last opened {formatDistanceToNow(new Date(project.last_opened), { addSuffix: true })}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Updated {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

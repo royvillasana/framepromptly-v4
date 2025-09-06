@@ -42,6 +42,7 @@ export interface Project {
   enhanced_settings?: ProjectEnhancedSettings;
   created_at: string;
   updated_at: string;
+  last_opened?: string;
 }
 
 interface ProjectState {
@@ -55,7 +56,7 @@ interface ProjectState {
   createProject: (name: string, description?: string) => Promise<Project>;
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
-  setCurrentProject: (project: Project | null) => void;
+  setCurrentProject: (project: Project | null) => Promise<void>;
   saveCanvasData: (projectId: string, nodes: any[], edges: any[]) => Promise<void>;
   
   // Miro Settings Actions
@@ -186,8 +187,30 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  setCurrentProject: (project: Project | null) => {
+  setCurrentProject: async (project: Project | null) => {
     set({ currentProject: project });
+    
+    // Update last_opened timestamp when a project is set as current
+    if (project) {
+      try {
+        const now = new Date().toISOString();
+        await supabase
+          .from('projects')
+          .update({ last_opened: now })
+          .eq('id', project.id);
+        
+        // Update the project in local state with new timestamp
+        const updatedProject = { ...project, last_opened: now };
+        set((state) => ({
+          currentProject: updatedProject,
+          projects: state.projects.map(p => 
+            p.id === project.id ? updatedProject : p
+          )
+        }));
+      } catch (error) {
+        console.error('Failed to update last_opened timestamp:', error);
+      }
+    }
   },
 
   saveCanvasData: async (projectId: string, nodes: any[], edges: any[]) => {
