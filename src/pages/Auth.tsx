@@ -40,7 +40,7 @@ export default function Auth() {
       if (invitationToken) {
         navigate(`/invitation?token=${invitationToken}`);
       } else {
-        navigate('/workflow');
+        navigate('/projects');
       }
     }
   }, [user, loading, navigate, invitationToken]);
@@ -155,7 +155,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">FramePromptly</CardTitle>

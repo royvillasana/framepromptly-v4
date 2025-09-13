@@ -399,7 +399,7 @@ const AIStressTest: React.FC = () => {
                   id="aiDelay"
                   value={aiDelayMs}
                   onChange={(e) => setAiDelayMs(Number(e.target.value))}
-                  className="flex h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                  className="flex h-8 rounded-md border border-input bg-gradient-to-br from-gray-50 to-white px-2 py-1 text-xs"
                 >
                   <option value="0">No delay</option>
                   <option value="1000">1 second</option>

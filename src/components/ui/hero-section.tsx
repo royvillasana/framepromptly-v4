@@ -57,23 +57,17 @@ export function HeroSection() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
+            className="flex justify-center mb-16"
           >
             <GradientButton 
               variant="primary"
               size="xl"
               asChild
             >
-              <a className="flex items-center" href="/workflow">
+              <a className="flex items-center" href="/auth">
                 Start Building
                 <ArrowRight className="w-5 h-5 ml-2" />
               </a>
-            </GradientButton>
-            <GradientButton 
-              variant="secondary"
-              size="xl"
-            >
-              View Demo
             </GradientButton>
           </motion.div>
 

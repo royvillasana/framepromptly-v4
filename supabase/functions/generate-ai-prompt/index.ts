@@ -169,6 +169,11 @@ Generate detailed professional instructions for ${toolName} in the ${stageName} 
           }
           console.error(`OpenAI API error (${openAIResponse.status}):`, errorData);
           
+          // Handle quota exceeded error specifically
+          if (errorData?.error?.code === 'insufficient_quota') {
+            throw new Error('OpenAI API quota exceeded. Please add credits to your OpenAI account at https://platform.openai.com/billing or contact your administrator.');
+          }
+          
           // Try next model on specific errors
           if (errorData?.error?.code === 'model_not_found' || 
               errorData?.error?.type === 'invalid_request_error' ||

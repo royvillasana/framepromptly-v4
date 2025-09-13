@@ -6,10 +6,10 @@ import { FolderOpen, Database } from 'lucide-react';
 
 export default function Projects() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
       
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -43,11 +43,11 @@ export default function Projects() {
         </div>
 
         {/* Main Content */}
-        <div className="p-6 pb-12">
-          <div className="max-w-7xl mx-auto">
+        <main className="container mx-auto px-4 py-8">
+          <div>
             <ProjectList />
           </div>
-        </div>
+        </main>
       </motion.div>
     </div>
   );

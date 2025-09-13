@@ -214,40 +214,27 @@ function ExpandedPromptOverlayComponent({
 
       console.log('💾 Conversation data to save:', conversationData.length, 'messages');
 
-      // Update to use the new conversation_history field instead of ai_response
-      const { error } = await supabase
+      // Use ai_response field directly since conversation_history column doesn't exist yet
+      console.log('💾 Using ai_response field for conversation storage...');
+      const conversationJson = JSON.stringify({
+        type: 'conversation',
+        messages: conversationData
+      });
+
+      const { error: saveError } = await supabase
         .from('prompts')
         .update({ 
-          conversation_history: conversationData,
+          ai_response: conversationJson,
           updated_at: new Date().toISOString()
         })
         .eq('id', prompt.id);
 
-      if (error) {
-        console.error('💾 Error saving conversation to database:', error);
-        // Fallback to old method if conversation_history field doesn't exist
-        console.log('💾 Trying fallback save to ai_response field...');
-        const conversationJson = JSON.stringify({
-          type: 'conversation',
-          messages: conversationData
-        });
-
-        const { error: fallbackError } = await supabase
-          .from('prompts')
-          .update({ 
-            ai_response: conversationJson,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', prompt.id);
-
-        if (fallbackError) {
-          console.error('💾 Fallback save also failed:', fallbackError);
-        } else {
-          console.log('💾 Fallback save successful');
-        }
-      } else {
-        console.log('💾 Conversation saved successfully to conversation_history field');
+      if (saveError) {
+        console.error('💾 Failed to save conversation:', saveError);
+        throw saveError;
       }
+
+      console.log('💾 Conversation saved successfully to ai_response field');
     } catch (error) {
       console.error('💾 Failed to save conversation:', error);
     }

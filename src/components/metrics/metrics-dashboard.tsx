@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useRealTimeAnalytics } from '@/hooks/use-real-time-analytics';
 import { 
   BarChart3, 
   LineChart, 
@@ -79,18 +80,31 @@ export const MetricsDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  
+  // Use real-time analytics
+  const {
+    metrics: realTimeMetrics,
+    isLoading: isAnalyticsLoading,
+    lastUpdated: analyticsLastUpdated,
+    refreshMetrics,
+    enableAutoRefresh,
+    disableAutoRefresh,
+    trackFeatureUsage
+  } = useRealTimeAnalytics(autoRefresh, 15000); // Refresh every 15 seconds
 
   useEffect(() => {
     loadDashboardData();
-    
-    const interval = autoRefresh ? setInterval(() => {
-      loadDashboardData();
-    }, 30000) : null;
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh]);
+    trackFeatureUsage('metrics_dashboard_view');
+  }, [trackFeatureUsage]);
+  
+  // Handle auto-refresh toggle
+  useEffect(() => {
+    if (autoRefresh) {
+      enableAutoRefresh();
+    } else {
+      disableAutoRefresh();
+    }
+  }, [autoRefresh, enableAutoRefresh, disableAutoRefresh]);
 
   const loadDashboardData = async () => {
     try {
@@ -106,6 +120,9 @@ export const MetricsDashboard: React.FC = () => {
       setCacheStats(stats);
       setCacheHealth(health);
       setLastUpdated(new Date());
+      
+      // Also refresh real-time metrics
+      await refreshMetrics();
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -115,23 +132,42 @@ export const MetricsDashboard: React.FC = () => {
 
   const handleExportMetrics = async (format: 'json' | 'csv' | 'prometheus') => {
     try {
-      const data = await metricsService.exportMetrics(format, {
-        start: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-        end: new Date()
-      });
+      trackFeatureUsage('metrics_export', { format });
+      
+      // Get both traditional and real-time metrics
+      const [traditionalData, realTimeData] = await Promise.all([
+        metricsService.exportMetrics(format, {
+          start: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+          end: new Date()
+        }),
+        realTimeMetrics ? Promise.resolve(JSON.stringify(realTimeMetrics, null, 2)) : Promise.resolve('{}')
+      ]);
+      
+      let combinedData = '';
+      if (format === 'json') {
+        const combined = {
+          traditional: JSON.parse(traditionalData),
+          realTime: JSON.parse(realTimeData),
+          exportedAt: new Date().toISOString()
+        };
+        combinedData = JSON.stringify(combined, null, 2);
+      } else {
+        combinedData = traditionalData;
+      }
       
       // Create and download file
-      const blob = new Blob([data], { type: 'text/plain' });
+      const blob = new Blob([combinedData], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `metrics_${new Date().toISOString().split('T')[0]}.${format}`;
+      a.download = `framepromptly_metrics_${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Export failed:', error);
+      trackFeatureUsage('metrics_export_failed', { format, error: error.message });
     }
   };
 
@@ -176,14 +212,15 @@ export const MetricsDashboard: React.FC = () => {
     changeRate?: number;
     icon: React.ReactNode;
     description?: string;
-    color?: 'default' | 'green' | 'red' | 'blue' | 'yellow';
+    color?: 'default' | 'green' | 'red' | 'blue' | 'yellow' | 'purple';
   }> = ({ title, value, trend, changeRate, icon, description, color = 'default' }) => {
     const colorClasses = {
       default: 'text-gray-600',
       green: 'text-green-600',
       red: 'text-red-600', 
       blue: 'text-blue-600',
-      yellow: 'text-yellow-600'
+      yellow: 'text-yellow-600',
+      purple: 'text-purple-600'
     };
 
     return (
@@ -210,7 +247,7 @@ export const MetricsDashboard: React.FC = () => {
   };
 
 
-  if (isLoading) {
+  if (isLoading || isAnalyticsLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
@@ -239,22 +276,16 @@ export const MetricsDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Real-time insights into your FramePromptly performance and quality metrics
-          </p>
-          <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Live</span>
-            </div>
-            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-            <Clock className="w-4 h-4" />
-            <span>Updated {lastUpdated.toLocaleTimeString()}</span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Live</span>
           </div>
+          <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+          <Clock className="w-4 h-4" />
+          <span>Updated {lastUpdated.toLocaleTimeString()}</span>
         </div>
         
         <div className="flex items-center gap-3">
@@ -277,6 +308,16 @@ export const MetricsDashboard: React.FC = () => {
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExportMetrics('json')}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export JSON
           </Button>
         </div>
       </div>
@@ -322,6 +363,64 @@ export const MetricsDashboard: React.FC = () => {
           color={dashboardData?.performance.errorRate > 2 ? "red" : "green"}
           description="System reliability"
         />
+      </div>
+
+      {/* Real-Time User Analytics */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Real-Time User Analytics</h2>
+            <p className="text-sm text-muted-foreground">Live user activity and engagement metrics</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-sm text-muted-foreground">
+              Updated {analyticsLastUpdated?.toLocaleTimeString() || 'Never'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <MetricCard
+            title="Active Users"
+            value={realTimeMetrics?.activeUsers || 0}
+            icon={<Users className="w-5 h-5" />}
+            color="blue"
+            description="Currently online"
+          />
+          
+          <MetricCard
+            title="Workflows Created"
+            value={realTimeMetrics?.workflowsCreated || 0}
+            icon={<Target className="w-5 h-5" />}
+            color="green"
+            description="Last 24 hours"
+          />
+          
+          <MetricCard
+            title="AI Prompts Generated"
+            value={realTimeMetrics?.aiPromptsGenerated || 0}
+            icon={<Brain className="w-5 h-5" />}
+            color="purple"
+            description="AI interactions today"
+          />
+          
+          <MetricCard
+            title="Projects Created"
+            value={realTimeMetrics?.projectsCreated || 0}
+            icon={<BarChart3 className="w-5 h-5" />}
+            color="yellow"
+            description="New projects today"
+          />
+          
+          <MetricCard
+            title="Page Views"
+            value={realTimeMetrics?.pageViews || 0}
+            icon={<Eye className="w-5 h-5" />}
+            color="red"
+            description="Total page views"
+          />
+        </div>
       </div>
 
       {/* Main Content Grid */}
@@ -418,6 +517,143 @@ export const MetricsDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Pages Analytics */}
+        <Card className="lg:col-span-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-green-600" />
+              Most Visited Pages
+            </CardTitle>
+            <CardDescription>
+              Popular pages and average engagement time
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {realTimeMetrics?.topPages && realTimeMetrics.topPages.length > 0 ? (
+              <div className="space-y-3">
+                {realTimeMetrics.topPages.slice(0, 8).map((page, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b border-muted last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {page.page === '/' ? 'Home' : page.page.replace(/^\//, '').replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {page.avgDuration > 0 ? `${(page.avgDuration / 1000).toFixed(1)}s avg` : 'Quick visits'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{page.views}</p>
+                      <p className="text-xs text-muted-foreground">views</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No page data available</p>
+                <p className="text-xs">Visit pages to see analytics</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Popular Frameworks */}
+        <Card className="lg:col-span-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-blue-600" />
+              Popular Frameworks
+            </CardTitle>
+            <CardDescription>
+              Most used UX frameworks and methodologies
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {realTimeMetrics?.topFrameworks && realTimeMetrics.topFrameworks.length > 0 ? (
+              <div className="space-y-3">
+                {realTimeMetrics.topFrameworks.slice(0, 8).map((framework, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b border-muted last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {framework.framework.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Framework usage
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{framework.usage}</p>
+                      <p className="text-xs text-muted-foreground">times</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No framework data</p>
+                <p className="text-xs">Create workflows to see popular frameworks</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Hourly Activity Chart */}
+        <Card className="lg:col-span-12">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LineChart className="w-5 h-5 text-purple-600" />
+              Activity Timeline (24h)
+            </CardTitle>
+            <CardDescription>
+              User activity throughout the day
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {realTimeMetrics?.hourlyActivity && (
+              <div className="flex items-end gap-1 h-32">
+                {realTimeMetrics.hourlyActivity.map((data, index) => {
+                  const maxActivity = Math.max(...realTimeMetrics.hourlyActivity.map(h => h.actions), 1);
+                  const height = Math.max((data.actions / maxActivity) * 100, 2);
+                  const isCurrentHour = new Date().getHours() === data.hour;
+                  
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center group">
+                      <div
+                        className={`w-full rounded-t transition-colors ${
+                          isCurrentHour 
+                            ? 'bg-blue-500' 
+                            : data.actions > 0 
+                              ? 'bg-gray-300 group-hover:bg-gray-400' 
+                              : 'bg-gray-100'
+                        }`}
+                        style={{ height: `${height}%` }}
+                        title={`${data.hour}:00 - ${data.actions} actions`}
+                      />
+                      <div className="text-xs text-muted-foreground mt-1 text-center">
+                        {data.hour === 0 ? '12A' : 
+                         data.hour === 12 ? '12P' : 
+                         data.hour < 12 ? `${data.hour}A` : `${data.hour - 12}P`}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>

@@ -125,7 +125,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   // Sync store edges with flow edges when store edges change
   useEffect(() => {
-    console.log('Store edges changed, updating flow edges:', edges.length);
+    // console.log('Store edges changed, updating flow edges:', edges.length);
     setFlowEdges(edges);
   }, [edges, setFlowEdges]);
 
@@ -335,13 +335,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       transition={{ duration: 0.5 }}
       className="h-full w-full relative"
       style={{ backgroundColor: '#333446' }}
-    >
-      <CanvasToolbar 
-        onClearSelection={handleClearSelection}
-        isMarqueeMode={isMarqueeMode}
-        onToggleMarqueeMode={toggleMarqueeMode}
-      />
-      
+    >      
       {/* Marquee Selection Rectangle */}
       {marqueeRect && isDrawing && (
         <div

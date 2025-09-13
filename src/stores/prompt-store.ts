@@ -751,7 +751,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
   loadProjectPrompts: async (projectId: string) => {
     try {
-      console.log('Loading prompts for project:', projectId);
+      // console.log('Loading prompts for project:', projectId);
       const { data, error } = await supabase
         .from('prompts')
         .select('*')

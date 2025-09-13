@@ -73,7 +73,7 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
     );
     
     // If no tools exist, create all tools for this stage
-    if (existingToolNodes.length === 0) {
+    if (existingToolNodes.length === 0 && stage.tools) {
       stage.tools.forEach((tool, index) => {
         // Use smart positioning for each tool
         const newPosition = getSmartPosition('tool', nodes, { 
@@ -186,11 +186,11 @@ export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: s
                 borderColor: colors.border.primary
               }}
             >
-              {stage.tools.length}
+              {stage.tools?.length || 0}
             </Badge>
           </div>
           <div className="space-y-1">
-            {stage.tools.map((tool) => (
+            {(stage.tools || []).map((tool) => (
               <div 
                 key={tool.id}
                 className="flex items-center justify-between p-1 rounded cursor-pointer group text-xs flex-shrink-0 transition-colors duration-200"

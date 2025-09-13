@@ -52,7 +52,7 @@ export default function KnowledgeBase() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
@@ -71,7 +71,7 @@ export default function KnowledgeBase() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
       
       <motion.div
@@ -124,8 +124,8 @@ export default function KnowledgeBase() {
         </div>
 
         {/* Main Content */}
-        <div className="p-6 pb-12">
-          <div className="max-w-7xl mx-auto">
+        <main className="container mx-auto px-4 py-8">
+          <div>
             <KnowledgeDocumentList
               projectId={project.id}
               entries={entries}
@@ -133,7 +133,7 @@ export default function KnowledgeBase() {
               onCreateNew={handleCreateNew}
             />
           </div>
-        </div>
+        </main>
       </motion.div>
     </div>
   );

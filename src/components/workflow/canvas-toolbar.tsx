@@ -3,6 +3,7 @@ import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize } from 
 import { Toolbar, ToolbarButton, ToolbarSeparator } from '@/components/ui/toolbar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { autoLayoutNodes, getSmartPosition } from '@/utils/node-positioning';
+import { ToolbarCenteredAIBuilder } from './ai-builder-input-toolbar-centered';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,7 @@ export function CanvasToolbar({
   onZoomOut, 
   onFitView 
 }: CanvasToolbarProps) {
-  const { nodes, setNodes, addNode, frameworks } = useWorkflowStore();
+  const { nodes, setNodes, addNode, addEdge, frameworks } = useWorkflowStore();
 
   const handleRearrangeNodes = () => {
     const rearrangedNodes = autoLayoutNodes(nodes);
@@ -80,6 +81,12 @@ export function CanvasToolbar({
     }
   };
 
+  const handleAIWorkflowGenerated = (nodes: any[], edges: any[]) => {
+    // The nodes and edges are already added to the workflow store by the AI Builder
+    // We could add additional logic here if needed (e.g., auto-arrange, notifications, etc.)
+    onClearSelection?.();
+  };
+
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
       <Toolbar className="bg-card/95 backdrop-blur-sm border shadow-lg">
@@ -121,6 +128,11 @@ export function CanvasToolbar({
         >
           <MousePointer2 className="h-4 w-4" />
         </ToolbarButton>
+        
+        <ToolbarSeparator />
+        
+        {/* AI Builder Input - Toolbar Centered */}
+        <ToolbarCenteredAIBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />
         
         <ToolbarSeparator />
         

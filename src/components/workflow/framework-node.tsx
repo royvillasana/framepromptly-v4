@@ -61,7 +61,8 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
 
   const handleUseFramework = () => {
     // Create all stages at once with smart positioning
-    framework.stages.forEach((stage, index) => {
+    if (framework.stages) {
+      framework.stages.forEach((stage, index) => {
       // For multiple stages, use smart positioning with some variety
       const newPosition = getSmartPosition('stage', nodes, { 
         sourceNodeId: id,
@@ -93,6 +94,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
         addEdge(edge);
       }
     });
+    }
   };
 
   return (
@@ -134,7 +136,7 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
             <div>
               <h3 className="font-bold text-lg" style={{ color: colors.text.secondary }}>{framework.name}</h3>
               <p className="text-sm" style={{ color: colors.text.light }}>
-                {framework.stages.length} stages
+                {framework.stages?.length || 0} stages
               </p>
             </div>
           </div>
@@ -160,11 +162,11 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
                 borderColor: colors.border.primary
               }}
             >
-              {framework.stages.length}
+              {framework.stages?.length || 0}
             </Badge>
           </div>
           <div className="space-y-2 p-1">
-            {framework.stages.map((stage) => (
+            {(framework.stages || []).map((stage) => (
               <div 
                 key={stage.id}
                 className="p-2 rounded-md text-xs transition-colors cursor-pointer group flex-shrink-0"

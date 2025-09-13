@@ -9,13 +9,13 @@
   "icons": [
     {
       "src": "/logo_header.png",
-      "sizes": "any",
+      "sizes": "32x32",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
       "src": "/apple-touch-icon.png", 
-      "sizes": "180x180",
+      "sizes": "32x32",
       "type": "image/png"
     }
   ]

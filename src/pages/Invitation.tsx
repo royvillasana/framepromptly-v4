@@ -207,7 +207,7 @@ export default function Invitation() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="flex items-center justify-center py-20">
           <Card className="w-full max-w-md">
@@ -225,7 +225,7 @@ export default function Invitation() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="container mx-auto py-20 px-4">
           <motion.div
@@ -256,7 +256,7 @@ export default function Invitation() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="container mx-auto py-20 px-4">
           <motion.div
@@ -305,7 +305,7 @@ export default function Invitation() {
 
   if (invitationData?.requiresRegistration) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="container mx-auto py-20 px-4">
           <motion.div
@@ -369,7 +369,7 @@ export default function Invitation() {
 
   // Logged in user, show invitation details
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
       <div className="container mx-auto py-20 px-4">
         <motion.div

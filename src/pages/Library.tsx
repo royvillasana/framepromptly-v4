@@ -355,22 +355,29 @@ export default function Library() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col">
       <Navigation />
       
-      <div className="flex-1 p-6 overflow-hidden">
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-6xl mx-auto h-full flex flex-col"
-        >
-          {/* Header */}
-          <div className="mb-6">
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="flex-1 flex flex-col"
+      >
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-b border-gray-100 p-6">
+          <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <BookmarkPlus className="w-8 h-8 text-primary" />
-                <h1 className="text-3xl font-bold">Prompt Library</h1>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-xl">
+                  <BookmarkPlus className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Prompt Library</h1>
+                  <p className="text-gray-600 mt-1">
+                    Manage and reuse your saved prompts across different projects and workflows
+                  </p>
+                </div>
               </div>
               <Button
                 variant="outline"
@@ -383,230 +390,232 @@ export default function Library() {
                 Refresh
               </Button>
             </div>
-            <p className="text-muted-foreground">
-              Manage and reuse your saved prompts across different projects and workflows. View as detailed list with all prompt information.
-            </p>
           </div>
+        </div>
 
-          {/* Filters */}
-          <Card className="p-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search prompts..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              <Select value={selectedFramework} onValueChange={setSelectedFramework}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="All Frameworks" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Frameworks</SelectItem>
-                  {uniqueFrameworks.map(framework => (
-                    <SelectItem key={framework} value={framework}>
-                      {framework}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedStage} onValueChange={setSelectedStage}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="All Stages" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stages</SelectItem>
-                  {uniqueStages.map(stage => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Version filter checkbox */}
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="show-versions" 
-                  checked={showVersionsOnly}
-                  onCheckedChange={(checked) => setShowVersionsOnly(checked as boolean)}
-                />
-                <label 
-                  htmlFor="show-versions" 
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Show versions only
-                </label>
-              </div>
-            </div>
-          </Card>
-
-          {/* Prompts List */}
-          <div className="flex-1 overflow-hidden">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading your prompt library...</p>
-                </div>
-              </div>
-            ) : filteredPrompts.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <BookmarkPlus className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No prompts found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    {searchQuery || selectedFramework !== 'all' || selectedStage !== 'all' 
-                      ? 'Try adjusting your search criteria'
-                      : 'Save prompts from the workflow builder to see them here'
-                    }
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <Card className="flex-1 overflow-hidden">
-                <div className="border-b bg-muted/50 px-6 py-3">
-                  <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground">
-                    <div className="col-span-4">Title & Description</div>
-                    <div className="col-span-2">Framework</div>
-                    <div className="col-span-2">Stage</div>
-                    <div className="col-span-2">Tool</div>
-                    <div className="col-span-1">Created</div>
-                    <div className="col-span-1 text-right">Actions</div>
+        {/* Main Content */}
+        <div className="flex-1 p-6 overflow-hidden">
+          <div className="max-w-6xl mx-auto h-full flex flex-col">
+            {/* Filters */}
+            <Card className="p-4 mb-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search prompts..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
                 </div>
                 
-                <ScrollArea className="flex-1">
-                  <div className="divide-y">
-                    {filteredPrompts.map((prompt) => (
-                      <motion.div
-                        key={prompt.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="px-6 py-4 hover:bg-muted/30 cursor-pointer group transition-colors"
-                        onClick={() => handleExpandPrompt(prompt)}
-                      >
-                        <div className="grid grid-cols-12 gap-4 items-start">
-                          {/* Title & Description */}
-                          <div className="col-span-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
-                              <h3 className="font-semibold text-sm truncate">
-                                {prompt.title}
-                              </h3>
-                              {prompt.isVersion && (
-                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-                                  Version
-                                </Badge>
+                <Select value={selectedFramework} onValueChange={setSelectedFramework}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="All Frameworks" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Frameworks</SelectItem>
+                    {uniqueFrameworks.map(framework => (
+                      <SelectItem key={framework} value={framework}>
+                        {framework}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedStage} onValueChange={setSelectedStage}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="All Stages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Stages</SelectItem>
+                    {uniqueStages.map(stage => (
+                      <SelectItem key={stage} value={stage}>
+                        {stage}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* Version filter checkbox */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="show-versions" 
+                    checked={showVersionsOnly}
+                    onCheckedChange={(checked) => setShowVersionsOnly(checked as boolean)}
+                  />
+                  <label 
+                    htmlFor="show-versions" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Show versions only
+                  </label>
+                </div>
+              </div>
+            </Card>
+
+            {/* Prompts List */}
+            <div className="flex-1 overflow-hidden">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading your prompt library...</p>
+                  </div>
+                </div>
+              ) : filteredPrompts.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <BookmarkPlus className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No prompts found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      {searchQuery || selectedFramework !== 'all' || selectedStage !== 'all' 
+                        ? 'Try adjusting your search criteria'
+                        : 'Save prompts from the workflow builder to see them here'
+                      }
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <Card className="flex-1 overflow-hidden">
+                  <div className="border-b bg-muted/50 px-6 py-3">
+                    <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground">
+                      <div className="col-span-4">Title & Description</div>
+                      <div className="col-span-2">Framework</div>
+                      <div className="col-span-2">Stage</div>
+                      <div className="col-span-2">Tool</div>
+                      <div className="col-span-1">Created</div>
+                      <div className="col-span-1 text-right">Actions</div>
+                    </div>
+                  </div>
+                  
+                  <ScrollArea className="flex-1">
+                    <div className="divide-y">
+                      {filteredPrompts.map((prompt) => (
+                        <motion.div
+                          key={prompt.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="px-6 py-4 hover:bg-muted/30 cursor-pointer group transition-colors"
+                          onClick={() => handleExpandPrompt(prompt)}
+                        >
+                          <div className="grid grid-cols-12 gap-4 items-start">
+                            {/* Title & Description */}
+                            <div className="col-span-4">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                                <h3 className="font-semibold text-sm truncate">
+                                  {prompt.title}
+                                </h3>
+                                {prompt.isVersion && (
+                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                                    Version
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2 ml-6">
+                                {prompt.description}
+                              </p>
+                              <div className="mt-2 ml-6">
+                                <p className="text-xs text-muted-foreground line-clamp-1 font-mono bg-muted/50 px-2 py-1 rounded">
+                                  {prompt.content}
+                                </p>
+                              </div>
+                              {/* Variables */}
+                              {prompt.variables.length > 0 && (
+                                <div className="mt-2 ml-6">
+                                  <div className="flex flex-wrap gap-1">
+                                    {prompt.variables.slice(0, 2).map((variable) => (
+                                      <Badge key={variable} variant="outline" className="text-xs">
+                                        {variable}
+                                      </Badge>
+                                    ))}
+                                    {prompt.variables.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{prompt.variables.length - 2} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2 ml-6">
-                              {prompt.description}
-                            </p>
-                            <div className="mt-2 ml-6">
-                              <p className="text-xs text-muted-foreground line-clamp-1 font-mono bg-muted/50 px-2 py-1 rounded">
-                                {prompt.content}
-                              </p>
+                            
+                            {/* Framework */}
+                            <div className="col-span-2">
+                              <Badge variant="outline" className="text-xs">
+                                {prompt.framework}
+                              </Badge>
                             </div>
-                            {/* Variables */}
-                            {prompt.variables.length > 0 && (
-                              <div className="mt-2 ml-6">
-                                <div className="flex flex-wrap gap-1">
-                                  {prompt.variables.slice(0, 2).map((variable) => (
-                                    <Badge key={variable} variant="outline" className="text-xs">
-                                      {variable}
-                                    </Badge>
-                                  ))}
-                                  {prompt.variables.length > 2 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{prompt.variables.length - 2} more
-                                    </Badge>
-                                  )}
-                                </div>
+                            
+                            {/* Stage */}
+                            <div className="col-span-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {prompt.stage}
+                              </Badge>
+                            </div>
+                            
+                            {/* Tool */}
+                            <div className="col-span-2">
+                              <Badge variant="default" className="text-xs">
+                                {prompt.tool}
+                              </Badge>
+                            </div>
+                            
+                            {/* Created Date */}
+                            <div className="col-span-1">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(prompt.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                            
+                            {/* Actions */}
+                            <div className="col-span-1 flex justify-end">
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopyPrompt(prompt);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                  title="Copy prompt"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                                
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePrompt(prompt.id);
+                                  }}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  title="Delete prompt"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
                               </div>
-                            )}
-                          </div>
-                          
-                          {/* Framework */}
-                          <div className="col-span-2">
-                            <Badge variant="outline" className="text-xs">
-                              {prompt.framework}
-                            </Badge>
-                          </div>
-                          
-                          {/* Stage */}
-                          <div className="col-span-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {prompt.stage}
-                            </Badge>
-                          </div>
-                          
-                          {/* Tool */}
-                          <div className="col-span-2">
-                            <Badge variant="default" className="text-xs">
-                              {prompt.tool}
-                            </Badge>
-                          </div>
-                          
-                          {/* Created Date */}
-                          <div className="col-span-1">
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(prompt.created_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </span>
-                          </div>
-                          
-                          {/* Actions */}
-                          <div className="col-span-1 flex justify-end">
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCopyPrompt(prompt);
-                                }}
-                                className="h-8 w-8 p-0"
-                                title="Copy prompt"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
-                              
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeletePrompt(prompt.id);
-                                }}
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                title="Delete prompt"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
                             </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                  <ScrollBar orientation="vertical" className="w-3 border-l border-l-transparent p-[2px]" />
-                </ScrollArea>
-              </Card>
-            )}
+                        </motion.div>
+                      ))}
+                    </div>
+                    <ScrollBar orientation="vertical" className="w-3 border-l border-l-transparent p-[2px]" />
+                  </ScrollArea>
+                </Card>
+              )}
+            </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
 
       {/* Expanded Prompt Overlay */}
       <AnimatePresence>

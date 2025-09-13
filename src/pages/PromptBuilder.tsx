@@ -245,7 +245,7 @@ export default function PromptBuilder() {
   // Show loading state if projects haven't loaded yet
   if (!projects) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -258,7 +258,7 @@ export default function PromptBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
       
       <motion.div

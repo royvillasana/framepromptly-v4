@@ -215,14 +215,37 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   saveCanvasData: async (projectId: string, nodes: any[], edges: any[]) => {
     try {
+      // Validate and sanitize canvas data before sending
+      const sanitizedNodes = nodes.map(node => ({
+        ...node,
+        // Remove any potential circular references or non-serializable data
+        data: node.data ? JSON.parse(JSON.stringify(node.data)) : null
+      }));
+      
+      const sanitizedEdges = edges.map(edge => ({
+        ...edge,
+        // Remove any potential circular references
+        data: edge.data ? JSON.parse(JSON.stringify(edge.data)) : null
+      }));
+
+      const canvasData = { 
+        nodes: sanitizedNodes, 
+        edges: sanitizedEdges,
+        lastUpdated: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('projects')
         .update({ 
-          canvas_data: { nodes, edges }
+          canvas_data: canvasData
         })
         .eq('id', projectId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase canvas save error:', error);
+        console.error('Canvas data being sent:', canvasData);
+        throw error;
+      }
 
       // Update local state
       set(state => ({

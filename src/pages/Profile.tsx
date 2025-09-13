@@ -329,7 +329,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
@@ -343,7 +343,7 @@ export default function Profile() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <Navigation />
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
@@ -356,44 +356,46 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="container mx-auto py-8 px-4"
       >
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Avatar className="w-16 h-16">
-              <AvatarImage src={profilePicturePreview || profile.avatar_url} />
-              <AvatarFallback className="text-lg font-semibold">
-                {getInitials(profile.full_name || profile.email)}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-foreground">
-                {profile.full_name || 'User Profile'}
-              </h1>
-              <p className="text-muted-foreground">{profile.email}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                  <Crown className="w-3 h-3 mr-1" />
-                  Premium
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  Member since {formatDate(profile.created_at)}
-                </span>
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-b border-gray-100 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-4 mb-2">
+              <Avatar className="w-16 h-16">
+                <AvatarImage src={profilePicturePreview || profile.avatar_url} />
+                <AvatarFallback className="text-lg font-semibold">
+                  {getInitials(profile.full_name || profile.email)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {profile.full_name || 'User Profile'}
+                </h1>
+                <p className="text-gray-600 mt-1">{profile.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Premium
+                  </Badge>
+                  <span className="text-sm text-gray-600">
+                    Member since {formatDate(profile.created_at)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Profile Tabs */}
+        <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" className="flex items-center gap-2">
@@ -787,6 +789,7 @@ export default function Profile() {
             </Card>
           </TabsContent>
         </Tabs>
+        </main>
       </motion.div>
     </div>
   );
