@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen, ArrowLeft, Copy, Download, ChevronRight, X } from 'lucide-react';
 import { NodeDetails } from '@/components/workflow/node-details';
 import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
+import { ProjectSidebar } from '@/components/workflow/project-sidebar';
 import { toast } from 'sonner';
 
 export default function Workflow() {
@@ -191,110 +192,51 @@ function WorkflowWithProject() {
       <Navigation />
       
       <div className="flex-1 flex w-full">
-        {/* Left Panel - Hidden when prompt is expanded */}
+        {/* Project Sidebar - Hidden when prompt is expanded */}
         {!expandedPromptId && (
-          <motion.div
-            initial={{ x: -400, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-80 border-r border-border bg-card flex-shrink-0"
+          <ProjectSidebar 
+            activePanel={activePanel} 
+            onPanelChange={setActivePanel}
           >
-          {/* Back to Projects Button */}
-          <div className="border-b border-border p-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start"
-              onClick={() => {
-                const { setCurrentProject } = useProjectStore.getState();
-                setCurrentProject(null);
-              }}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Projects
-            </Button>
-          </div>
-          
-          {/* Framework Selector Header */}
-          <div className="border-b border-border p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Workflow Builder</h2>
-              <div className="flex space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => {
-                    console.log('Save button clicked!');
-                    setTestClicks(prev => prev + 1);
-                  }}
-                >
-                  <Save className="w-4 h-4" />
-                  {testClicks > 0 && <span className="ml-1 text-xs">({testClicks})</span>}
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Share className="w-4 h-4" />
-                </Button>
-                <Button size="sm">
-                  <Play className="w-4 h-4" />
-                </Button>
+            {/* Framework Selector */}
+            <div className="p-4 border-b border-border space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">Select UX Framework</h3>
+                 <Select onValueChange={(value) => {
+                   console.log('Select value changed:', value);
+                   const framework = frameworks.find(f => f.id === value);
+                   if (framework) handleFrameworkSelection(framework);
+                 }}>
+                  <SelectTrigger className="w-full bg-background border border-border shadow-sm hover:bg-accent/50 transition-colors">
+                    <SelectValue placeholder="Choose a framework..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-border shadow-lg z-[100] max-h-60 overflow-y-auto">
+                    {frameworks.map((framework) => (
+                      <SelectItem 
+                        key={framework.id} 
+                        value={framework.id}
+                        className="cursor-pointer hover:bg-accent focus:bg-accent"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: framework.color }}
+                          />
+                          <div>
+                            <div className="font-medium">{framework.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {framework.stages.length} stages
+                            </div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Select UX Framework</h3>
-               <Select onValueChange={(value) => {
-                 console.log('Select value changed:', value);
-                 const framework = frameworks.find(f => f.id === value);
-                 if (framework) handleFrameworkSelection(framework);
-               }}>
-                <SelectTrigger className="w-full bg-background border border-border shadow-sm hover:bg-accent/50 transition-colors">
-                  <SelectValue placeholder="Choose a framework..." />
-                </SelectTrigger>
-                <SelectContent className="bg-background border border-border shadow-lg z-[100] max-h-60 overflow-y-auto">
-                  {frameworks.map((framework) => (
-                    <SelectItem 
-                      key={framework.id} 
-                      value={framework.id}
-                      className="cursor-pointer hover:bg-accent focus:bg-accent"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-4 h-4 rounded"
-                          style={{ backgroundColor: framework.color }}
-                        />
-                        <div>
-                          <div className="font-medium">{framework.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {framework.stages.length} stages
-                          </div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Tabs value={activePanel} onValueChange={(value: any) => setActivePanel(value)}>
-            <div className="border-b border-border p-4">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="canvas" className="text-xs">
-                  <Layers className="w-3 h-3 mr-1" />
-                  Canvas
-                </TabsTrigger>
-                <TabsTrigger value="prompts" className="text-xs">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Prompts
-                </TabsTrigger>
-                <TabsTrigger value="knowledge" className="text-xs">
-                  <BookOpen className="w-3 h-3 mr-1" />
-                  Knowledge
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <TabsContent value="canvas" className="m-0 h-[calc(100vh-320px)]">
+            <TabsContent value="canvas" className="m-0 h-[calc(100vh-380px)]">
               <div className="p-4 space-y-4 h-full overflow-y-auto">
                 {selectedNode ? (
                   // Node Details View
@@ -481,16 +423,14 @@ function WorkflowWithProject() {
               </div>
             </TabsContent>
             
-            <TabsContent value="prompts" className="m-0 h-[calc(100vh-320px)]">
+            <TabsContent value="prompts" className="m-0 h-[calc(100vh-380px)]">
               <PromptPanel onPromptView={() => setActivePanel('canvas')} />
             </TabsContent>
             
-            <TabsContent value="knowledge" className="m-0 h-[calc(100vh-320px)]">
+            <TabsContent value="knowledge" className="m-0 h-[calc(100vh-380px)]">
               <KnowledgeBasePanel />
             </TabsContent>
-
-          </Tabs>
-          </motion.div>
+          </ProjectSidebar>
         )}
         
         {/* Canvas */}
