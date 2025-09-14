@@ -883,7 +883,10 @@ function ExpandedPromptOverlayComponent({
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
+    // Ensure we only close on backdrop clicks, not on child element clicks
     if (e.target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
       onContract();
     }
   };
@@ -1080,7 +1083,7 @@ function ExpandedPromptOverlayComponent({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed z-50 bg-background/95 backdrop-blur-sm"
+      className="fixed z-[9999] bg-background/95 backdrop-blur-sm"
       data-modal="expanded-prompt-overlay"
       style={{
         top: '86px', // Precise height for Index/Library pages (p-6 = 24px*2 + ~48px content)
@@ -1096,7 +1099,10 @@ function ExpandedPromptOverlayComponent({
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="w-full h-full"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
       >
         <div className="h-full flex bg-background">
           {/* Main Content Area */}

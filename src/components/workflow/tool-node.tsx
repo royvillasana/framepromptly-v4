@@ -10,6 +10,7 @@ import { useProjectStore } from '@/stores/project-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
 import { getPlatformRecommendation, PlatformType } from '@/lib/ux-tool-platform-optimizer';
 import { generateToolSpecificInstructions } from '@/lib/tool-specific-prompt-instructions';
+import { optimizePromptForOutput } from '@/lib/ai-output-configurations';
 import { supabase } from '@/integrations/supabase/client';
 import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
@@ -19,6 +20,7 @@ import { EnhancedPromptPanel } from './enhanced-prompt-panel';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
 import { PlatformSelector } from './platform-selector';
+import { AIOutputSelector, AIOutputBadge } from '@/components/ui/ai-output-selector';
 import { getFrameworkColors } from '@/lib/framework-colors';
 import { toast } from 'sonner';
 
@@ -29,6 +31,7 @@ interface ToolNodeData {
   isActive?: boolean;
   isCompleted?: boolean;
   linkedKnowledge?: string[];
+  aiOutputSelection?: string;
 }
 
 interface ToolNodeProps {
@@ -42,7 +45,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const { addNode, addEdge, nodes, edges, updateNode } = useWorkflowStore();
   const { currentProject, getEnhancedSettings } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
-  const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab } = data;
+  const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], aiOutputSelection = 'none', onSwitchToPromptTab } = data;
   const linkedKnowledge = Array.isArray(rawLinkedKnowledge) ? rawLinkedKnowledge : [];
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
@@ -172,6 +175,11 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           undefined,
           knowledgeContext || undefined
         );
+      }
+
+      // Apply AI output optimizations if selected
+      if (aiOutputSelection && aiOutputSelection !== 'none') {
+        promptContent = optimizePromptForOutput(promptContent, aiOutputSelection);
       }
       await new Promise(resolve => setTimeout(resolve, 400));
       
@@ -513,6 +521,21 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
                 </div>
               </div>
             )}
+          </div>
+
+          {/* AI Output Selection */}
+          <div className="flex-shrink-0 mb-3">
+            <AIOutputSelector
+              value={aiOutputSelection}
+              onChange={(value) => {
+                if (id) {
+                  updateNode(id, { aiOutputSelection: value });
+                }
+              }}
+              variant="compact"
+              showDescription={false}
+              className="text-xs"
+            />
           </div>
 
           {/* Actions */}

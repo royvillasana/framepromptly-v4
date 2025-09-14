@@ -198,63 +198,10 @@ function WorkflowWithProject() {
             activePanel={activePanel} 
             onPanelChange={setActivePanel}
           >
-            {/* Framework Selector */}
-            <div className="p-4 border-b border-border space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Select UX Framework</h3>
-                 <Select onValueChange={(value) => {
-                   console.log('Select value changed:', value);
-                   const framework = frameworks.find(f => f.id === value);
-                   if (framework) handleFrameworkSelection(framework);
-                 }}>
-                  <SelectTrigger className="w-full bg-background border border-border shadow-sm hover:bg-accent/50 transition-colors">
-                    <SelectValue placeholder="Choose a framework..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border border-border shadow-lg z-[100] max-h-60 overflow-y-auto">
-                    {frameworks.map((framework) => (
-                      <SelectItem 
-                        key={framework.id} 
-                        value={framework.id}
-                        className="cursor-pointer hover:bg-accent focus:bg-accent"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className="w-4 h-4 rounded"
-                            style={{ backgroundColor: framework.color }}
-                          />
-                          <div>
-                            <div className="font-medium">{framework.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {framework.stages.length} stages
-                            </div>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
             
             <TabsContent value="canvas" className="m-0 h-[calc(100vh-380px)]">
               <div className="p-4 space-y-4 h-full overflow-y-auto">
-                {selectedNode ? (
-                  // Node Details View
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">Node Details</h3>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => useWorkflowStore.getState().selectNode(null)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    
-                    <NodeDetails node={selectedNode} />
-                  </div>
-                ) : currentPrompt ? (
+                {currentPrompt ? (
                   // Prompt Details View
                   <div className="space-y-4">
                     {/* Header with back button */}

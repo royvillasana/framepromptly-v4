@@ -339,7 +339,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       {/* Marquee Selection Rectangle */}
       {marqueeRect && isDrawing && (
         <div
-          className="absolute pointer-events-none border-2 border-primary bg-primary/20 z-50"
+          className="absolute pointer-events-none border-2 border-primary bg-primary/20 z-20"
           style={{
             left: Math.min(marqueeRect.startX, marqueeRect.currentX),
             top: Math.min(marqueeRect.startY, marqueeRect.currentY),
@@ -395,7 +395,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       </div>
 
       {/* Zoom Indicator */}
-      <div className="fixed bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium z-50">
+      <div className="fixed bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium z-20">
         {Math.round(zoom * 100)}%
       </div>
 
@@ -407,6 +407,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onFitView={handleFitView}
+        selectedNode={selectedNode}
       />
     </motion.div>
   );

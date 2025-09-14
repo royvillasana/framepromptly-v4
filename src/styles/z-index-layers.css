@@ -1,0 +1,47 @@
+/* Z-Index Layer Documentation */
+/* 
+ * This file documents the z-index layering system to prevent conflicts
+ * and ensure proper stacking of UI elements.
+ * 
+ * Z-Index Layers:
+ * 0-9:       Base content, canvas elements
+ * 10-19:     Canvas overlays (selection rectangles, etc.)
+ * 20-29:     Fixed UI elements (zoom indicator, toolbar)
+ * 30-39:     Navigation toolbars and controls
+ * 40-49:     Side panels (add element panel, etc.)
+ * 50-99:     Dropdowns, tooltips, and standard popovers
+ * 100-499:   Standard modals and dialogs
+ * 500-999:   High priority modals
+ * 1000-8999: Reserved for future use
+ * 9000+:     Critical overlays (expanded prompts, full-screen modals)
+ * 9998:      Secondary critical overlays
+ * 9999:      Primary critical overlays (expanded prompt overlay)
+ * 
+ * Usage guidelines:
+ * - Use semantic z-index values from the ranges above
+ * - Document any new z-index values in this file
+ * - Avoid arbitrary high values like z-50 for non-critical elements
+ * - Test overlay interactions when making z-index changes
+ */
+
+/* Critical overlay base styles to prevent event leakage */
+.critical-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.critical-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.critical-overlay-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}

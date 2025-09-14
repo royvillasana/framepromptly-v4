@@ -23,7 +23,9 @@ import {
   Download,
   Edit,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -87,18 +89,18 @@ export function ProjectSidebar({ activePanel, onPanelChange, children }: Project
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsCollapsed(false)}
-            className="w-8 h-8 p-0"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
             onClick={handleBackToProjects}
             className="w-8 h-8 p-0"
           >
             <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(false)}
+            className="w-8 h-8 p-0"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
           </Button>
         </div>
 
@@ -146,19 +148,19 @@ export function ProjectSidebar({ activePanel, onPanelChange, children }: Project
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsCollapsed(true)}
-            className="w-8 h-8 p-0"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
             onClick={handleBackToProjects}
             className="flex items-center gap-2 text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Projects
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(true)}
+            className="w-8 h-8 p-0"
+          >
+            <PanelLeftClose className="w-4 h-4" />
           </Button>
         </div>
 
@@ -226,21 +228,6 @@ export function ProjectSidebar({ activePanel, onPanelChange, children }: Project
           )}
         </div>
 
-        {/* Quick Stats */}
-        <div className="flex items-center gap-4 pt-2 border-t border-border">
-          <div className="flex items-center gap-1 text-xs">
-            <Database className="w-3 h-3 text-blue-500" />
-            <span className="text-muted-foreground">Knowledge</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs">
-            <Sparkles className="w-3 h-3 text-purple-500" />
-            <span className="text-muted-foreground">Prompts</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs">
-            <Layers className="w-3 h-3 text-green-500" />
-            <span className="text-muted-foreground">Canvas</span>
-          </div>
-        </div>
       </div>
 
       {/* Tabs */}

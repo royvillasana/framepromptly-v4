@@ -1,15 +1,10 @@
 import { useState } from 'react';
-import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize, Sparkles, Settings } from 'lucide-react';
 import { Toolbar, ToolbarButton, ToolbarSeparator } from '@/components/ui/toolbar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { autoLayoutNodes, getSmartPosition } from '@/utils/node-positioning';
 import { ToolbarCenteredAIBuilder } from './ai-builder-input-toolbar-centered';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { AddElementPanel } from './add-element-panel';
 import { Button } from '@/components/ui/button';
 
 interface CanvasToolbarProps {
@@ -20,6 +15,7 @@ interface CanvasToolbarProps {
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onFitView?: () => void;
+  selectedNode?: any;
 }
 
 export function CanvasToolbar({ 
@@ -29,9 +25,11 @@ export function CanvasToolbar({
   zoom, 
   onZoomIn, 
   onZoomOut, 
-  onFitView 
+  onFitView,
+  selectedNode
 }: CanvasToolbarProps) {
-  const { nodes, setNodes, addNode, addEdge, frameworks } = useWorkflowStore();
+  const { nodes, setNodes, addNode, addEdge, frameworks, selectFramework } = useWorkflowStore();
+  const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
 
   const handleRearrangeNodes = () => {
     const rearrangedNodes = autoLayoutNodes(nodes);
@@ -87,73 +85,86 @@ export function CanvasToolbar({
     onClearSelection?.();
   };
 
+  const handleFrameworkSelection = (framework: any) => {
+    selectFramework(framework);
+    const position = getSmartPosition('framework', nodes);
+    const newNode = {
+      id: `framework-${framework.id}`,
+      type: 'framework' as const,
+      position,
+      data: { framework, isSelected: true },
+    };
+    addNode(newNode);
+    onClearSelection?.();
+  };
+
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-      <Toolbar className="bg-card/95 backdrop-blur-sm border shadow-lg">
-        {/* Zoom Controls */}
-        <ToolbarButton
-          onClick={onZoomOut}
-          title="Zoom out"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </ToolbarButton>
-        
-        <ToolbarButton
-          onClick={onZoomIn}
-          title="Zoom in"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </ToolbarButton>
-        
-        <ToolbarButton
-          onClick={onFitView}
-          title="Fit view"
-        >
-          <Maximize className="h-4 w-4" />
-        </ToolbarButton>
-        
-        <ToolbarSeparator />
-        
-        <ToolbarButton
-          onClick={handleRearrangeNodes}
-          title="Rearrange nodes automatically"
-        >
-          <Grid3x3 className="h-4 w-4" />
-        </ToolbarButton>
-        
-        <ToolbarButton
-          onClick={onToggleMarqueeMode}
-          title="Toggle marquee selection mode"
-          className={isMarqueeMode ? "bg-primary text-primary-foreground" : ""}
-        >
-          <MousePointer2 className="h-4 w-4" />
-        </ToolbarButton>
-        
-        <ToolbarSeparator />
-        
-        {/* AI Builder Input - Toolbar Centered */}
-        <ToolbarCenteredAIBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />
-        
-        <ToolbarSeparator />
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <ToolbarButton title="Add new node">
-              <Plus className="h-4 w-4" />
-            </ToolbarButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={handleAddStageNode}>
-              <Layers className="h-4 w-4 mr-2" />
-              Add UX Stage
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleAddToolNode}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add UX Tool
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </Toolbar>
-    </div>
+    <>
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-30">
+        <Toolbar className="bg-card/95 backdrop-blur-sm border shadow-lg">
+          {/* Zoom Controls */}
+          <ToolbarButton
+            onClick={onZoomOut}
+            title="Zoom out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </ToolbarButton>
+          
+          <ToolbarButton
+            onClick={onZoomIn}
+            title="Zoom in"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </ToolbarButton>
+          
+          <ToolbarButton
+            onClick={onFitView}
+            title="Fit view"
+          >
+            <Maximize className="h-4 w-4" />
+          </ToolbarButton>
+          
+          <ToolbarSeparator />
+          
+          <ToolbarButton
+            onClick={handleRearrangeNodes}
+            title="Rearrange nodes automatically"
+          >
+            <Grid3x3 className="h-4 w-4" />
+          </ToolbarButton>
+          
+          <ToolbarButton
+            onClick={onToggleMarqueeMode}
+            title="Toggle marquee selection mode"
+            className={isMarqueeMode ? "bg-primary text-primary-foreground" : ""}
+          >
+            <MousePointer2 className="h-4 w-4" />
+          </ToolbarButton>
+          
+          <ToolbarSeparator />
+          
+          {/* AI Builder Input - Toolbar Centered */}
+          <ToolbarCenteredAIBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />
+          
+          <ToolbarSeparator />
+          
+          <ToolbarButton 
+            onClick={() => setIsAddPanelOpen(true)}
+            title="Add new element to canvas"
+            className={isAddPanelOpen ? "bg-primary text-primary-foreground" : ""}
+          >
+            <Plus className="h-4 w-4" />
+          </ToolbarButton>
+        </Toolbar>
+      </div>
+
+      {/* Add Element Panel */}
+      <AddElementPanel 
+        isOpen={isAddPanelOpen}
+        onClose={() => setIsAddPanelOpen(false)}
+        onClearSelection={onClearSelection}
+        selectedNode={selectedNode}
+      />
+    </>
   );
 }

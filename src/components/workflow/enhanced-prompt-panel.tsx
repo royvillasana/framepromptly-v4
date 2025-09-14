@@ -366,7 +366,7 @@ export const EnhancedPromptPanel: React.FC<EnhancedPromptPanelProps> = ({
 
   return createPortal(
     <div
-      className="fixed z-50 bg-background/95 backdrop-blur-sm"
+      className="fixed z-[9998] bg-background/95 backdrop-blur-sm"
       style={{
         top: '86px', // Same as expanded prompt overlay
         left: '0px',
