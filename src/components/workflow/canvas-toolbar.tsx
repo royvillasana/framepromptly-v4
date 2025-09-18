@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize, Sparkles, Settings } from 'lucide-react';
+import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize, Sparkles, Settings, Square } from 'lucide-react';
 import { Toolbar, ToolbarButton, ToolbarSeparator } from '@/components/ui/toolbar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { autoLayoutNodes, getSmartPosition } from '@/utils/node-positioning';
@@ -135,10 +135,14 @@ export function CanvasToolbar({
           
           <ToolbarButton
             onClick={onToggleMarqueeMode}
-            title="Toggle marquee selection mode"
+            title={isMarqueeMode ? "Exit drag selection mode" : "Enable drag selection mode"}
             className={isMarqueeMode ? "bg-primary text-primary-foreground" : ""}
           >
-            <MousePointer2 className="h-4 w-4" />
+            {isMarqueeMode ? (
+              <Square className="h-4 w-4" />
+            ) : (
+              <MousePointer2 className="h-4 w-4" />
+            )}
           </ToolbarButton>
           
           <ToolbarSeparator />

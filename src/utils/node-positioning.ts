@@ -186,50 +186,257 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
   };
 }
 
-// Utility function to auto-layout existing nodes with proper spacing
+// Utility function to auto-layout existing nodes with hierarchical workflow layout
 export function autoLayoutNodes(nodes: Node[], spacing: NodeSpacing = DEFAULT_SPACING): Node[] {
-  const calculator = createPositionCalculator(spacing);
-  const nodesByType = nodes.reduce((acc, node) => {
-    const type = node.type || 'tool';
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(node);
-    return acc;
-  }, {} as Record<string, Node[]>);
-
-  const layoutOrder = ['framework', 'stage', 'tool', 'prompt'];
-  const positionedNodes: Node[] = [];
+  // Phase 1: Analyze canvas nodes and detect relationships
+  const nodeAnalysis = analyzeNodeRelationships(nodes);
   
-  layoutOrder.forEach((nodeType, typeIndex) => {
-    const nodesOfType = nodesByType[nodeType] || [];
-    
-    nodesOfType.forEach((node, nodeIndex) => {
-      const { x, y } = calculator.getGridPosition(
-        Math.floor(nodeIndex / 3), // 3 nodes per row
-        (nodeIndex % 3) + (typeIndex * 4), // Offset by type
-        nodeType
-      );
-      
-      positionedNodes.push({
-        ...node,
-        position: { x, y }
-      });
-    });
-  });
+  // Phase 2: Create hierarchical layout based on workflow structure
+  return createHierarchicalLayout(nodeAnalysis, spacing);
+}
 
-  // Add any nodes not in the layout order
-  const processedTypes = new Set(layoutOrder);
-  Object.entries(nodesByType).forEach(([type, typeNodes]) => {
-    if (!processedTypes.has(type)) {
-      typeNodes.forEach((node, index) => {
-        const { x, y } = calculator.getAvailablePosition(type, positionedNodes);
-        positionedNodes.push({
-          ...node,
-          position: { x, y }
-        });
-      });
+// Analyze nodes and their relationships for hierarchical layout
+function analyzeNodeRelationships(nodes: Node[]) {
+  const frameworks = nodes.filter(n => n.type === 'framework');
+  const stages = nodes.filter(n => n.type === 'stage');
+  const tools = nodes.filter(n => n.type === 'tool');
+  const prompts = nodes.filter(n => n.type === 'prompt');
+  
+  // Map stages to their related frameworks
+  const stageToFramework = new Map<string, Node>();
+  stages.forEach(stage => {
+    // Find framework this stage belongs to based on data.framework or closest framework
+    const relatedFramework = frameworks.find(fw => 
+      stage.data?.framework?.id === fw.data?.framework?.id ||
+      stage.data?.frameworkId === fw.id
+    ) || frameworks[0]; // Fallback to first framework if no explicit relationship
+    
+    if (relatedFramework) {
+      stageToFramework.set(stage.id, relatedFramework);
     }
   });
+  
+  // Map tools to their related stages
+  const toolToStage = new Map<string, Node>();
+  tools.forEach(tool => {
+    // Find stage this tool belongs to based on data relationships
+    const relatedStage = stages.find(stage => 
+      tool.data?.stageId === stage.id ||
+      tool.data?.stage?.id === stage.data?.stage?.id ||
+      (tool.data?.tool?.stageId && stage.data?.stage?.id === tool.data.tool.stageId)
+    ) || stages[0]; // Fallback to first stage if no explicit relationship
+    
+    if (relatedStage) {
+      toolToStage.set(tool.id, relatedStage);
+    }
+  });
+  
+  // Map prompts to their related tools
+  const promptToTool = new Map<string, Node>();
+  prompts.forEach(prompt => {
+    // Find tool this prompt belongs to based on data relationships
+    const relatedTool = tools.find(tool => 
+      prompt.data?.sourceToolId === tool.id ||
+      prompt.data?.toolId === tool.id
+    ) || tools[0]; // Fallback to first tool if no explicit relationship
+    
+    if (relatedTool) {
+      promptToTool.set(prompt.id, relatedTool);
+    }
+  });
+  
+  // Group stages by framework
+  const frameworkToStages = new Map<string, Node[]>();
+  frameworks.forEach(fw => {
+    const relatedStages = stages.filter(stage => stageToFramework.get(stage.id)?.id === fw.id);
+    frameworkToStages.set(fw.id, relatedStages);
+  });
+  
+  // Group tools by stage
+  const stageToTools = new Map<string, Node[]>();
+  stages.forEach(stage => {
+    const relatedTools = tools.filter(tool => toolToStage.get(tool.id)?.id === stage.id);
+    stageToTools.set(stage.id, relatedTools);
+  });
+  
+  // Group prompts by tool
+  const toolToPrompts = new Map<string, Node[]>();
+  tools.forEach(tool => {
+    const relatedPrompts = prompts.filter(prompt => promptToTool.get(prompt.id)?.id === tool.id);
+    toolToPrompts.set(tool.id, relatedPrompts);
+  });
+  
+  return {
+    frameworks,
+    stages,
+    tools,
+    prompts,
+    stageToFramework,
+    toolToStage,
+    promptToTool,
+    frameworkToStages,
+    stageToTools,
+    toolToPrompts,
+    orphanedNodes: nodes.filter(n => !['framework', 'stage', 'tool', 'prompt'].includes(n.type || ''))
+  };
+}
 
+// Create hierarchical layout: Framework → Stages → Tools → Prompts
+function createHierarchicalLayout(analysis: any, spacing: NodeSpacing) {
+  const positionedNodes: Node[] = [];
+  const { frameworks, frameworkToStages, stageToTools, toolToPrompts, orphanedNodes } = analysis;
+  const calculator = createPositionCalculator(spacing);
+  
+  const startX = 100; // Start with padding from left
+  const startY = 100; // Start with padding from top
+  
+  // Helper function to get node dimensions
+  const getNodeDimensions = (nodeType: string) => {
+    switch (nodeType) {
+      case 'framework': return spacing.framework;
+      case 'stage': return spacing.stage;
+      case 'tool': return spacing.tool;
+      case 'prompt': return spacing.prompt;
+      default: return spacing.tool;
+    }
+  };
+  
+  // Helper function to find safe position without overlaps
+  const findSafePosition = (nodeType: string, preferredX: number, preferredY: number): { x: number; y: number } => {
+    const dimensions = getNodeDimensions(nodeType);
+    const buffer = 80; // Minimum buffer between nodes
+    
+    // Check if preferred position conflicts with existing nodes
+    const hasConflict = positionedNodes.some(existingNode => {
+      const existingDimensions = getNodeDimensions(existingNode.type || 'tool');
+      const existingX = existingNode.position.x;
+      const existingY = existingNode.position.y;
+      
+      // Check for overlap with buffer
+      const overlapX = preferredX < existingX + existingDimensions.width + buffer && 
+                      preferredX + dimensions.width + buffer > existingX;
+      const overlapY = preferredY < existingY + existingDimensions.height + buffer && 
+                      preferredY + dimensions.height + buffer > existingY;
+      
+      return overlapX && overlapY;
+    });
+    
+    if (!hasConflict) {
+      return { x: preferredX, y: preferredY };
+    }
+    
+    // If there's a conflict, find next available position
+    return calculator.getAvailablePosition(nodeType, positionedNodes, preferredX, preferredY);
+  };
+  
+  // Track column positions for each hierarchy level
+  const columnPositions = {
+    framework: startX,
+    stage: 0, // Will be calculated based on framework positions
+    tool: 0,  // Will be calculated based on stage positions
+    prompt: 0 // Will be calculated based on tool positions
+  };
+  
+  // Phase 1: Position frameworks on the left with proper vertical distribution
+  let currentFrameworkY = startY;
+  frameworks.forEach((framework, fwIndex) => {
+    const safePosition = findSafePosition('framework', columnPositions.framework, currentFrameworkY);
+    
+    positionedNodes.push({
+      ...framework,
+      position: safePosition
+    });
+    
+    currentFrameworkY = safePosition.y + spacing.framework.height + spacing.vertical;
+  });
+  
+  // Update stage column position based on frameworks
+  const maxFrameworkWidth = Math.max(...positionedNodes
+    .filter(n => n.type === 'framework')
+    .map(n => n.position.x + spacing.framework.width), columnPositions.framework);
+  columnPositions.stage = maxFrameworkWidth + spacing.horizontal;
+  
+  // Phase 2: Position stages next to their frameworks
+  frameworks.forEach((framework) => {
+    const frameworkNode = positionedNodes.find(n => n.id === framework.id);
+    if (!frameworkNode) return;
+    
+    const relatedStages = frameworkToStages.get(framework.id) || [];
+    let currentStageY = frameworkNode.position.y;
+    
+    relatedStages.forEach((stage, stageIndex) => {
+      const preferredStageY = currentStageY + (stageIndex * (spacing.stage.height + spacing.vertical * 0.7));
+      const safePosition = findSafePosition('stage', columnPositions.stage, preferredStageY);
+      
+      positionedNodes.push({
+        ...stage,
+        position: safePosition
+      });
+      
+      // Update current Y for next stage to avoid overlap
+      currentStageY = Math.max(currentStageY, safePosition.y + spacing.stage.height + spacing.vertical * 0.7);
+    });
+  });
+  
+  // Update tool column position based on stages
+  const maxStageWidth = Math.max(...positionedNodes
+    .filter(n => n.type === 'stage')
+    .map(n => n.position.x + spacing.stage.width), columnPositions.stage);
+  columnPositions.tool = maxStageWidth + spacing.horizontal;
+  
+  // Phase 3: Position tools next to their stages
+  positionedNodes.filter(n => n.type === 'stage').forEach((stageNode) => {
+    const relatedTools = stageToTools.get(stageNode.id) || [];
+    let currentToolY = stageNode.position.y;
+    
+    relatedTools.forEach((tool, toolIndex) => {
+      const preferredToolY = currentToolY + (toolIndex * (spacing.tool.height + spacing.vertical * 0.5));
+      const safePosition = findSafePosition('tool', columnPositions.tool, preferredToolY);
+      
+      positionedNodes.push({
+        ...tool,
+        position: safePosition
+      });
+      
+      // Update current Y for next tool to avoid overlap
+      currentToolY = Math.max(currentToolY, safePosition.y + spacing.tool.height + spacing.vertical * 0.5);
+    });
+  });
+  
+  // Update prompt column position based on tools
+  const maxToolWidth = Math.max(...positionedNodes
+    .filter(n => n.type === 'tool')
+    .map(n => n.position.x + spacing.tool.width), columnPositions.tool);
+  columnPositions.prompt = maxToolWidth + spacing.horizontal;
+  
+  // Phase 4: Position prompts to the right of their tools
+  positionedNodes.filter(n => n.type === 'tool').forEach((toolNode) => {
+    const relatedPrompts = toolToPrompts.get(toolNode.id) || [];
+    let currentPromptY = toolNode.position.y;
+    
+    relatedPrompts.forEach((prompt, promptIndex) => {
+      const preferredPromptY = currentPromptY + (promptIndex * (spacing.prompt.height + spacing.vertical * 0.4));
+      const safePosition = findSafePosition('prompt', columnPositions.prompt, preferredPromptY);
+      
+      positionedNodes.push({
+        ...prompt,
+        position: safePosition
+      });
+      
+      // Update current Y for next prompt to avoid overlap
+      currentPromptY = Math.max(currentPromptY, safePosition.y + spacing.prompt.height + spacing.vertical * 0.4);
+    });
+  });
+  
+  // Phase 5: Handle orphaned nodes (nodes without clear relationships)
+  orphanedNodes.forEach(node => {
+    const { x, y } = calculator.getAvailablePosition(node.type || 'tool', positionedNodes);
+    positionedNodes.push({
+      ...node,
+      position: { x, y }
+    });
+  });
+  
   return positionedNodes;
 }
 

@@ -38,8 +38,8 @@
     --muted-foreground: 213 26% 45%;
 
     /* Accent: Cobalt Blue - Secondary actions */
-    --accent: 211 100% 33%; /* Cobalt Blue #004DA8 */
-    --accent-foreground: 0 0% 100%;
+    --accent: 211 100% 96%; /* Very light Cobalt Blue for better contrast */
+    --accent-foreground: 213 26% 18%; /* Dark text for good contrast */
 
     /* Status colors */
     --destructive: 0 84% 60%; /* Red for errors */
@@ -118,9 +118,9 @@
     --muted: 213 26% 15%;
     --muted-foreground: 0 0% 65%;
 
-    /* Accent: Brighter Cobalt Blue for dark mode */
-    --accent: 211 100% 45%; /* Brighter Cobalt Blue */
-    --accent-foreground: 0 0% 100%;
+    /* Accent: Darker background for dark mode with light text */
+    --accent: 213 26% 20%; /* Darker background for good contrast */
+    --accent-foreground: 0 0% 95%; /* Light text for good contrast */
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -449,4 +449,78 @@
 
 .scrollbar-track-transparent::-webkit-scrollbar-track {
   background-color: transparent;
+}
+
+/* ========================================
+   HOVER CONTRAST IMPROVEMENTS
+   ======================================== */
+
+/* Ensure all focus and hover states have proper contrast */
+.hover-contrast-fix:hover,
+.hover-contrast-fix:focus {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Specific fixes for problematic color combinations */
+.text-gray-600:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+.text-blue-500:hover {
+  color: hsl(194 100% 35%) !important; /* Darker blue for better contrast */
+}
+
+/* Enhanced dropdown and select item hover states */
+[role="option"]:hover,
+[role="option"]:focus,
+[data-radix-collection-item]:hover,
+[data-radix-collection-item]:focus {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Ensure proper contrast for navigation items */
+nav a:hover,
+nav button:hover {
+  color: hsl(var(--foreground));
+}
+
+/* Fix any remaining problematic hover states */
+.hover-fix {
+  transition: all 0.2s ease-in-out;
+}
+
+.hover-fix:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Dark mode specific improvements */
+.dark .text-gray-600:hover {
+  color: hsl(0 0% 85%) !important;
+}
+
+.dark .text-blue-500:hover {
+  color: hsl(194 100% 65%) !important; /* Brighter blue for dark mode */
+}
+
+/* Ensure menu items have proper hover contrast in both modes */
+[data-radix-dropdown-menu-item]:hover,
+[data-radix-select-item]:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  outline: none !important;
+}
+
+/* Button hover improvements for better contrast */
+button:hover:not(.gradient-button):not([data-variant="ghost"]) {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Link hover improvements */
+a:hover:not(.no-hover-styles) {
+  color: hsl(var(--primary));
+  text-decoration: underline;
 }

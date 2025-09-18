@@ -144,6 +144,19 @@ export function AIParametersIndicator({ className }: AIParametersIndicatorProps)
     return 'text-orange-600';
   };
 
+  // Check if using custom settings (different from defaults)
+  const isUsingCustomSettings = () => {
+    const defaults = { temperature: 0.7, topP: 0.9, topK: 50, creativityLevel: 'balanced' };
+    return (
+      aiSettings.temperature !== defaults.temperature ||
+      aiSettings.topP !== defaults.topP ||
+      aiSettings.topK !== defaults.topK ||
+      aiSettings.creativityLevel !== defaults.creativityLevel
+    );
+  };
+
+  const hasCustomSettings = isUsingCustomSettings();
+
   return (
     <TooltipProvider>
       <AnimatePresence>
@@ -159,9 +172,20 @@ export function AIParametersIndicator({ className }: AIParametersIndicatorProps)
             <Button 
               variant="ghost" 
               size="sm" 
-              className="gap-2 bg-background/60 backdrop-blur-sm border border-border/40 hover:bg-gray-100/80 hover:border-gray-300 transition-all duration-200"
+              className={cn(
+                "gap-2 bg-background/60 backdrop-blur-sm border transition-all duration-200",
+                hasCustomSettings 
+                  ? "border-primary/60 bg-primary/5 hover:bg-primary/10 hover:border-primary" 
+                  : "border-border/40 hover:bg-gray-100/80 hover:border-gray-300",
+                className?.includes('w-full') ? 'w-full justify-start h-8' : ''
+              )}
             >
-              <Brain className="w-4 h-4" />
+              <div className="relative">
+                <Brain className="w-4 h-4" />
+                {hasCustomSettings && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                )}
+              </div>
               <div className="flex items-center gap-1 text-xs font-mono">
                 <span className={getParameterColor(aiSettings.temperature || 0.7, 0, 2)}>
                   T:{aiSettings.temperature?.toFixed(1)}
@@ -175,10 +199,17 @@ export function AIParametersIndicator({ className }: AIParametersIndicatorProps)
                   K:{aiSettings.topK}
                 </span>
               </div>
+              {hasCustomSettings && (
+                <span className="text-xs text-primary font-medium">Custom</span>
+              )}
             </Button>
           </PopoverTrigger>
           
-          <PopoverContent className="w-80 p-0" side="bottom" align="end">
+          <PopoverContent 
+            className="w-80 p-0" 
+            side={className?.includes('w-full') ? "right" : "bottom"} 
+            align={className?.includes('w-full') ? "start" : "end"}
+          >
             <Card className="border-0 shadow-lg">
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
@@ -186,12 +217,19 @@ export function AIParametersIndicator({ className }: AIParametersIndicatorProps)
                     <Brain className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold">AI Generation Parameters</h3>
                   </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={cn("text-xs", getCreativityColor(aiSettings.creativityLevel || 'balanced'))}
-                  >
-                    {aiSettings.creativityLevel || 'balanced'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {hasCustomSettings && (
+                      <Badge variant="default" className="text-xs bg-primary/10 text-primary border-primary/20">
+                        Custom
+                      </Badge>
+                    )}
+                    <Badge 
+                      variant="secondary" 
+                      className={cn("text-xs", getCreativityColor(aiSettings.creativityLevel || 'balanced'))}
+                    >
+                      {aiSettings.creativityLevel || 'balanced'}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -307,6 +345,11 @@ export function AIParametersIndicator({ className }: AIParametersIndicatorProps)
 
                 <div className="text-xs text-muted-foreground">
                   <p>These parameters control AI creativity and output diversity for this project.</p>
+                  {hasCustomSettings && (
+                    <p className="text-primary mt-1 font-medium">
+                      ✨ Custom parameters are actively modifying AI prompt generation
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { GradientButton } from "@/components/ui/gradient-button";
-import { AIParametersIndicator } from "@/components/ui/ai-parameters-indicator";
 import { cn } from "@/lib/utils";
 import { Zap, Menu, User, LogOut, BarChart, BookOpen, Settings, FlaskConical, Brain } from "lucide-react";
 import { motion } from "framer-motion";
@@ -29,35 +28,6 @@ export function Navigation({ className }: NavigationProps) {
   const location = useLocation();
   const { toast } = useToast();
 
-  // Track when user enters a project to show indicator persistently
-  useEffect(() => {
-    const isOnProjectPage = location.pathname.includes('/workflow') || 
-                           location.pathname.includes('/projects/') ||
-                           location.pathname.includes('/project/') || // Support singular "project" path
-                           location.pathname.includes('/prompt-builder');
-    
-    if (isOnProjectPage && user) {
-      localStorage.setItem('hasAccessedProject', 'true');
-      
-      // Extract and store project ID if available (support both /projects/ and /project/ paths)
-      const projectIdMatch = location.pathname.match(/\/projects?\/([^/]+)/) || location.pathname.match(/\/project\/([^/]+)/);
-      if (projectIdMatch) {
-        localStorage.setItem('lastAccessedProjectId', projectIdMatch[1]);
-      } else if (location.pathname === '/workflow' && currentProject?.id) {
-        // Handle /workflow page - use currentProject from store
-        localStorage.setItem('lastAccessedProjectId', currentProject.id);
-      }
-    }
-  }, [location.pathname, user, currentProject]);
-
-  // Check if user has ever accessed a project in this session
-  // This should show the indicator once they enter any project and persist it
-  const hasProjectAccess = currentProject !== null || 
-                           location.pathname.includes('/workflow') || 
-                           location.pathname.includes('/projects/') ||
-                           location.pathname.includes('/project/') || // Support singular "project" path
-                           location.pathname.includes('/prompt-builder') ||
-                           localStorage.getItem('hasAccessedProject') === 'true';
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -68,8 +38,6 @@ export function Navigation({ className }: NavigationProps) {
         variant: "destructive"
       });
     } else {
-      // Clear project access flag on sign out
-      localStorage.removeItem('hasAccessedProject');
       toast({
         title: "Signed out successfully"
       });
@@ -139,12 +107,8 @@ export function Navigation({ className }: NavigationProps) {
             )}
           </div>
 
-          {/* Right: AI Parameters + User Controls */}
+          {/* Right: User Controls */}
           <div className="flex items-center justify-end space-x-4">
-            {/* AI Parameters Indicator - show after user has accessed any project */}
-            {user && hasProjectAccess && (
-              <AIParametersIndicator />
-            )}
             {loading ? (
               <div className="h-9 w-20 bg-muted animate-pulse rounded" />
             ) : user ? (

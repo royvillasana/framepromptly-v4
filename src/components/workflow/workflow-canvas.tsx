@@ -27,6 +27,7 @@ import { ContextNode } from './context-node';
 import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { motion } from 'framer-motion';
+import { Square } from 'lucide-react';
 
 // Define nodeTypes outside the component to prevent recreation on each render
 const staticNodeTypes = {
@@ -80,6 +81,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [isMarqueeMode, setIsMarqueeMode] = useState(false);
+  const [isDraggingNodes, setIsDraggingNodes] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [marqueeRect, setMarqueeRect] = useState<{
     startX: number;
@@ -95,19 +97,15 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     tool: ToolNode,
   }), []);
   
-  // Add onSwitchToPromptTab to tool nodes and selected state to all nodes
+  // Add onSwitchToPromptTab to tool nodes - let React Flow handle selection
   const enhancedNodes = useMemo(() => 
-    nodes.map(node => {
-      const isSelected = selectedNode?.id === node.id;
-      return {
-        ...node,
-        selected: isSelected,
-        data: { 
-          ...node.data, 
-          ...(node.type === 'tool' ? { onSwitchToPromptTab } : {})
-        }
-      };
-    }), [nodes, onSwitchToPromptTab, selectedNode]
+    nodes.map(node => ({
+      ...node,
+      data: { 
+        ...node.data, 
+        ...(node.type === 'tool' ? { onSwitchToPromptTab } : {})
+      }
+    })), [nodes, onSwitchToPromptTab]
   );
 
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(enhancedNodes);
@@ -128,6 +126,61 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     // console.log('Store edges changed, updating flow edges:', edges.length);
     setFlowEdges(edges);
   }, [edges, setFlowEdges]);
+
+  // Define handleClearSelection function first
+  const handleClearSelection = useCallback(() => {
+    setSelectedNodes([]);
+    // Let React Flow handle clearing selection - use the instance method
+    if (reactFlowInstance) {
+      reactFlowInstance.getNodes().forEach(node => {
+        reactFlowInstance.updateNode(node.id, { selected: false });
+      });
+    }
+    // Clear store selection if not in marquee mode
+    if (!isMarqueeMode) {
+      selectNode(null);
+    }
+  }, [isMarqueeMode, reactFlowInstance, selectNode]);
+
+  // Add keyboard shortcuts for marquee mode
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Escape key to exit marquee mode
+      if (event.key === 'Escape' && isMarqueeMode) {
+        setIsMarqueeMode(false);
+        handleClearSelection();
+        event.preventDefault();
+      }
+      
+      // Delete key to delete selected nodes in marquee mode
+      if (event.key === 'Delete' && isMarqueeMode && selectedNodes.length > 0) {
+        const remainingNodes = flowNodes.filter(node => !selectedNodes.includes(node.id));
+        const remainingEdges = flowEdges.filter(edge => 
+          !selectedNodes.includes(edge.source) && !selectedNodes.includes(edge.target)
+        );
+        
+        setNodes(remainingNodes);
+        setEdges(remainingEdges);
+        setSelectedNodes([]);
+        event.preventDefault();
+      }
+      
+      // Cmd/Ctrl+A to select all nodes
+      if ((event.metaKey || event.ctrlKey) && event.key === 'a') {
+        if (reactFlowInstance && flowNodes.length > 0) {
+          // Select all nodes
+          flowNodes.forEach(node => {
+            reactFlowInstance.updateNode(node.id, { selected: true });
+          });
+          setSelectedNodes(flowNodes.map(node => node.id));
+          event.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMarqueeMode, selectedNodes, flowNodes, flowEdges, handleClearSelection, setNodes, setEdges, reactFlowInstance]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -213,19 +266,26 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      selectNode(node);
+      // In normal mode, set single node selection in store for compatibility
+      if (!isMarqueeMode) {
+        selectNode(node);
+      }
+      // Let React Flow handle multi-selection automatically
     },
-    [selectNode]
+    [selectNode, isMarqueeMode]
   );
 
   const onSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
-      setSelectedNodes(selectedNodes.map(node => node.id));
+    ({ nodes: selectedReactFlowNodes }: { nodes: Node[] }) => {
+      setSelectedNodes(selectedReactFlowNodes.map(node => node.id));
       
-      // Clear selectedNode in store if no nodes are selected
-      if (selectedNodes.length === 0) {
+      // Update store selection for compatibility with existing components
+      if (selectedReactFlowNodes.length === 1) {
+        selectNode(selectedReactFlowNodes[0]);
+      } else if (selectedReactFlowNodes.length === 0) {
         selectNode(null);
       }
+      // For multi-selection (length > 1), don't update store selection
     },
     [selectNode]
   );
@@ -253,30 +313,45 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     reactFlowInstance?.fitView();
   }, [reactFlowInstance]);
 
-  const handleClearSelection = useCallback(() => {
-    setSelectedNodes([]);
-  }, []);
-
   const toggleMarqueeMode = useCallback(() => {
-    setIsMarqueeMode(!isMarqueeMode);
+    const newMarqueeMode = !isMarqueeMode;
+    setIsMarqueeMode(newMarqueeMode);
     setMarqueeRect(null);
     setIsDrawing(false);
-  }, [isMarqueeMode]);
+    
+    // Clear selections when toggling modes using React Flow instance
+    setSelectedNodes([]);
+    if (reactFlowInstance) {
+      reactFlowInstance.getNodes().forEach(node => {
+        reactFlowInstance.updateNode(node.id, { selected: false });
+      });
+    }
+    if (!newMarqueeMode) {
+      selectNode(null);
+    }
+  }, [isMarqueeMode, reactFlowInstance, selectNode]);
 
   const onMouseDown = useCallback((event: React.MouseEvent) => {
     if (isMarqueeMode && event.button === 0) {
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const startX = event.clientX - rect.left;
-      const startY = event.clientY - rect.top;
+      // Check if we're clicking on empty space (not on a node)
+      const target = event.target as HTMLElement;
+      const isNodeClick = target.closest('.react-flow__node');
       
-      setMarqueeRect({
-        startX,
-        startY,
-        currentX: startX,
-        currentY: startY,
-      });
-      setIsDrawing(true);
-      event.preventDefault();
+      if (!isNodeClick) {
+        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+        const startX = event.clientX - rect.left;
+        const startY = event.clientY - rect.top;
+        
+        setMarqueeRect({
+          startX,
+          startY,
+          currentX: startX,
+          currentY: startY,
+        });
+        setIsDrawing(true);
+        event.preventDefault();
+        event.stopPropagation();
+      }
     }
   }, [isMarqueeMode]);
 
@@ -295,38 +370,62 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
   }, [isDrawing, marqueeRect, isMarqueeMode]);
 
   const onMouseUp = useCallback((event: React.MouseEvent) => {
-    if (isDrawing && marqueeRect && isMarqueeMode) {
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    if (isDrawing && marqueeRect && isMarqueeMode && reactFlowInstance) {
       const { startX, startY, currentX, currentY } = marqueeRect;
       
-      // Calculate selection bounds
+      // Calculate selection bounds in screen coordinates
       const minX = Math.min(startX, currentX);
       const minY = Math.min(startY, currentY);
       const maxX = Math.max(startX, currentX);
       const maxY = Math.max(startY, currentY);
+      
+      // Convert screen coordinates to flow coordinates
+      const startFlow = reactFlowInstance.screenToFlowPosition({ x: minX, y: minY });
+      const endFlow = reactFlowInstance.screenToFlowPosition({ x: maxX, y: maxY });
       
       // Find nodes within selection bounds
       const selectedNodeIds = flowNodes
         .filter(node => {
           const nodeX = node.position.x;
           const nodeY = node.position.y;
-          const nodeWidth = (node.measured?.width || 100);
-          const nodeHeight = (node.measured?.height || 100);
+          const nodeWidth = (node.measured?.width || node.width || 280);
+          const nodeHeight = (node.measured?.height || node.height || 200);
           
-          return (
-            nodeX >= minX - nodeWidth/2 &&
-            nodeX <= maxX + nodeWidth/2 &&
-            nodeY >= minY - nodeHeight/2 &&
-            nodeY <= maxY + nodeHeight/2
-          );
+          // Check if node overlaps with selection rectangle
+          const nodeLeft = nodeX;
+          const nodeTop = nodeY;
+          const nodeRight = nodeX + nodeWidth;
+          const nodeBottom = nodeY + nodeHeight;
+          
+          const selectionLeft = startFlow.x;
+          const selectionTop = startFlow.y;
+          const selectionRight = endFlow.x;
+          const selectionBottom = endFlow.y;
+          
+          // Check for overlap
+          return !(nodeRight < selectionLeft || 
+                   nodeLeft > selectionRight || 
+                   nodeBottom < selectionTop || 
+                   nodeTop > selectionBottom);
         })
         .map(node => node.id);
       
+      // Update selected nodes in React Flow using the instance
       setSelectedNodes(selectedNodeIds);
+      
+      // Use React Flow's built-in selection API
+      if (reactFlowInstance && selectedNodeIds.length > 0) {
+        reactFlowInstance.getNodes().forEach(node => {
+          reactFlowInstance.updateNode(node.id, { 
+            selected: selectedNodeIds.includes(node.id) 
+          });
+        });
+      }
+      
       setIsDrawing(false);
       setMarqueeRect(null);
     }
-  }, [isDrawing, marqueeRect, isMarqueeMode, flowNodes]);
+  }, [isDrawing, marqueeRect, isMarqueeMode, flowNodes, reactFlowInstance, setFlowNodes]);
 
   return (
     <motion.div
@@ -350,7 +449,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       )}
       
       <div 
-        className="h-full w-full"
+        className={`h-full w-full ${isMarqueeMode ? 'cursor-crosshair' : ''}`}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
@@ -362,18 +461,26 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           onEdgesChange={onEdgesChangeHandler}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
-          onPaneClick={() => selectNode(null)}
+          onPaneClick={() => {
+            if (isMarqueeMode) {
+              handleClearSelection();
+            } else {
+              selectNode(null);
+            }
+          }}
           onSelectionChange={onSelectionChange}
           onViewportChange={onViewportChange}
           onInit={onInit}
           nodeTypes={nodeTypes}
           connectionMode={ConnectionMode.Loose}
           selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
-          multiSelectionKeyCode="Shift"
+          multiSelectionKeyCode={["Meta", "Control", "Shift"]}
           nodeOrigin={[0, 0]}
           nodesDraggable={true}
           nodesConnectable={true}
           elementsSelectable={true}
+          selectNodesOnDrag={true}
+          selectionOnDrag={isMarqueeMode}
           minZoom={0.1}
           maxZoom={4}
           fitView
@@ -398,6 +505,25 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       <div className="fixed bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium z-20">
         {Math.round(zoom * 100)}%
       </div>
+
+      {/* Marquee Mode Indicator */}
+      {isMarqueeMode && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg text-sm font-medium z-20">
+          <div className="flex items-center gap-2 mb-1">
+            <Square className="h-4 w-4" />
+            Drag Selection Mode
+            {selectedNodes.length > 0 && (
+              <span className="bg-primary-foreground text-primary px-2 py-0.5 rounded text-xs">
+                {selectedNodes.length} selected
+              </span>
+            )}
+          </div>
+          <div className="text-xs opacity-90">
+            Drag to select • Cmd/Ctrl+Click multi-select • Cmd/Ctrl+A select all • ESC to exit
+            {selectedNodes.length > 0 && " • DEL to delete"}
+          </div>
+        </div>
+      )}
 
       <CanvasToolbar
         onClearSelection={handleClearSelection}

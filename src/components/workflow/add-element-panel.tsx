@@ -701,7 +701,7 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
   };
 
   return (
-    <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-80 bg-card border-l border-border shadow-lg z-40 flex flex-col">
+    <div className="fixed right-0 top-[5.3rem] h-[calc(100vh-4rem)] w-80 bg-card border-l border-border shadow-lg z-40 flex flex-col">
       {/* Header */}
       <div className="border-b border-border p-4 flex items-center justify-between">
         <h3 className="font-semibold text-sm">Add Elements</h3>

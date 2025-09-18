@@ -7,6 +7,177 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Default AI method settings for fallback
+const DEFAULT_AI_SETTINGS = {
+  promptStructure: 'framework-guided',
+  creativityLevel: 'balanced',
+  reasoning: 'step-by-step',
+  adaptability: 'context-aware',
+  validation: 'built-in',
+  personalization: 'user-preferences',
+  temperature: 0.7,
+  topP: 0.9,
+  topK: 50,
+};
+
+// Helper function to load project AI settings
+async function loadProjectAISettings(supabase: any, projectId: string) {
+  try {
+    if (!projectId || projectId.toString().startsWith('ai-stress-test-')) {
+      console.log('🔧 Using default settings for stress test or missing project ID');
+      return DEFAULT_AI_SETTINGS;
+    }
+
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('enhanced_settings')
+      .eq('id', projectId)
+      .single();
+
+    if (error) {
+      console.warn('Failed to load project settings, using defaults:', error.message);
+      return DEFAULT_AI_SETTINGS;
+    }
+
+    const enhancedSettings = project?.enhanced_settings;
+    const aiMethodSettings = enhancedSettings?.aiMethodSettings;
+
+    if (!aiMethodSettings) {
+      console.log('🔧 No AI method settings found, using defaults');
+      return DEFAULT_AI_SETTINGS;
+    }
+
+    // Validate and sanitize parameters
+    const validatedSettings = {
+      promptStructure: aiMethodSettings.promptStructure || DEFAULT_AI_SETTINGS.promptStructure,
+      creativityLevel: aiMethodSettings.creativityLevel || DEFAULT_AI_SETTINGS.creativityLevel,
+      reasoning: aiMethodSettings.reasoning || DEFAULT_AI_SETTINGS.reasoning,
+      adaptability: aiMethodSettings.adaptability || DEFAULT_AI_SETTINGS.adaptability,
+      validation: aiMethodSettings.validation || DEFAULT_AI_SETTINGS.validation,
+      personalization: aiMethodSettings.personalization || DEFAULT_AI_SETTINGS.personalization,
+      temperature: Math.max(0.1, Math.min(2.0, aiMethodSettings.temperature || DEFAULT_AI_SETTINGS.temperature)),
+      topP: Math.max(0.1, Math.min(1.0, aiMethodSettings.topP || DEFAULT_AI_SETTINGS.topP)),
+      topK: Math.max(1, Math.min(100, aiMethodSettings.topK || DEFAULT_AI_SETTINGS.topK)),
+    };
+
+    console.log('🔧 Loaded AI settings:', validatedSettings);
+    return validatedSettings;
+  } catch (error) {
+    console.error('Error loading AI settings:', error);
+    return DEFAULT_AI_SETTINGS;
+  }
+}
+
+// Dynamic system prompt builder based on AI settings
+function buildSystemPrompt(aiSettings: any, toolName: string, stageName: string, frameworkName: string) {
+  let basePrompt = "You are a professional UX methodology expert. Generate comprehensive, practical instructions for UX practitioners.";
+  
+  // Apply creativity level modifications
+  const creativityInstructions = {
+    conservative: `
+Your response should be methodical and based on proven methodologies:
+- Focus on well-established UX practices and documented best practices
+- Minimize experimental or unproven techniques
+- Emphasize reliable, time-tested approaches
+- Include references to established frameworks and standards`,
+    
+    balanced: `
+Your response should balance proven methodologies with innovative approaches:
+- Include both established practices and emerging techniques
+- Provide a mix of traditional and modern UX approaches
+- Balance innovation with practical considerations
+- Reference both classic and contemporary methodologies`,
+    
+    creative: `
+Your response should explore innovative UX approaches and creative solutions:
+- Include emerging methodologies and experimental techniques
+- Encourage creative problem-solving approaches
+- Suggest novel applications of established practices
+- Explore cutting-edge UX research and methodologies`,
+    
+    experimental: `
+Your response should prioritize cutting-edge, experimental UX approaches:
+- Generate innovative and speculative methodologies
+- Include the latest research-backed techniques
+- Encourage boundary-pushing experimental practices
+- Suggest novel, untested but promising approaches`
+  };
+
+  // Apply reasoning style modifications
+  const reasoningInstructions = {
+    'step-by-step': `
+Structure your response with clear, numbered steps and logical progression:
+- Use numbered steps and sub-steps
+- Include decision trees and flowcharts where helpful
+- Provide detailed methodology with clear sequences
+- Break complex processes into manageable phases`,
+    
+    direct: `
+Provide concise, actionable instructions with minimal explanation:
+- Focus on immediate, actionable tasks
+- Minimize background theory and explanation
+- Use bullet points and brief, clear statements
+- Prioritize what to do over why to do it`,
+    
+    exploratory: `
+Present multiple approaches and encourage experimentation:
+- Offer several alternative methodology options
+- Include comparative analysis of different approaches
+- Encourage adaptation and customization
+- Provide framework for choosing between options`
+  };
+
+  // Apply validation level modifications
+  const validationInstructions = {
+    none: "",
+    basic: `
+Include basic success indicators:
+- Provide simple completion criteria
+- Include basic quality checkpoints`,
+    
+    'built-in': `
+Include comprehensive validation and success criteria:
+- Provide detailed success metrics and measurement methods
+- Include validation checkpoints throughout the process
+- Add quality assurance steps and review criteria
+- Specify expected outcomes and deliverables`,
+    
+    comprehensive: `
+Include extensive validation, measurement, and optimization:
+- Provide multiple validation approaches and success metrics
+- Include detailed quality assurance and review processes
+- Add risk assessment and mitigation strategies
+- Specify measurement methods, KPIs, and optimization opportunities
+- Include post-completion evaluation and improvement recommendations`
+  };
+
+  // Combine all instructions
+  const creativityInstruction = creativityInstructions[aiSettings.creativityLevel] || creativityInstructions.balanced;
+  const reasoningInstruction = reasoningInstructions[aiSettings.reasoning] || reasoningInstructions['step-by-step'];
+  const validationInstruction = validationInstructions[aiSettings.validation] || validationInstructions['built-in'];
+
+  const fullSystemPrompt = `${basePrompt}
+
+${creativityInstruction}
+
+${reasoningInstruction}
+
+${validationInstruction}
+
+Your response should be:
+- Professional and actionable
+- Well-structured with clear sections
+- Include specific steps, methods, and deliverables
+- Provide concrete examples when helpful
+- Be ready for immediate use by UX teams
+
+When a Project Knowledge Base is provided, integrate that context into your instructions.
+
+Generate detailed professional instructions for ${toolName} in the ${stageName} stage of the ${frameworkName} framework.`;
+
+  return fullSystemPrompt;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -33,6 +204,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+
+    // Load project AI settings
+    const aiSettings = await loadProjectAISettings(supabase, projectId);
 
     let user = null;
     
@@ -120,30 +294,29 @@ ${processedPrompt}`;
     for (const model of models) {
       try {
         console.log('Attempting OpenAI call with model:', model);
+        console.log('🎛️ Using AI settings:', {
+          temperature: aiSettings.temperature,
+          topP: aiSettings.topP,
+          creativityLevel: aiSettings.creativityLevel,
+          reasoning: aiSettings.reasoning,
+          validation: aiSettings.validation
+        });
+
+        // Build dynamic system prompt based on user settings
+        const dynamicSystemPrompt = buildSystemPrompt(aiSettings, toolName, stageName, frameworkName);
+
         const payload: Record<string, unknown> = {
           model,
           messages: [
             {
               role: 'system',
-              content: `You are a professional UX methodology expert. Generate comprehensive, practical instructions for UX practitioners.
-
-Your response should be:
-- Professional and actionable
-- Well-structured with clear sections
-- Include specific steps, methods, and deliverables
-- Provide concrete examples when helpful
-- Include success criteria and validation methods
-- Be ready for immediate use by UX teams
-
-When a Project Knowledge Base is provided, integrate that context into your instructions.
-
-Generate detailed professional instructions for ${toolName} in the ${stageName} stage of the ${frameworkName} framework.`
+              content: dynamicSystemPrompt
             },
             { role: 'user', content: processedPrompt }
           ],
-          temperature: 0.3,
+          temperature: aiSettings.temperature,
           max_tokens: 1500,
-          top_p: 1,
+          top_p: aiSettings.topP,
           frequency_penalty: 0,
           presence_penalty: 0
         };

@@ -70,7 +70,8 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   
   const isExpanded = expandedPromptId === prompt.id;
 
-  const handleExpand = () => {
+  const handleExpand = (event: React.MouseEvent) => {
+    event.stopPropagation();
     console.log('Expanding prompt node:', prompt.id);
     setExpandedPromptId(prompt.id);
   };
@@ -80,7 +81,8 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
     setExpandedPromptId(null);
   };
 
-  const handleCopy = () => {
+  const handleCopy = (event: React.MouseEvent) => {
+    event.stopPropagation();
     const contentToCopy = latestAIResponse || displayPromptContent;
     
     navigator.clipboard.writeText(contentToCopy);

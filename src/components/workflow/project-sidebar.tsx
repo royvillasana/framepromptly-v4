@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AIParametersIndicator } from '@/components/ui/ai-parameters-indicator';
 import { motion } from 'framer-motion';
 import { 
   ChevronLeft, 
@@ -226,6 +227,15 @@ export function ProjectSidebar({ activePanel, onPanelChange, children }: Project
               <span className="line-clamp-2">{currentProject.description}</span>
             </div>
           )}
+        </div>
+
+        {/* AI Generation Parameters */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <Settings className="w-3 h-3" />
+            <span>AI Generation Settings</span>
+          </div>
+          <AIParametersIndicator className="w-full" />
         </div>
 
       </div>

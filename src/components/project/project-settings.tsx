@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProjectStore } from '@/stores/project-store';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Target, CheckCircle, Brain, Settings, Save, Users } from 'lucide-react';
+import { ArrowLeft, Target, CheckCircle, Brain, Settings, Save, Users, Bot } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectInvitations } from './project-invitations';
+import { AIOutputSelector } from '@/components/ui/ai-output-selector';
 
 export function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -53,6 +54,7 @@ export function ProjectSettings() {
     topP: 0.9,
     topK: 50,
   });
+  const [aiOutputSelection, setAiOutputSelection] = useState<string>('none');
 
   useEffect(() => {
     if (!projects.length) {
@@ -125,6 +127,7 @@ export function ProjectSettings() {
           topP: 0.9,
           topK: 50,
         });
+        setAiOutputSelection(settings.aiOutputSelection || 'none');
       }
     } catch (error) {
       console.error('Failed to load enhanced settings:', error);
@@ -209,7 +212,8 @@ export function ProjectSettings() {
       industry: selectedIndustry,
       projectContext,
       qualitySettings,
-      aiMethodSettings
+      aiMethodSettings,
+      aiOutputSelection
     };
 
     try {
@@ -300,7 +304,7 @@ export function ProjectSettings() {
               });
             }} className="w-full">
               <div className="flex items-center justify-between mb-6">
-                <TabsList className="grid w-fit grid-cols-4 bg-gray-100 p-1 rounded-lg">
+                <TabsList className="grid w-fit grid-cols-5 bg-gray-100 p-1 rounded-lg">
                   <TabsTrigger 
                     value="context"
                     className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
@@ -321,6 +325,13 @@ export function ProjectSettings() {
                   >
                     <Brain className="w-4 h-4 mr-2" />
                     AI Methods
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="ai-output"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
+                  >
+                    <Bot className="w-4 h-4 mr-2" />
+                    AI Output
                   </TabsTrigger>
                   <TabsTrigger 
                     value="team"
@@ -952,6 +963,42 @@ export function ProjectSettings() {
                             </p>
                           </div>
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* AI Output Tab */}
+              <TabsContent value="ai-output" className="mt-0">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Bot className="w-5 h-5 text-blue-600" />
+                        AI Output Optimization
+                      </CardTitle>
+                      <CardDescription>
+                        Configure AI platform-specific optimizations that will be applied to all generated prompts in this project. 
+                        This enhances prompt effectiveness by adding platform-specific instructions and formatting.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <AIOutputSelector
+                        value={aiOutputSelection}
+                        onChange={setAiOutputSelection}
+                        variant="default"
+                        showDescription={true}
+                      />
+                      
+                      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-semibold text-blue-900 mb-2">How AI Output Optimization Works</h4>
+                        <ul className="text-sm text-blue-800 space-y-2">
+                          <li>• <strong>Project-Level Setting:</strong> Applies to all prompts generated in this project</li>
+                          <li>• <strong>Platform-Specific Instructions:</strong> Adds optimized prefixes and suffixes based on AI research</li>
+                          <li>• <strong>Automatic Enhancement:</strong> No additional configuration needed in individual tools</li>
+                          <li>• <strong>Research-Based:</strong> Optimizations based on 2024-2025 AI platform best practices</li>
+                        </ul>
                       </div>
                     </CardContent>
                   </Card>
