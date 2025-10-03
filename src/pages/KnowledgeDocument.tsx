@@ -14,7 +14,7 @@ export default function KnowledgeDocument() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { projects, fetchProjects } = useProjectStore();
+  const { projects, fetchProjects, getEnhancedSettings } = useProjectStore();
   const { entries, fetchEntries, addTextEntry } = useKnowledgeStore();
   const [project, setProject] = useState(projects.find(p => p.id === projectId));
   const [document, setDocument] = useState<any>(null);
@@ -34,13 +34,9 @@ export default function KnowledgeDocument() {
       if (foundProject) {
         fetchEntries(foundProject.id);
         
-        // Load existing enhanced settings
+        // Load existing enhanced settings if needed
         const existingSettings = getEnhancedSettings(foundProject.id);
-        if (existingSettings) {
-          setSelectedIndustry(existingSettings.industry);
-          setProjectContext(existingSettings.projectContext);
-          setQualitySettings(existingSettings.qualitySettings);
-        }
+        // Enhanced settings are available for other components to use
       }
     }
   }, [projects, projectId, fetchEntries, getEnhancedSettings]);
