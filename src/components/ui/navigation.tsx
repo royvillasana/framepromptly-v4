@@ -58,11 +58,6 @@ export function Navigation({ className }: NavigationProps) {
           {/* Left: Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <img 
-                src={logoHeader}
-                alt="FramePromptly Logo" 
-                className="h-8 w-auto"
-              />
               <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 FramePromptly
               </span>

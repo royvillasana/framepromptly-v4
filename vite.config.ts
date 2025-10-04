@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/framepromptly-v4/' : '/',
+  base: './',
   server: {
     host: "::",
     port: 8080,

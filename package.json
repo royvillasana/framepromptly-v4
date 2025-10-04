@@ -1,14 +1,18 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "framepromptly",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:8080 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "npm run build && electron-builder --mac",
+    "electron:build:dev": "npm run build:dev && electron-builder --mac --dir"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -84,6 +88,10 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^38.2.1",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -93,10 +101,10 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "wait-on": "^9.0.1"
   },
-  "description": "## Project info",
-  "main": "eslint.config.js",
+  "description": "FramePromptly - UX Framework Workflow Builder",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/royvillasana/framepromptly-v4.git"
@@ -106,5 +114,44 @@
   "bugs": {
     "url": "https://github.com/royvillasana/framepromptly-v4/issues"
   },
-  "homepage": "https://github.com/royvillasana/framepromptly-v4#readme"
+  "homepage": "https://github.com/royvillasana/framepromptly-v4#readme",
+  "build": {
+    "appId": "com.framepromptly.app",
+    "productName": "FramePromptly",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/icon.png"
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "title": "FramePromptly ${version}"
+    }
+  }
 }
