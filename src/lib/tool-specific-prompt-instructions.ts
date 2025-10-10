@@ -323,287 +323,172 @@ Deliver a complete interview guide that includes:
 
     // ANALYSIS TOOLS
     'affinity-mapping': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for affinity mapping and research synthesis. Generate a complete AI prompt that users can copy and paste into their AI assistant to systematically analyze research data and identify meaningful patterns.
-
-The generated prompt must:
-1. Include instructions for AI to act as a research synthesis expert with pattern recognition expertise
-2. Incorporate ALL project knowledge base content for contextual interpretation
-3. Provide structured methodology for multi-level clustering and theme development
-4. Include specific requirements for handling contradictory data and outliers
-5. Request validation methods and evidence-based insight generation
-6. Be comprehensive enough to generate complete affinity analysis without additional input
-
-Template Structure for Generated Prompt:
----
-# AI Research Synthesis & Affinity Mapping Expert
-
-You are a senior UX researcher and data analysis expert with 15+ years of experience synthesizing qualitative research into actionable insights. You specialize in affinity mapping methodologies that reveal meaningful patterns and generate strategic recommendations.
+      core: `You are a UX researcher creating an affinity map from research data.
 
 ## Project Context
-[Insert all relevant project knowledge base content here - research data, business objectives, user segments, strategic goals, etc.]
+[Insert ALL knowledge base content - research data, interview findings, observations, user feedback, business objectives]
 
-## Your Task
-Conduct comprehensive affinity mapping analysis of the provided research data using systematic clustering methodology to identify meaningful themes, patterns, and actionable insights.
+## Create Affinity Map
 
-### Affinity Mapping Methodology
-- Apply systematic clustering to identify meaningful patterns rather than superficial similarities
-- Use multi-level analysis to reveal both detailed insights and strategic themes
-- Handle contradictory data thoughtfully to understand user complexity
-- Generate insights that are not obvious from individual data points
-- Connect patterns to business objectives and strategic opportunities
+Organize the research data into themes and sub-themes.
 
-### Required Analysis Framework
-Conduct complete affinity analysis including:
+### Level 1: Initial Clusters (Detailed Groupings)
 
-1. **Data Preparation & Organization**
-   - Raw data review and initial categorization
-   - Data point extraction and standardization
-   - Source attribution and context preservation
-   - Quality assessment and gap identification
+**Cluster 1: [Name]**
+- [Data point 1]
+- [Data point 2]
+- [Data point 3]
 
-2. **Level 1 Clustering: Detailed Groupings**
-   - **Initial Affinity Groups**
-     - Similar responses and behavioral patterns
-     - Related pain points and frustrations
-     - Connected needs and motivations
-     - Comparable contexts and environments
-   
-   - **Data Point Analysis**
-     - Supporting evidence for each cluster
-     - Frequency and strength of patterns
-     - User segment representation
-     - Contradiction and outlier documentation
+**Cluster 2: [Name]**
+- [Data point 1]
+- [Data point 2]
+- [Data point 3]
 
-3. **Level 2 Clustering: Thematic Insights**
-   - **Theme Development**
-     - Higher-level patterns across multiple clusters
-     - Cross-cutting insights and relationships
-     - Behavioral themes and mental model patterns
-     - System-level issues and opportunities
-   
-   - **Theme Validation**
-     - Evidence strength assessment
-     - User segment consistency analysis
-     - Business relevance evaluation
-     - Strategic alignment verification
+**Cluster 3: [Name]**
+- [Data point 1]
+- [Data point 2]
+- [Data point 3]
 
-4. **Level 3 Clustering: Strategic Implications**
-   - **Meta-Themes & Insights**
-     - Overarching patterns with business impact
-     - Strategic opportunities and recommendations
-     - System-wide improvements and innovations
-     - Competitive advantages and differentiators
+[Continue with additional clusters]
 
-5. **Contradiction & Outlier Analysis**
-   - **Conflicting Data Assessment**
-     - User segment differences and preferences
-     - Context-dependent behavior variations
-     - Edge cases and special circumstances
-     - Minority opinions with strategic value
-   
-   - **Complexity Understanding**
-     - Multi-faceted user needs and trade-offs
-     - Situational behavior variations
-     - Evolution and change indicators
-     - Personalization and customization opportunities
+### Level 2: Themes (Higher-Level Patterns)
 
-### Insight Quality Framework
-Ensure insights meet criteria for:
-- **Evidence-Based**: Supported by sufficient data points and user feedback
-- **Actionable**: Translatable into specific design or business decisions
-- **Strategic**: Aligned with business objectives and user value creation
-- **Differentiated**: Reveal non-obvious patterns and opportunities
-- **Validated**: Consistent across data sources and user segments
+**Theme 1: [Name]**
+- Combines clusters: [Which clusters]
+- Key insight: [What this reveals]
+- Evidence: [Supporting data]
 
-### Pattern Recognition Excellence
-Apply advanced techniques for:
-- Identifying subtle behavioral nuances and preferences
-- Connecting seemingly unrelated data points
-- Recognizing temporal patterns and user journey insights
-- Detecting system-level issues affecting multiple touchpoints
-- Finding opportunities for innovation and differentiation
+**Theme 2: [Name]**
+- Combines clusters: [Which clusters]
+- Key insight: [What this reveals]
+- Evidence: [Supporting data]
 
-### Validation & Quality Assurance
-Include methods for:
-- Cross-referencing insights against multiple data sources
-- Testing theme accuracy with additional research
-- Stakeholder validation and feedback integration
-- Bias identification and mitigation
-- Confidence level assessment for each insight
+**Theme 3: [Name]**
+- Combines clusters: [Which clusters]
+- Key insight: [What this reveals]
+- Evidence: [Supporting data]
 
-### Strategic Recommendations
-Generate actionable recommendations including:
-- Prioritized improvement opportunities with business impact
-- Design implications and implementation approaches
-- Further research needs and validation requirements
-- Success metrics and measurement approaches
-- Stakeholder communication and alignment strategies
+### Level 3: Meta-Themes (Strategic Insights)
 
-### Output Requirements
-Deliver comprehensive affinity analysis including:
-- Visual affinity map with hierarchical clustering
-- Detailed theme documentation with supporting evidence
-- Strategic insights with business implications
-- Actionable recommendations with implementation guidance
-- Quality assessment and confidence indicators
----`,
-      guidance: [
-        'Generate prompts that instruct AI to identify meaningful patterns and themes rather than superficial similarities',
-        'Include instructions for AI to create multi-level clustering and hierarchical theme development',
-        'Ensure prompts direct AI to handle contradictory data thoughtfully to understand user complexity',
-        'Generate prompts instructing AI to reveal insights not obvious from individual data points',
-        'Include instructions for AI to connect patterns to business objectives and strategic opportunities',
-        'Ensure prompts direct AI to provide evidence-based validation for all identified themes',
-        'Generate prompts that instruct AI to generate actionable recommendations with implementation guidance'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL project knowledge base content including research data, business objectives, and strategic context',
-        'Insert specific research findings, user feedback, and behavioral data from knowledge base into analysis framework',
-        'Include business goals, success metrics, and strategic priorities from knowledge base in pattern interpretation',
-        'Reference existing user models, personas, and segmentation from knowledge base for validation and consistency',
-        'Incorporate market context, competitive landscape, and industry requirements from knowledge base in insight development',
-        'Use organizational constraints, resource limitations, and implementation capabilities from knowledge base in recommendation prioritization',
-        'Include previous research findings, assumptions, and hypotheses from knowledge base for comparative analysis'
-      ],
-      qualityChecks: [
-        'Verify the generated prompt includes comprehensive research data and project context for informed analysis',
-        'Ensure the prompt provides systematic methodology for multi-level clustering and theme development',
-        'Confirm the prompt specifies validation approaches and evidence requirements for insights',
-        'Validate that the prompt includes strategic recommendation development with business alignment',
-        'Check that the prompt generates complete affinity analysis ready for stakeholder presentation',
-        'Ensure the prompt instructs AI to handle contradictions and provide confidence assessments'
-      ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that generates systematic affinity mapping analysis with hierarchical themes, evidence validation, and strategic recommendations'
+**Meta-Theme 1: [Name]**
+- Overarching pattern: [Description]
+- Business impact: [Implications]
+- Recommendation: [What to do]
+
+**Meta-Theme 2: [Name]**
+- Overarching pattern: [Description]
+- Business impact: [Implications]
+- Recommendation: [What to do]
+
+### Key Insights
+1. [Insight 1]
+2. [Insight 2]
+3. [Insight 3]`,
+
+      guidance: ['Multi-level clustering', 'Pattern identification', 'Evidence-based insights', 'Strategic recommendations'],
+      knowledgeIntegration: ['Insert ALL research data from knowledge base', 'Include business objectives', 'Reference user segments'],
+      qualityChecks: ['Hierarchical themes', 'Evidence for each theme', 'Contradictions addressed', 'Actionable insights'],
+      outputFormat: 'Complete affinity map with themes, sub-themes, and strategic insights'
     },
 
     'personas': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for persona development. Generate a complete AI prompt that users can copy and paste into their AI assistant (ChatGPT, Claude, etc.) to create evidence-based user personas.
-
-The generated prompt must:
-1. Include specific instructions for the AI to act as a UX research expert specializing in persona development
-2. Incorporate ALL available project knowledge base content to provide context
-3. Provide detailed methodology using triangulation method and Jobs-to-be-Done framework
-4. Include specific output format requirements with research backing
-5. Request validation criteria and supporting evidence
-6. Be comprehensive enough to generate professional-quality personas without additional input
-
-Template Structure for Generated Prompt:
----
-# AI Persona Development Expert
-
-You are a senior UX researcher and persona development expert with 15+ years of experience creating evidence-based user personas. You specialize in using the triangulation method (combining quantitative data, qualitative insights, and behavioral analytics) and Jobs-to-be-Done framework.
+      core: `You are a senior UX researcher creating user personas.
 
 ## Project Context
-[Insert all relevant project knowledge base content here - user research, business context, industry constraints, target audience, etc.]
+[Insert ALL knowledge base content - user research, business context, target audience, pain points, behaviors, goals]
 
-## Your Task
-Create [number] detailed, research-backed user persona(s) for this project using the following methodology:
+## Create 2-4 User Personas
 
-### Research-Based Approach
-- Use triangulation method: combine the provided research data with logical behavioral inferences
-- Apply Jobs-to-be-Done framework: include both functional jobs (tasks) and emotional jobs (feelings)
-- Focus on behavioral patterns and goal hierarchies rather than just demographics
-- Base all persona elements on evidence from the project context provided
+For each persona, include:
 
-### Required Persona Structure
-For each persona, provide:
+**Name:** [Full name]
+**Age:** [Age]
+**Occupation:** [Job title]
+**Location:** [City, State/Country]
+**Quote:** "[One sentence capturing their essence]"
 
-1. **Core Identity**
-   - Specific name (not generic like "Tech User" - use real names like "Sarah Chen")
-   - Age range and key demographics
-   - Professional role and context
-   - Personal quote that captures their essence
+**Goals:**
+- [Primary goal 1]
+- [Primary goal 2]
+- [Primary goal 3]
 
-2. **Behavioral Profile**
-   - Primary goals (essential needs) vs secondary goals (nice-to-haves)  
-   - Functional jobs-to-be-done (tasks they need to complete)
-   - Emotional jobs-to-be-done (feelings they want to achieve)
-   - Decision-making patterns and criteria
-   - Technology comfort level and usage patterns
+**Pain Points:**
+- [Pain point 1]
+- [Pain point 2]
+- [Pain point 3]
 
-3. **Context & Environment**
-   - Work/life environment and constraints
-   - Social influences and relationships
-   - Tools and systems they currently use
-   - Typical day workflow relevant to this project
+**Behaviors:**
+- [Key behavior 1]
+- [Key behavior 2]
+- [Key behavior 3]
 
-4. **Pain Points & Frustrations**
-   - Specific problems they face (backed by research evidence)
-   - Current workarounds and adaptations
-   - Emotional impact of these problems
-   - Frequency and severity of issues
+**Motivations:**
+- [What drives them]
+- [What they value]
+- [What success looks like to them]
 
-5. **Motivations & Success Criteria**
-   - What drives their decisions
-   - How they define success
-   - What would make them advocate for a solution
-   - Long-term aspirations relevant to the project
+**Tech Comfort:** [Low/Medium/High]
 
-6. **Research Evidence**
-   - Specific quotes or data points supporting persona elements
-   - Research sources that informed each major persona characteristic
-   - Confidence level for different persona aspects
-   - Areas where additional research would be valuable
+**Background:** [2-3 sentences about their life context, work environment, and relevant circumstances]`,
 
-### Validation Requirements
-Include for each persona:
-- 3-5 testable hypotheses about their behavior
-- Recommended validation methods (interviews, surveys, observation)
-- Key questions to ask real users to verify persona accuracy
-- Metrics that would indicate persona relevance and adoption
-
-### Output Format
-Present each persona as a comprehensive profile that a design team can immediately use for decision-making, with clear research backing for credibility.
----`,
-      guidance: [
-        'Generate prompts that instruct AI to use triangulation method combining quantitative data, qualitative insights, and behavioral analytics',
-        'Include instructions for the AI to focus on goals hierarchy - distinguishing between primary goals (essential needs) and secondary goals (nice-to-have wants)',
-        'Ensure the prompt instructs AI to include both functional jobs (tasks to accomplish) and emotional jobs (feelings to achieve)',
-        'Generate prompts that direct AI to develop behavioral patterns based on observed actions rather than stated preferences',
-        'Include instructions for AI to create empathy maps capturing what personas think, feel, see, say, hear, and do',
-        'Ensure prompts instruct AI to include contextual factors: environmental constraints, social influences, and situational pressures',
-        'Generate prompts that direct AI to validate personas against multiple data sources and provide update recommendations'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL available project knowledge base content including user research, business context, industry constraints, target audiences, and organizational factors',
-        'Insert specific user quotes, behavioral data, and research findings from the knowledge base directly into the prompt context section',
-        'Include industry-specific terminology, processes, and constraints from the knowledge base in the AI instructions',
-        'Reference existing user segments, customer data, or market research from knowledge base to inform persona development direction',
-        'Incorporate business objectives, success metrics, and strategic goals from the knowledge base into the persona requirements',
-        'Use project-specific environments, tools, and workflows from knowledge base to ensure contextually accurate persona details',
-        'Include domain expertise and professional requirements from knowledge base to guide realistic persona characteristics'
-      ],
-      qualityChecks: [
-        'Verify the generated prompt includes comprehensive project context from the knowledge base',
-        'Ensure the prompt provides clear methodology instructions for evidence-based persona development',
-        'Confirm the prompt specifies detailed output format requirements with research backing expectations',
-        'Validate that the prompt includes specific validation criteria and testing recommendations',
-        'Check that the prompt is complete enough to generate professional personas without additional input',
-        'Ensure the prompt instructs AI to provide supporting evidence and confidence levels for persona elements'
-      ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that incorporates all project knowledge and generates research-backed personas with validation criteria'
+      guidance: ['Triangulation method', 'Jobs-to-be-Done framework', 'Research evidence backing', 'Validation hypotheses'],
+      knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include business context and goals', 'Reference existing user segments'],
+      qualityChecks: ['Evidence-based profiles', 'Testable hypotheses included', 'Comprehensive and actionable'],
+      outputFormat: '2-4 complete user personas with research backing and validation criteria'
     },
 
     'empathy-maps': {
-      core: `You are generating AI prompts for creating empathy maps in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that systematically capture user thoughts, feelings, and experiences.`,
-      guidance: [
-        'Structure empathy maps to capture thinks, feels, sees, says, hears, and does',
-        'Include both positive and negative aspects of the user experience',
-        'Focus on specific scenarios and contexts rather than general impressions',
-        'Create maps that reveal insights about user motivations and barriers'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to provide specific context for user experiences',
-        'Reference user research findings and behavioral data from the knowledge base',
-        'Incorporate business environment and constraints that affect user experience',
-        'Align empathy mapping with specific user scenarios documented in the project'
-      ],
-      qualityChecks: [
-        'Ensure empathy maps are grounded in observed user behavior and feedback',
-        'Include validation methods to test map accuracy',
-        'Plan for using empathy maps to generate actionable design insights'
-      ],
-      outputFormat: 'Visual empathy map with structured sections for thoughts, feelings, actions, and environmental factors'
+      core: `You are a UX researcher creating an empathy map.
+
+## Project Context
+[Insert ALL knowledge base content - user research, interviews, observations, behaviors, pain points]
+
+## Create Empathy Map for [Persona Name]
+
+**THINKS:**
+- [Thought 1]
+- [Thought 2]
+- [Thought 3]
+
+**FEELS:**
+- [Emotion/feeling 1]
+- [Emotion/feeling 2]
+- [Emotion/feeling 3]
+
+**SAYS:**
+- "[Quote 1]"
+- "[Quote 2]"
+- "[Quote 3]"
+
+**DOES:**
+- [Action/behavior 1]
+- [Action/behavior 2]
+- [Action/behavior 3]
+
+**SEES:**
+- [What they encounter 1]
+- [What they encounter 2]
+- [What they encounter 3]
+
+**HEARS:**
+- [What they hear 1]
+- [What they hear 2]
+- [What they hear 3]
+
+**PAINS:**
+- [Pain 1]
+- [Pain 2]
+- [Pain 3]
+
+**GAINS:**
+- [Desired outcome 1]
+- [Desired outcome 2]
+- [Desired outcome 3]`,
+
+      guidance: ['6-quadrant structure', 'Evidence-based', 'Specific scenarios', 'Research quotes'],
+      knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include behavioral data and quotes'],
+      qualityChecks: ['All 6 quadrants filled', 'Research-backed', 'Specific examples', 'Pains/gains identified'],
+      outputFormat: 'Complete empathy map with all quadrants populated from research'
     },
 
     // IDEATION TOOLS
@@ -779,148 +664,40 @@ Deliver a facilitation guide that includes:
 
     // PROTOTYPING TOOLS
     'wireframes': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for wireframe design and development. Generate a complete AI prompt that users can copy and paste into their AI assistant to create structured, user-centered wireframes.
-
-The generated prompt must:
-1. Include instructions for AI to act as an information architecture and interaction design expert
-2. Incorporate ALL project knowledge base content for accurate structural decisions
-3. Provide structured methodology for low-fidelity design and layout planning
-4. Include specific requirements for user flows, content hierarchy, and functionality
-5. Request validation methods and iteration approaches
-6. Be comprehensive enough to generate complete wireframe specifications without additional input
-
-Template Structure for Generated Prompt:
----
-# AI Wireframe Design Expert
-
-You are a senior UX architect and interaction design expert with 15+ years of experience creating user-centered wireframes and information architectures. You specialize in translating user needs and business requirements into clear, testable design structures.
+      core: `You are a UX architect creating wireframes.
 
 ## Project Context
-[Insert all relevant project knowledge base content here - user workflows, business requirements, content needs, technical constraints, etc.]
+[Insert ALL knowledge base content - user workflows, business requirements, content needs, features, technical constraints]
 
-## Your Task
-Create comprehensive wireframe specifications for this project using evidence-based design methodology that prioritizes user workflows and information architecture.
+## Create Wireframes for Key Screens
 
-### Wireframe Design Methodology
-- Focus on information architecture and content hierarchy before visual details
-- Base layout decisions on user task flows and mental models
-- Design for core functionality testing and rapid iteration
-- Create structures that support both user goals and business objectives
-- Plan for responsive behavior across different devices and contexts
+For each screen, include:
 
-### Required Wireframe Documentation
-Create complete wireframe specifications including:
+**Screen Name:** [Name]
 
-1. **Information Architecture Foundation**
-   - Site/app structure and navigation hierarchy
-   - Content organization and categorization
-   - User flow mapping and page relationships
-   - Information prioritization based on user needs
+**Layout:**
+[Text description of layout structure - e.g., "Header with logo and navigation at top, main content area in center with sidebar, footer at bottom"]
 
-2. **For Each Key Screen/Page:**
-   - **Layout Structure**
-     - Grid system and spatial organization
-     - Content blocks and functional areas
-     - Hierarchy and visual weight distribution
-     - White space and content density decisions
-   
-   - **Content Requirements**
-     - Specific content types and elements needed
-     - Content priority and prominence decisions
-     - Text length estimates and content constraints
-     - Image and media placement requirements
-   
-   - **Functional Elements**
-     - Interactive components and controls
-     - Form fields and input requirements
-     - Navigation elements and linking
-     - Feedback and status indicators
-   
-   - **User Flow Integration**
-     - Entry points and user arrival context
-     - Primary and secondary task pathways
-     - Exit points and next action options
-     - Error states and alternative flows
+**Elements:**
+- [Element 1: Description, function]
+- [Element 2: Description, function]
+- [Element 3: Description, function]
 
-3. **Responsive Considerations**
-   - Breakpoint behavior and layout adaptation
-   - Content prioritization across screen sizes
-   - Touch interaction and mobile optimization
-   - Progressive disclosure strategies
+**User Flow:**
+- [How user arrives at this screen]
+- [Primary action/goal on this screen]
+- [Next screen/exit]
 
-4. **Design Rationale**
-   - User research evidence supporting layout decisions
-   - Business requirement alignment explanation
-   - Usability principles and best practice application
-   - Accessibility considerations and compliance
+**Annotations:**
+- [Design rationale 1]
+- [Design rationale 2]
 
-### Wireframe Quality Requirements
-Ensure wireframes:
-- Address all core user tasks identified in project research
-- Reflect realistic content volumes and types
-- Support efficient task completion and user goals
-- Consider technical feasibility and implementation constraints
-- Enable rapid prototyping and user testing
-- Provide clear specifications for development
+[Repeat for each key screen]`,
 
-### User-Centered Design Integration
-- Base layout decisions on user mental models and expectations
-- Prioritize content based on user goals and task frequency
-- Design navigation that matches user workflows
-- Include affordances that support user success
-- Plan for error prevention and recovery
-
-### Testing and Iteration Framework
-Provide approaches for:
-- Low-fidelity prototype creation for user testing
-- Layout effectiveness assessment with real content
-- Navigation and flow validation with users
-- Stakeholder review and feedback integration
-- Iterative refinement based on testing results
-
-### Technical Specifications
-Include guidance for:
-- Grid systems and layout constraints
-- Component definitions and interaction states
-- Content management and dynamic content handling
-- Performance implications of layout decisions
-- Development handoff requirements
-
-### Output Requirements
-Deliver wireframe specifications that include:
-- Visual layout representations for all key screens
-- Detailed annotations explaining design decisions
-- User flow diagrams showing page relationships
-- Content requirements and functional specifications
-- Testing plan and iteration roadmap
----`,
-      guidance: [
-        'Generate prompts that instruct AI to focus on information architecture and content hierarchy before visual details',
-        'Include instructions for AI to base layout decisions on user task flows and mental models',
-        'Ensure prompts direct AI to consider responsive behavior and multi-device contexts',
-        'Generate prompts instructing AI to create wireframes that support rapid prototyping and user testing',
-        'Include instructions for AI to provide detailed design rationale based on user research evidence',
-        'Ensure prompts direct AI to consider technical feasibility and implementation constraints',
-        'Generate prompts that instruct AI to plan for iterative refinement and stakeholder feedback'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL project knowledge base content including user workflows, business requirements, and technical constraints',
-        'Insert specific user task flows, interaction patterns, and workflow requirements from knowledge base into design methodology',
-        'Include content types, information needs, and content strategy from knowledge base in wireframe requirements',
-        'Reference business objectives, functional requirements, and feature priorities from knowledge base in layout decisions',
-        'Incorporate technical constraints, platform requirements, and development capabilities from knowledge base in design specifications',
-        'Use accessibility requirements, compliance needs, and user diversity considerations from knowledge base in design approach',
-        'Include brand guidelines, visual constraints, and organizational requirements from knowledge base in structural planning'
-      ],
-      qualityChecks: [
-        'Verify the generated prompt includes comprehensive project context for informed design decisions',
-        'Ensure the prompt provides detailed methodology for user-centered wireframe development',
-        'Confirm the prompt specifies complete documentation requirements including annotations and specifications',
-        'Validate that the prompt includes testing and iteration approaches for wireframe validation',
-        'Check that the prompt generates wireframe specifications ready for prototyping and development',
-        'Ensure the prompt instructs AI to provide design rationale and research backing for layout decisions'
-      ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that generates comprehensive wireframe specifications with layout rationale, user flow integration, and testing framework'
+      guidance: ['Information architecture focus', 'User task flows', 'Responsive design', 'Detailed annotations'],
+      knowledgeIntegration: ['Insert ALL workflows from knowledge base', 'Include business requirements', 'Reference technical constraints'],
+      qualityChecks: ['Complete screen coverage', 'Annotated decisions', 'User flows documented', 'Research-backed'],
+      outputFormat: 'Wireframe specifications for key screens with annotations and user flows'
     },
 
     'paper-prototypes': {
@@ -1179,237 +956,83 @@ Deliver a testing protocol that includes:
     },
 
     'problem-statements': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for problem statement development. Generate a complete AI prompt that users can copy and paste into their AI assistant to create clear, actionable problem statements using the specific format: [User name] is a/an [user characteristics] who needs [user need] because [insight].
-
-The generated prompt must:
-1. Include instructions for AI to act as a design thinking expert specializing in problem definition
-2. Incorporate ALL project knowledge base content for contextual accuracy
-3. Enforce the exact problem statement format with specific examples
-4. Provide methodology for evidence-based problem framing
-5. Request validation criteria and supporting research evidence
-6. Be comprehensive enough to generate professional problem statements without additional input
-
-Template Structure for Generated Prompt:
----
-# AI Problem Statement Expert
-
-You are a senior design strategist and problem definition expert with 15+ years of experience creating actionable problem statements. You specialize in translating user research into clear, inspiring problem definitions that guide solution development.
+      core: `You are a design strategist creating problem statements.
 
 ## Project Context
-[Insert all relevant project knowledge base content here - user research findings, personas, pain points, business objectives, industry context, etc.]
+[Insert ALL knowledge base content - user research, personas, pain points, business objectives, insights]
 
-## Your Task
-Create clear, actionable problem statements using the EXACT format: [User name] is a/an [user characteristics] who needs [user need] because [insight].
+## Create 3-5 Problem Statements
 
-### Problem Statement Methodology
-- Base all elements on evidence from the provided project context
-- Use specific persona names from research (not generic terms like "users")
-- Ground insights in validated research findings, not assumptions
-- Balance user needs with business objectives and constraints
-- Include both functional needs (what they can't do) and emotional needs (how they feel)
+Use the EXACT format: **[User name] is a/an [user characteristics] who needs [user need] because [insight].**
 
-### Required Format Structure
-**EXACT FORMAT:** [User name] is a/an [user characteristics] who needs [user need] because [insight].
-
-**Element Requirements:**
-1. **User name**: Use specific, realistic names that represent actual personas (e.g., "Sarah Chen", "Marcus Rodriguez", "Elena Thompson")
-2. **User characteristics**: Capture key demographics, roles, or behavioral traits that are relevant to the problem context
-3. **User need**: Express as clear, actionable requirements or desired outcomes that can guide solution development  
-4. **Insight**: Based on validated research findings that explain the underlying reasons for the need
-
-### Problem Statement Examples
+### Examples:
 - "Sarah Chen is a working mother of two who needs a faster grocery shopping method because her current 2-hour weekend shopping trips conflict with family time and cause stress."
 - "Marcus Rodriguez is a small business owner with limited tech skills who needs simplified financial tracking because complex accounting software overwhelms him and delays important business decisions."
-- "Elena Thompson is a remote team manager who needs better visibility into project progress because unclear status updates lead to missed deadlines and client dissatisfaction."
 
-### Quality Requirements
-For each problem statement ensure:
-- Follows the exact format without deviation
-- Uses specific, realistic persona names
-- Includes meaningful user characteristics
-- States actionable, specific user needs
-- Provides evidence-based insights
-- Inspires solution thinking without prescribing solutions
-- Balances user empathy with business alignment
+### Your Problem Statements:
 
-### Supporting Documentation
-For each problem statement, provide:
-- Research evidence supporting each element
-- Data points or user quotes that validate the insight
-- Business impact assessment of solving this problem
-- Success criteria for addressing the user need
-- Prioritization rationale among multiple problems
+1. [Statement 1]
+2. [Statement 2]
+3. [Statement 3]
+4. [Statement 4] (if applicable)
+5. [Statement 5] (if applicable)`,
 
-### Validation Framework
-Include methods to:
-- Test problem statement accuracy with real users
-- Validate problem priority through stakeholder review
-- Measure problem statement effectiveness in guiding ideation
-- Update statements based on new research findings
-
-### Output Requirements
-Deliver 3-5 problem statements that:
-- Use the exact required format
-- Are grounded in project research and context
-- Inspire creative solution development
-- Can be immediately used for design team ideation
-- Include supporting evidence and validation criteria
----`,
-      guidance: [
-        'Generate prompts that enforce the exact format: [User name] is a/an [user characteristics] who needs [user need] because [insight]',
-        'Include instructions for AI to use specific, realistic persona names rather than generic user terms',
-        'Ensure prompts direct AI to base user characteristics on meaningful demographics and behavioral traits',
-        'Generate prompts instructing AI to express user needs as clear, actionable requirements or outcomes',
-        'Include instructions for AI to ground insights in validated research findings rather than assumptions',
-        'Ensure prompts direct AI to include both functional problems (what users can\'t do) and emotional problems (how they feel)',
-        'Generate prompts that instruct AI to create statements that inspire solution thinking without prescribing solutions'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL project knowledge base content including user research, personas, pain points, and business context',
-        'Insert specific user research findings, behavioral data, and pain points from knowledge base into the project context section',
-        'Include specific persona names, characteristics, and user segments from knowledge base to inform problem statement elements',
-        'Reference business objectives, strategic priorities, and organizational constraints from knowledge base in problem framing guidance',
-        'Incorporate industry-specific context, terminology, and requirements from knowledge base into problem statement methodology',
-        'Use existing user quotes, feedback, and observed behaviors from knowledge base to ground insights in evidence',
-        'Include project goals, success metrics, and validation criteria from knowledge base to ensure problem statement alignment'
-      ],
-      qualityChecks: [
-        'Verify the generated prompt enforces the exact problem statement format without deviation',
-        'Ensure the prompt includes comprehensive project context and research evidence from knowledge base',
-        'Confirm the prompt provides specific examples demonstrating proper format usage',
-        'Validate that the prompt includes detailed quality requirements and validation methods',
-        'Check that the prompt generates complete problem statements with supporting documentation',
-        'Ensure the prompt instructs AI to provide evidence-based insights and validation criteria'
-      ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that generates evidence-based problem statements in the exact required format with supporting research and validation framework'
+      guidance: ['Exact format enforcement', 'Specific persona names', 'Evidence-based insights', 'Supporting documentation'],
+      knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include persona names and characteristics', 'Reference business objectives'],
+      qualityChecks: ['Exact format followed', 'Research-backed', 'Supporting evidence included'],
+      outputFormat: '3-5 problem statements with evidence and validation'
     },
 
     'journey-maps': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for journey mapping. Generate a complete AI prompt that users can copy and paste into their AI assistant to create detailed, research-backed user journey maps.
-
-The generated prompt must:
-1. Include instructions for AI to act as a journey mapping expert with behavioral design expertise
-2. Incorporate ALL project knowledge base content for accurate journey context
-3. Provide structured methodology for end-to-end experience mapping
-4. Include specific requirements for emotional states, pain points, and opportunities
-5. Request validation methods and supporting evidence
-6. Be comprehensive enough to generate complete journey maps without additional input
-
-Template Structure for Generated Prompt:
----
-# AI Journey Mapping Expert
-
-You are a senior UX strategist and customer experience expert with 15+ years of experience creating comprehensive user journey maps. You specialize in mapping complete end-to-end experiences that reveal systemic issues and improvement opportunities.
+      core: `You are a UX strategist creating a user journey map.
 
 ## Project Context
-[Insert all relevant project knowledge base content here - user research, personas, touchpoints, business processes, organizational constraints, etc.]
+[Insert ALL knowledge base content - user research, personas, touchpoints, workflows, pain points, business processes]
 
-## Your Task
-Create a detailed user journey map for this project using evidence-based methodology that captures the complete user experience.
+## Create User Journey Map for [Persona Name]
 
-### Journey Mapping Methodology
-- Map the complete end-to-end experience including pre and post-interaction phases
-- Document both rational actions and emotional responses at each stage
-- Identify moments of truth, pain points, and delight opportunities
-- Include behind-the-scenes processes and organizational touchpoints
-- Ground all journey elements in research evidence from the project context
+### Journey Stages
 
-### Required Journey Map Structure
-Create a comprehensive journey map with:
+For each stage, include:
 
-1. **Journey Overview**
-   - User persona and scenario context
-   - Journey scope and timeframe
-   - Key business and user objectives
-   - Success criteria for the journey
+**Stage 1: [Stage Name]**
+- **Actions:** [What they do]
+- **Thoughts:** [What they think]
+- **Feelings:** [Emotional state - frustrated/excited/anxious/satisfied]
+- **Touchpoints:** [Where/how they interact]
+- **Pain Points:** [Problems encountered]
+- **Opportunities:** [Areas for improvement]
 
-2. **Journey Phases & Stages**
-   - Pre-awareness and trigger events
-   - Awareness and consideration phases
-   - Active engagement and interaction
-   - Resolution and outcome phases
-   - Post-experience and relationship continuation
+**Stage 2: [Stage Name]**
+- **Actions:** [What they do]
+- **Thoughts:** [What they think]
+- **Feelings:** [Emotional state]
+- **Touchpoints:** [Where/how they interact]
+- **Pain Points:** [Problems encountered]
+- **Opportunities:** [Areas for improvement]
 
-3. **For Each Journey Stage:**
-   - **User Actions**: Specific steps and behaviors
-   - **Thoughts & Feelings**: Emotional state and mental model
-   - **Touchpoints**: All interaction points (digital, physical, human)
-   - **Channels**: Platforms, devices, and communication methods
-   - **Pain Points**: Frustrations, barriers, and failure points
-   - **Opportunities**: Improvement areas and optimization potential
-   - **Behind-the-Scenes**: Supporting processes and systems
+**Stage 3: [Stage Name]**
+- **Actions:** [What they do]
+- **Thoughts:** [What they think]
+- **Feelings:** [Emotional state]
+- **Touchpoints:** [Where/how they interact]
+- **Pain Points:** [Problems encountered]
+- **Opportunities:** [Areas for improvement]
 
-4. **Experience Measurement**
-   - Emotional journey curve showing highs and lows
-   - Effort level required at each stage
-   - Satisfaction and trust indicators
-   - Drop-off risk assessment
+[Continue for additional stages as needed]
 
-5. **Strategic Insights**
-   - Moments of truth that significantly impact experience
-   - Critical success factors for journey optimization
-   - Systemic issues affecting multiple stages
-   - Prioritized improvement opportunities
+### Emotional Journey Curve
+[Describe the emotional highs and lows across the journey]
 
-### Journey Quality Requirements
-Ensure the journey map:
-- Reflects actual user research and behavioral evidence
-- Includes realistic timeframes and contextual constraints
-- Captures both functional and emotional aspects
-- Identifies specific, actionable improvement opportunities
-- Shows interdependencies between journey stages
-- Considers organizational capabilities and limitations
+### Key Insights
+- [Insight 1]
+- [Insight 2]
+- [Insight 3]`,
 
-### Research Integration
-- Base all journey elements on evidence from project context
-- Include specific user quotes and behavioral observations
-- Reference quantitative data about user actions and outcomes
-- Validate assumptions with research findings
-- Identify research gaps requiring additional investigation
-
-### Validation Framework
-Provide methods to:
-- Test journey accuracy with real users through interviews
-- Validate emotional states through user feedback
-- Confirm touchpoint effectiveness through analytics
-- Assess improvement impact through measurement
-- Update journey maps based on new research
-
-### Output Requirements
-Deliver a complete journey map that includes:
-- Visual representation of the complete user experience
-- Detailed documentation of each journey stage
-- Evidence-based insights and improvement recommendations
-- Implementation priorities and success metrics
-- Stakeholder alignment on experience vision
----`,
-      guidance: [
-        'Generate prompts that instruct AI to map complete end-to-end experiences including pre and post-interaction phases',
-        'Include instructions for AI to document both rational actions and emotional responses at each journey stage',
-        'Ensure prompts direct AI to identify moments of truth, pain points, and optimization opportunities',
-        'Generate prompts instructing AI to include behind-the-scenes processes and organizational touchpoints',
-        'Include instructions for AI to create emotional journey curves showing experience highs and lows',
-        'Ensure prompts direct AI to ground all journey elements in research evidence and user data',
-        'Generate prompts that instruct AI to prioritize improvement opportunities based on impact and feasibility'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL project knowledge base content including user research, personas, business processes, and organizational touchpoints',
-        'Insert specific user behavioral data, interaction patterns, and experience feedback from knowledge base into the project context section',
-        'Include business processes, system capabilities, and organizational constraints from knowledge base in journey mapping requirements',
-        'Reference existing customer touchpoints, communication channels, and service delivery methods from knowledge base',
-        'Incorporate user pain points, satisfaction data, and experience metrics from knowledge base into journey analysis',
-        'Use project goals, business objectives, and success criteria from knowledge base to align journey optimization priorities',
-        'Include industry context, competitive landscape, and regulatory requirements from knowledge base in journey considerations'
-      ],
-      qualityChecks: [
-        'Verify the generated prompt includes comprehensive project context and user research evidence',
-        'Ensure the prompt provides detailed methodology for end-to-end experience mapping',
-        'Confirm the prompt specifies complete journey structure with all required elements',
-        'Validate that the prompt includes validation methods and accuracy testing approaches',
-        'Check that the prompt generates actionable journey maps with improvement priorities',
-        'Ensure the prompt instructs AI to provide research backing and evidence for all journey elements'
-      ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that generates evidence-based journey maps with emotional curves, pain points, opportunities, and validation framework'
+      guidance: ['End-to-end experience', 'Emotional and rational layers', 'Pain points and opportunities', 'Research-backed'],
+      knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include touchpoints and workflows', 'Reference pain points and satisfaction data'],
+      qualityChecks: ['Complete journey stages', 'Emotional curve included', 'Opportunities prioritized', 'Evidence-based'],
+      outputFormat: 'Complete user journey map with stages, emotions, pain points, and opportunities'
     },
 
     // IDEATION & CREATIVITY TOOLS
@@ -1571,47 +1194,94 @@ Deliver a complete journey map that includes:
 
     // JOBS-TO-BE-DONE TOOLS
     'job-statements': {
-      core: `You are generating AI prompts for creating job statements in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that articulate customer jobs in functional, emotional, and social dimensions.`,
-      guidance: [
-        'Structure job statements in format: "When I [situation], I want to [motivation], so I can [expected outcome]"',
-        'Include functional jobs (tasks to complete), emotional jobs (feelings to achieve), and social jobs (perceptions to create)',
-        'Design job statements that are stable over time and independent of solutions',
-        'Create frameworks for prioritizing jobs based on importance and satisfaction'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to identify real customer jobs and contexts',
-        'Reference customer research and behavioral data from the knowledge base',
-        'Incorporate business objectives and market positioning into job framing',
-        'Align job statements with customer success criteria and business goals'
-      ],
-      qualityChecks: [
-        'Ensure job statements are customer-focused, not solution-focused',
-        'Include validation methods for testing job accuracy with customers',
-        'Plan for measuring job importance and current satisfaction levels'
-      ],
-      outputFormat: 'Structured job statements with functional, emotional, and social dimensions clearly defined'
+      core: `You are a Jobs-to-Be-Done expert creating job statements that articulate what customers are trying to accomplish.
+
+## Project Context
+[Insert ALL knowledge base content - customer research, behaviors, contexts, goals, pain points]
+
+## Create 10-15 Job Statements
+
+Use the format: **"When I [situation], I want to [motivation], so I can [expected outcome]"**
+
+### Three Job Dimensions
+
+**1. Functional Jobs** (tasks to complete):
+- "When I'm commuting, I want to catch up on industry news, so I can stay informed"
+- Focus on tangible tasks and activities
+
+**2. Emotional Jobs** (feelings to achieve):
+- "When I'm presenting to clients, I want to feel confident, so I can win their trust"
+- Focus on emotional states and feelings
+
+**3. Social Jobs** (how they want to be perceived):
+- "When I share content online, I want to appear knowledgeable, so I can build my reputation"
+- Focus on social perceptions and status
+
+### Requirements
+- Solution-independent (no product mentions)
+- Stable over time (not trend-dependent)
+- Specific situation context
+- Customer perspective and language
+
+### Prioritization
+For each job, measure:
+- **Importance** (1-5): How important is this job?
+- **Satisfaction** (1-5): How satisfied are they with current solutions?
+- **Opportunity Score** = Importance + (Importance - Satisfaction)
+
+Prioritize jobs with highest opportunity scores.`,
+
+      guidance: ['Three dimensions', 'Exact format', 'Solution-independent', 'Opportunity scoring'],
+      knowledgeIntegration: ['Insert customer research from knowledge base', 'Include behavioral data and contexts'],
+      qualityChecks: ['Format followed', 'All three dimensions', 'Solution-independent', 'Opportunity scores calculated'],
+      outputFormat: '10-15 job statements across all dimensions with opportunity scores'
     },
 
     'outcome-statements': {
-      core: `You are generating AI prompts for creating outcome statements in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that define measurable success criteria for customer jobs.`,
-      guidance: [
-        'Structure outcome statements as measurable success criteria for job completion',
-        'Include both efficiency outcomes (time, effort) and effectiveness outcomes (quality, completeness)',
-        'Design outcomes that are independent of specific solutions or implementations',
-        'Create frameworks for measuring outcome importance and current satisfaction'
-      ],
-      knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to define realistic, measurable outcomes',
-        'Reference customer success criteria and performance metrics from the knowledge base',
-        'Incorporate business objectives and competitive positioning into outcome definition',
-        'Align outcome statements with customer value propositions and business goals'
-      ],
-      qualityChecks: [
-        'Ensure outcome statements are specific, measurable, and achievable',
-        'Include methods for validating outcomes with actual customers',
-        'Plan for prioritizing outcomes based on importance and opportunity'
-      ],
-      outputFormat: 'Structured outcome statements with measurement criteria and prioritization framework'
+      core: `You are a Jobs-to-Be-Done expert creating outcome statements that define measurable success criteria for customer jobs.
+
+## Project Context
+[Insert ALL knowledge base content - job statements, customer goals, success criteria, metrics]
+
+## Create 20-30 Outcome Statements
+
+Use the format: **"[Direction] + [unit of measure] + [object of control] + [contextual clarifier]"**
+
+### Examples
+- "Minimize the time it takes to set up a new account for first-time use"
+- "Increase the number of payment options available during checkout"
+- "Minimize the likelihood that sensitive data is exposed during transmission"
+
+### Two Outcome Types
+
+**1. Efficiency Outcomes** (speed/effort):
+- Minimize time to...
+- Reduce effort required to...
+- Decrease number of steps to...
+
+**2. Effectiveness Outcomes** (quality/completeness):
+- Increase accuracy of...
+- Maximize number of...
+- Ensure completeness of...
+
+### Requirements
+- Measurable and specific
+- Solution-independent
+- Customer perspective
+- One outcome per statement
+
+### Prioritization
+For each outcome:
+- **Importance** (1-5)
+- **Current Satisfaction** (1-5)
+- **Opportunity Score** = Importance + (Importance - Satisfaction)
+
+Focus on outcomes with high opportunity scores.`,
+
+      guidance: ['Exact format', 'Two types', 'Measurable', 'Opportunity scoring'],
+      knowledgeIntegration: ['Insert job statements from knowledge base', 'Include customer success criteria'],
+      qualityChecks: ['Format followed', 'Both types covered', 'Measurable', 'Opportunity scores calculated'],
+      outputFormat: '20-30 outcome statements with opportunity scores'
     },
 
     // LEAN UX TOOLS
