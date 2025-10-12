@@ -175,7 +175,12 @@ export const KnowledgeBasePanel = () => {
         <div className="flex gap-2">
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Text
               </Button>
@@ -220,7 +225,13 @@ export const KnowledgeBasePanel = () => {
 
           <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload File
               </Button>

@@ -1,23 +1,16 @@
 /**
  * @fileoverview Tool-Specific AI Prompt Instructions System
  * Each tool has unique, contextual AI prompt instructions based on framework, stage, and tool purpose
- * Enhanced with platform-specific optimizations for Miro AI, FigJam AI, and Figma AI
  * This addresses the issue where all tools were using generic prompt text
  */
 
 import { UXFramework, UXStage, UXTool } from '@/stores/workflow-store';
-import { 
-  getPlatformRecommendation, 
-  getOptimizedPrompt, 
-  PlatformType 
-} from '@/lib/ux-tool-platform-optimizer';
 
 export interface ToolPromptContext {
   framework: UXFramework;
   stage: UXStage;
   tool: UXTool;
   projectContext?: string; // From knowledge base
-  preferredPlatform?: PlatformType; // Platform preference for optimizations
 }
 
 export interface SpecificToolInstructions {
@@ -28,92 +21,31 @@ export interface SpecificToolInstructions {
   knowledgeIntegrationInstructions: string[];
   qualityChecks: string[];
   expectedOutputFormat: string;
-  // Platform optimization enhancements
-  platformRecommendation?: {
-    recommendedPlatform: PlatformType;
-    confidence: number;
-    reasoning: string;
-    alternativePlatforms?: { platform: PlatformType; useCase: string }[];
-  };
-  platformOptimizedPrompt?: string;
-  platformSpecifics?: {
-    platform: PlatformType;
-    instructions: string[];
-    specifications: string[];
-    bestPractices: string[];
-  };
 }
 
 /**
  * Generate specific AI prompt instructions for each tool based on context
  */
 export function generateToolSpecificInstructions(context: ToolPromptContext): SpecificToolInstructions {
-  const { framework, stage, tool, preferredPlatform } = context;
-  
+  const { framework, stage, tool } = context;
+
   // Get base template for this tool type
   const baseInstructions = getBaseToolInstructions(tool.id);
-  
+
   // Customize based on framework context
   const frameworkCustomizations = getFrameworkSpecificCustomizations(tool.id, framework.id);
-  
+
   // Customize based on stage context
   const stageCustomizations = getStageSpecificCustomizations(tool.id, stage.id, framework.id);
-  
-  // Get platform optimization (if supported)
-  const platformRecommendation = getPlatformRecommendation(tool.id);
-  const selectedPlatform = preferredPlatform || platformRecommendation?.platform;
-  
-  // Generate platform-optimized prompt
-  let platformOptimization = null;
-  if (selectedPlatform && platformRecommendation) {
-    const basePrompt = `# AI Prompt Instructions for ${tool.name}
-## Framework Context: ${framework.name} - ${stage.name} Stage
 
-${baseInstructions.core}
-
-### Framework-Specific Application in ${framework.name}:
-${frameworkCustomizations.join('\n')}
-
-### Stage-Specific Focus in ${stage.name}:
-${stageCustomizations.join('\n')}
-
-### Integration with Project Knowledge:
-${baseInstructions.knowledgeIntegration.join('\n')}`;
-
-    platformOptimization = getOptimizedPrompt(tool.id, basePrompt, selectedPlatform);
-  }
-  
   return {
-    promptTemplate: platformOptimization?.optimizedPrompt || `# AI Prompt Instructions for ${tool.name}
-## Framework Context: ${framework.name} - ${stage.name} Stage
-
-${baseInstructions.core}
-
-### Framework-Specific Application in ${framework.name}:
-${frameworkCustomizations.join('\n')}
-
-### Stage-Specific Focus in ${stage.name}:
-${stageCustomizations.join('\n')}
-
-### Integration with Project Knowledge:
-${baseInstructions.knowledgeIntegration.join('\n')}`,
-    
+    promptTemplate: baseInstructions.core,
     contextualGuidance: baseInstructions.guidance,
     frameworkSpecificNotes: frameworkCustomizations,
     stageSpecificFocus: stageCustomizations,
     knowledgeIntegrationInstructions: baseInstructions.knowledgeIntegration,
     qualityChecks: baseInstructions.qualityChecks,
-    expectedOutputFormat: baseInstructions.outputFormat,
-    
-    // Platform optimization enhancements
-    platformRecommendation: platformRecommendation ? {
-      recommendedPlatform: platformRecommendation.platform,
-      confidence: platformRecommendation.confidence,
-      reasoning: platformRecommendation.reasoning,
-      alternativePlatforms: platformRecommendation.alternativePlatforms
-    } : undefined,
-    platformOptimizedPrompt: platformOptimization?.optimizedPrompt,
-    platformSpecifics: platformOptimization?.platformSpecifics
+    expectedOutputFormat: baseInstructions.outputFormat
   };
 }
 
@@ -323,67 +255,75 @@ Deliver a complete interview guide that includes:
 
     // ANALYSIS TOOLS
     'affinity-mapping': {
-      core: `You are a UX researcher creating an affinity map from research data.
+      core: `You are a senior UX researcher. Create an affinity map for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - research data, interview findings, observations, user feedback, business objectives]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create Affinity Map
+---
 
-Organize the research data into themes and sub-themes.
+## Instructions:
+Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all clusters, themes, and insights on the research data, user feedback, and patterns documented in the Project Context.
 
-### Level 1: Initial Clusters (Detailed Groupings)
+---
 
-**Cluster 1: [Name]**
-- [Data point 1]
-- [Data point 2]
-- [Data point 3]
+# AFFINITY MAP
 
-**Cluster 2: [Name]**
-- [Data point 1]
-- [Data point 2]
-- [Data point 3]
+## LEVEL 1: INITIAL CLUSTERS
 
-**Cluster 3: [Name]**
-- [Data point 1]
-- [Data point 2]
-- [Data point 3]
+### Cluster 1: [Write cluster name based on grouping patterns in the Project Context]
+- [Write data point 1 from research data in the Project Context]
+- [Write data point 2 from research data in the Project Context]
+- [Write data point 3 from research data in the Project Context]
+- [Write data point 4 from research data in the Project Context]
 
-[Continue with additional clusters]
+### Cluster 2: [Write cluster name based on patterns in the Project Context]
+- [Write data point 1 from the Project Context]
+- [Write data point 2 from the Project Context]
+- [Write data point 3 from the Project Context]
+- [Write data point 4 from the Project Context]
 
-### Level 2: Themes (Higher-Level Patterns)
+[Continue with additional clusters as needed based on the research data in the Project Context]
 
-**Theme 1: [Name]**
-- Combines clusters: [Which clusters]
-- Key insight: [What this reveals]
-- Evidence: [Supporting data]
+---
 
-**Theme 2: [Name]**
-- Combines clusters: [Which clusters]
-- Key insight: [What this reveals]
-- Evidence: [Supporting data]
+## LEVEL 2: THEMES (Higher-Level Patterns)
 
-**Theme 3: [Name]**
-- Combines clusters: [Which clusters]
-- Key insight: [What this reveals]
-- Evidence: [Supporting data]
+### Theme 1: [Write theme name based on cluster patterns from the Project Context]
+- **Combines clusters:** [List which clusters this combines based on the analysis above]
+- **Key insight:** [Write what this pattern reveals about user needs, behaviors, or pain points from the Project Context]
+- **Evidence:** [Cite specific data points from the Project Context supporting this theme]
 
-### Level 3: Meta-Themes (Strategic Insights)
+### Theme 2: [Write theme name based on patterns in the Project Context]
+- **Combines clusters:** [List which clusters based on analysis]
+- **Key insight:** [Write what this reveals based on the Project Context]
+- **Evidence:** [Cite supporting data from the Project Context]
 
-**Meta-Theme 1: [Name]**
-- Overarching pattern: [Description]
-- Business impact: [Implications]
-- Recommendation: [What to do]
+### Theme 3: [Write theme name based on patterns in the Project Context]
+- **Combines clusters:** [List which clusters]
+- **Key insight:** [Write what this reveals about users from the Project Context]
+- **Evidence:** [Cite supporting evidence from the Project Context]
 
-**Meta-Theme 2: [Name]**
-- Overarching pattern: [Description]
-- Business impact: [Implications]
-- Recommendation: [What to do]
+---
 
-### Key Insights
-1. [Insight 1]
-2. [Insight 2]
-3. [Insight 3]`,
+## LEVEL 3: META-THEMES (Strategic Insights)
+
+### Meta-Theme 1: [Write overarching theme name synthesizing themes from the Project Context]
+- **Pattern:** [Describe the high-level pattern across multiple themes based on the Project Context data]
+- **Business Impact:** [Describe implications for the business/product based on business goals in the Project Context]
+- **Recommendation:** [Write specific actionable recommendation aligned with objectives in the Project Context]
+
+### Meta-Theme 2: [Write overarching theme name based on the Project Context patterns]
+- **Pattern:** [Describe the high-level pattern from the Project Context]
+- **Business Impact:** [Describe implications based on the Project Context]
+- **Recommendation:** [Write actionable recommendation based on the Project Context]
+
+---
+
+## KEY INSIGHTS:
+1. [Write key insight 1 based on patterns and themes identified from the Project Context]
+2. [Write key insight 2 based on user behaviors and needs from the Project Context]
+3. [Write key insight 3 based on opportunities and challenges from the Project Context]`,
 
       guidance: ['Multi-level clustering', 'Pattern identification', 'Evidence-based insights', 'Strategic recommendations'],
       knowledgeIntegration: ['Insert ALL research data from knowledge base', 'Include business objectives', 'Reference user segments'],
@@ -392,44 +332,56 @@ Organize the research data into themes and sub-themes.
     },
 
     'personas': {
-      core: `You are a senior UX researcher creating user personas.
+      core: `You are a senior UX researcher. Create 3 user personas for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - user research, business context, target audience, pain points, behaviors, goals]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create 2-4 User Personas
+---
 
-For each persona, include:
+## PERSONA 1
 
-**Name:** [Full name]
-**Age:** [Age]
-**Occupation:** [Job title]
-**Location:** [City, State/Country]
-**Quote:** "[One sentence capturing their essence]"
+**Name:** [Create a realistic full name]
+**Age:** [Specific age]
+**Occupation:** [Specific job title]
+**Location:** [Specific city, state/country]
+**Quote:** "[Write a one-sentence quote that captures their essence]"
 
 **Goals:**
-- [Primary goal 1]
-- [Primary goal 2]
-- [Primary goal 3]
+- [Write specific goal 1 based on research]
+- [Write specific goal 2 based on research]
+- [Write specific goal 3 based on research]
 
 **Pain Points:**
-- [Pain point 1]
-- [Pain point 2]
-- [Pain point 3]
+- [Write specific pain point 1 from research]
+- [Write specific pain point 2 from research]
+- [Write specific pain point 3 from research]
 
 **Behaviors:**
-- [Key behavior 1]
-- [Key behavior 2]
-- [Key behavior 3]
+- [Describe specific behavior 1]
+- [Describe specific behavior 2]
+- [Describe specific behavior 3]
 
 **Motivations:**
-- [What drives them]
-- [What they value]
-- [What success looks like to them]
+- [Describe what drives them]
+- [Describe what they value most]
+- [Describe what success looks like to them]
 
-**Tech Comfort:** [Low/Medium/High]
+**Tech Comfort:** [State: Low, Medium, or High]
 
-**Background:** [2-3 sentences about their life context, work environment, and relevant circumstances]`,
+**Background:** [Write 2-3 sentences about their life context, work environment, and relevant circumstances based on the research data]
+
+---
+
+## PERSONA 2
+
+[Repeat the same structure for persona 2]
+
+---
+
+## PERSONA 3
+
+[Repeat the same structure for persona 3]`,
 
       guidance: ['Triangulation method', 'Jobs-to-be-Done framework', 'Research evidence backing', 'Validation hypotheses'],
       knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include business context and goals', 'Reference existing user segments'],
@@ -438,52 +390,59 @@ For each persona, include:
     },
 
     'empathy-maps': {
-      core: `You are a UX researcher creating an empathy map.
+      core: `You are a senior UX researcher. Create an empathy map for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - user research, interviews, observations, behaviors, pain points]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create Empathy Map for [Persona Name]
+---
 
-**THINKS:**
-- [Thought 1]
-- [Thought 2]
-- [Thought 3]
+## Instructions:
+Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all empathy map quadrants on user research data, behavioral observations, and direct quotes documented in the Project Context.
 
-**FEELS:**
-- [Emotion/feeling 1]
-- [Emotion/feeling 2]
-- [Emotion/feeling 3]
+---
 
-**SAYS:**
-- "[Quote 1]"
-- "[Quote 2]"
-- "[Quote 3]"
+# EMPATHY MAP: [Write the persona name based on the target user in the Project Context]
 
-**DOES:**
-- [Action/behavior 1]
-- [Action/behavior 2]
-- [Action/behavior 3]
+## THINKS:
+- [Write what the user is thinking based on goals, concerns, and questions mentioned in the Project Context]
+- [Write another thought based on research data in the Project Context]
+- [Write another thought based on user insights in the Project Context]
 
-**SEES:**
-- [What they encounter 1]
-- [What they encounter 2]
-- [What they encounter 3]
+## FEELS:
+- [Describe their emotions (frustrated, excited, anxious, confident, etc.) based on user sentiment in the Project Context]
+- [Describe another emotional state from research in the Project Context]
+- [Describe another emotional state from user feedback in the Project Context]
 
-**HEARS:**
-- [What they hear 1]
-- [What they hear 2]
-- [What they hear 3]
+## SAYS:
+- "[Write an actual quote from user research in the Project Context]"
+- "[Write another actual quote from user interviews or feedback in the Project Context]"
+- "[Write another actual quote from users documented in the Project Context]"
 
-**PAINS:**
-- [Pain 1]
-- [Pain 2]
-- [Pain 3]
+## DOES:
+- [Describe an observable action or behavior from research in the Project Context]
+- [Describe another observable action or behavior documented in the Project Context]
+- [Describe another user behavior pattern from the Project Context]
 
-**GAINS:**
-- [Desired outcome 1]
-- [Desired outcome 2]
-- [Desired outcome 3]`,
+## SEES:
+- [Describe what they encounter in their environment based on context in the Project Context]
+- [Describe another thing they see - competitors, influencers, etc. - mentioned in the Project Context]
+- [Describe another environmental factor from the Project Context]
+
+## HEARS:
+- [Describe what others tell them or opinions they hear based on the Project Context]
+- [Describe another external influence they hear documented in the Project Context]
+- [Describe another piece of feedback or advice they hear from the Project Context]
+
+## PAINS:
+- [Write a specific frustration or obstacle they face based on pain points in the Project Context]
+- [Write another pain point from research in the Project Context]
+- [Write another pain point from user complaints in the Project Context]
+
+## GAINS:
+- [Write a desired outcome or benefit they seek based on goals in the Project Context]
+- [Write another gain they want to achieve based on needs in the Project Context]
+- [Write another gain they want to achieve based on objectives in the Project Context]`,
 
       guidance: ['6-quadrant structure', 'Evidence-based', 'Specific scenarios', 'Research quotes'],
       knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include behavioral data and quotes'],
@@ -664,35 +623,71 @@ Deliver a facilitation guide that includes:
 
     // PROTOTYPING TOOLS
     'wireframes': {
-      core: `You are a UX architect creating wireframes.
+      core: `You are a senior UX designer. Create low-fidelity wireframes for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - user workflows, business requirements, content needs, features, technical constraints]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create Wireframes for Key Screens
+---
 
-For each screen, include:
+## Instructions:
+Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all wireframe designs on user workflows, business requirements, and technical constraints documented in the Project Context.
 
-**Screen Name:** [Name]
+---
 
-**Layout:**
-[Text description of layout structure - e.g., "Header with logo and navigation at top, main content area in center with sidebar, footer at bottom"]
+## WIREFRAME 1: [Write screen name based on key user workflows in the Project Context - e.g., "Home Screen"]
 
-**Elements:**
-- [Element 1: Description, function]
-- [Element 2: Description, function]
-- [Element 3: Description, function]
+**Layout Description:**
+[Describe the layout structure based on user needs and content hierarchy in the Project Context - e.g., "Header with logo and navigation at top, hero banner below header, 3-column grid of featured items in main content area, sidebar with filters on right, footer at bottom"]
+
+**Key Elements:**
+1. [Element name based on features in the Project Context]: [Description and function based on user needs - e.g., "Search bar: Allows users to search products by keyword"]
+2. [Element name from the Project Context]: [Description and function based on requirements in the Project Context]
+3. [Element name from user workflows in the Project Context]: [Description and function]
+4. [Element name from the Project Context]: [Description and function]
+5. [Element name based on business goals in the Project Context]: [Description and function]
 
 **User Flow:**
-- [How user arrives at this screen]
-- [Primary action/goal on this screen]
-- [Next screen/exit]
+- Arrives from: [Where user comes from based on user journeys in the Project Context]
+- Primary goal: [What user wants to accomplish based on goals and tasks in the Project Context]
+- Next step: [Where user goes next based on workflows in the Project Context]
 
 **Annotations:**
-- [Design rationale 1]
-- [Design rationale 2]
+- [Design decision and rationale based on user research or business requirements in the Project Context - e.g., "Placed CTA button above fold to increase conversions based on heatmap data"]
+- [Another design decision and rationale based on insights from the Project Context]
 
-[Repeat for each key screen]`,
+---
+
+## WIREFRAME 2: [Write screen name based on user workflows in the Project Context]
+
+**Layout Description:**
+[Describe the layout structure for this screen based on content and functionality in the Project Context]
+
+**Key Elements:**
+1. [Element name from the Project Context]: [Description and function based on user needs in the Project Context]
+2. [Element name]: [Description and function based on requirements]
+3. [Element name]: [Description and function]
+4. [Element name]: [Description and function]
+5. [Element name]: [Description and function]
+
+**User Flow:**
+- Arrives from: [Where user comes from based on the Project Context]
+- Primary goal: [What user wants to accomplish based on the Project Context]
+- Next step: [Where user goes next based on the Project Context]
+
+**Annotations:**
+- [Design decision and rationale based on the Project Context]
+- [Another design decision and rationale based on the Project Context]
+
+---
+
+## WIREFRAME 3: [Write screen name based on key screens in the Project Context]
+
+[Repeat same structure using information from the Project Context]
+
+---
+
+[Continue for all key screens identified in the Project Context]`,
 
       guidance: ['Information architecture focus', 'User task flows', 'Responsive design', 'Detailed annotations'],
       knowledgeIntegration: ['Insert ALL workflows from knowledge base', 'Include business requirements', 'Reference technical constraints'],
@@ -956,26 +951,29 @@ Deliver a testing protocol that includes:
     },
 
     'problem-statements': {
-      core: `You are a design strategist creating problem statements.
+      core: `You are a senior UX strategist. Create 3-5 problem statements for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - user research, personas, pain points, business objectives, insights]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create 3-5 Problem Statements
+---
 
-Use the EXACT format: **[User name] is a/an [user characteristics] who needs [user need] because [insight].**
+## FORMAT: [User name] is a/an [user characteristics] who needs [user need] because [insight].
 
-### Examples:
-- "Sarah Chen is a working mother of two who needs a faster grocery shopping method because her current 2-hour weekend shopping trips conflict with family time and cause stress."
-- "Marcus Rodriguez is a small business owner with limited tech skills who needs simplified financial tracking because complex accounting software overwhelms him and delays important business decisions."
+### PROBLEM STATEMENT 1:
+[Write the complete problem statement in the exact format above, using a specific persona name and research-backed insight]
 
-### Your Problem Statements:
+### PROBLEM STATEMENT 2:
+[Write the complete problem statement in the exact format above, using a different persona if applicable]
 
-1. [Statement 1]
-2. [Statement 2]
-3. [Statement 3]
-4. [Statement 4] (if applicable)
-5. [Statement 5] (if applicable)`,
+### PROBLEM STATEMENT 3:
+[Write the complete problem statement in the exact format above]
+
+### PROBLEM STATEMENT 4: (if applicable)
+[Write the complete problem statement in the exact format above]
+
+### PROBLEM STATEMENT 5: (if applicable)
+[Write the complete problem statement in the exact format above]`,
 
       guidance: ['Exact format enforcement', 'Specific persona names', 'Evidence-based insights', 'Supporting documentation'],
       knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include persona names and characteristics', 'Reference business objectives'],
@@ -984,50 +982,65 @@ Use the EXACT format: **[User name] is a/an [user characteristics] who needs [us
     },
 
     'journey-maps': {
-      core: `You are a UX strategist creating a user journey map.
+      core: `You are a senior UX researcher. Create a user journey map for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - user research, personas, touchpoints, workflows, pain points, business processes]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create User Journey Map for [Persona Name]
+---
 
-### Journey Stages
+## Instructions:
+Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all journey stages, actions, emotions, and touchpoints on user research data, behavioral patterns, and workflows documented in the Project Context.
 
-For each stage, include:
+---
 
-**Stage 1: [Stage Name]**
-- **Actions:** [What they do]
-- **Thoughts:** [What they think]
-- **Feelings:** [Emotional state - frustrated/excited/anxious/satisfied]
-- **Touchpoints:** [Where/how they interact]
-- **Pain Points:** [Problems encountered]
-- **Opportunities:** [Areas for improvement]
+# USER JOURNEY MAP: [Write persona name based on target users in the Project Context]
 
-**Stage 2: [Stage Name]**
-- **Actions:** [What they do]
-- **Thoughts:** [What they think]
-- **Feelings:** [Emotional state]
-- **Touchpoints:** [Where/how they interact]
-- **Pain Points:** [Problems encountered]
-- **Opportunities:** [Areas for improvement]
+## STAGE 1: [Write stage name based on user workflows in the Project Context - e.g., "Discovery"]
 
-**Stage 3: [Stage Name]**
-- **Actions:** [What they do]
-- **Thoughts:** [What they think]
-- **Feelings:** [Emotional state]
-- **Touchpoints:** [Where/how they interact]
-- **Pain Points:** [Problems encountered]
-- **Opportunities:** [Areas for improvement]
+**Actions:** [Describe what the user does in this stage based on behaviors in the Project Context]
+**Thoughts:** [Describe what they're thinking based on goals and concerns in the Project Context]
+**Feelings:** 😊/😐/😞 [Describe their emotional state (satisfied, neutral, frustrated) based on sentiment in the Project Context]
+**Touchpoints:** [List where/how they interact (website, app, phone, store, etc.) based on channels in the Project Context]
+**Pain Points:** [Describe problems they encounter based on frustrations documented in the Project Context]
+**Opportunities:** [Describe areas for improvement based on needs and gaps in the Project Context]
 
-[Continue for additional stages as needed]
+## STAGE 2: [Write stage name based on user workflows in the Project Context]
 
-### Emotional Journey Curve
-[Describe the emotional highs and lows across the journey]
+**Actions:** [Describe what the user does in this stage based on the Project Context]
+**Thoughts:** [Describe what they're thinking based on the Project Context]
+**Feelings:** 😊/😐/😞 [Describe their emotional state based on the Project Context]
+**Touchpoints:** [List where/how they interact based on the Project Context]
+**Pain Points:** [Describe problems they encounter from the Project Context]
+**Opportunities:** [Describe areas for improvement based on the Project Context]
 
-### Key Insights
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]`,
+## STAGE 3: [Write stage name based on user workflows in the Project Context]
+
+**Actions:** [Describe what the user does in this stage based on the Project Context]
+**Thoughts:** [Describe what they're thinking based on the Project Context]
+**Feelings:** 😊/😐/😞 [Describe their emotional state based on the Project Context]
+**Touchpoints:** [List where/how they interact based on the Project Context]
+**Pain Points:** [Describe problems they encounter from the Project Context]
+**Opportunities:** [Describe areas for improvement based on the Project Context]
+
+## STAGE 4: [Write stage name if applicable based on the Project Context]
+
+**Actions:** [Describe what the user does in this stage based on the Project Context]
+**Thoughts:** [Describe what they're thinking based on the Project Context]
+**Feelings:** 😊/😐/😞 [Describe their emotional state based on the Project Context]
+**Touchpoints:** [List where/how they interact based on the Project Context]
+**Pain Points:** [Describe problems they encounter from the Project Context]
+**Opportunities:** [Describe areas for improvement based on the Project Context]
+
+---
+
+## EMOTIONAL JOURNEY CURVE:
+[Describe how emotions change across stages based on sentiment and satisfaction data in the Project Context - starts frustrated, becomes excited, drops to anxious, ends satisfied, etc.]
+
+## KEY INSIGHTS:
+1. [Write key insight based on journey analysis and patterns in the Project Context]
+2. [Write another key insight based on pain points and opportunities from the Project Context]
+3. [Write another key insight based on user behaviors and needs in the Project Context]`,
 
       guidance: ['End-to-end experience', 'Emotional and rational layers', 'Pain points and opportunities', 'Research-backed'],
       knowledgeIntegration: ['Insert ALL user research from knowledge base', 'Include touchpoints and workflows', 'Reference pain points and satisfaction data'],
@@ -1194,42 +1207,46 @@ For each stage, include:
 
     // JOBS-TO-BE-DONE TOOLS
     'job-statements': {
-      core: `You are a Jobs-to-Be-Done expert creating job statements that articulate what customers are trying to accomplish.
+      core: `You are a Jobs-to-Be-Done expert. Create 10-15 job statements for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - customer research, behaviors, contexts, goals, pain points]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create 10-15 Job Statements
+---
 
-Use the format: **"When I [situation], I want to [motivation], so I can [expected outcome]"**
+## FORMAT: "When I [situation], I want to [motivation], so I can [expected outcome]"
 
-### Three Job Dimensions
+### FUNCTIONAL JOBS (tasks to complete):
 
-**1. Functional Jobs** (tasks to complete):
-- "When I'm commuting, I want to catch up on industry news, so I can stay informed"
-- Focus on tangible tasks and activities
+1. [Write functional job statement in exact format]
+2. [Write functional job statement in exact format]
+3. [Write functional job statement in exact format]
+4. [Write functional job statement in exact format]
+5. [Write functional job statement in exact format]
 
-**2. Emotional Jobs** (feelings to achieve):
-- "When I'm presenting to clients, I want to feel confident, so I can win their trust"
-- Focus on emotional states and feelings
+### EMOTIONAL JOBS (feelings to achieve):
 
-**3. Social Jobs** (how they want to be perceived):
-- "When I share content online, I want to appear knowledgeable, so I can build my reputation"
-- Focus on social perceptions and status
+1. [Write emotional job statement in exact format]
+2. [Write emotional job statement in exact format]
+3. [Write emotional job statement in exact format]
+4. [Write emotional job statement in exact format]
 
-### Requirements
-- Solution-independent (no product mentions)
-- Stable over time (not trend-dependent)
-- Specific situation context
-- Customer perspective and language
+### SOCIAL JOBS (how they want to be perceived):
 
-### Prioritization
-For each job, measure:
-- **Importance** (1-5): How important is this job?
-- **Satisfaction** (1-5): How satisfied are they with current solutions?
+1. [Write social job statement in exact format]
+2. [Write social job statement in exact format]
+3. [Write social job statement in exact format]
+
+---
+
+## OPPORTUNITY SCORES:
+
+For each job above, add:
+- **Importance** (1-5)
+- **Current Satisfaction** (1-5)
 - **Opportunity Score** = Importance + (Importance - Satisfaction)
 
-Prioritize jobs with highest opportunity scores.`,
+[List all jobs with their scores]`,
 
       guidance: ['Three dimensions', 'Exact format', 'Solution-independent', 'Opportunity scoring'],
       knowledgeIntegration: ['Insert customer research from knowledge base', 'Include behavioral data and contexts'],
@@ -1238,45 +1255,58 @@ Prioritize jobs with highest opportunity scores.`,
     },
 
     'outcome-statements': {
-      core: `You are a Jobs-to-Be-Done expert creating outcome statements that define measurable success criteria for customer jobs.
+      core: `You are a Jobs-to-Be-Done expert. Create 20-30 outcome statements for ${'{projectName}'}. ${'{projectDescription}'}
 
-## Project Context
-[Insert ALL knowledge base content - job statements, customer goals, success criteria, metrics]
+## Project Context:
+${'{knowledgeBase}'}
 
-## Create 20-30 Outcome Statements
+---
 
-Use the format: **"[Direction] + [unit of measure] + [object of control] + [contextual clarifier]"**
+## FORMAT: [Direction] + [unit of measure] + [object of control] + [contextual clarifier]
 
-### Examples
+**EXAMPLES:**
 - "Minimize the time it takes to set up a new account for first-time use"
 - "Increase the number of payment options available during checkout"
 - "Minimize the likelihood that sensitive data is exposed during transmission"
 
-### Two Outcome Types
+---
 
-**1. Efficiency Outcomes** (speed/effort):
-- Minimize time to...
-- Reduce effort required to...
-- Decrease number of steps to...
+### EFFICIENCY OUTCOMES (speed and effort):
 
-**2. Effectiveness Outcomes** (quality/completeness):
-- Increase accuracy of...
-- Maximize number of...
-- Ensure completeness of...
+1. [Write efficiency outcome statement in exact format - e.g., "Minimize the time it takes to..."]
+2. [Write efficiency outcome statement in exact format - e.g., "Reduce the effort required to..."]
+3. [Write efficiency outcome statement in exact format - e.g., "Decrease the number of steps to..."]
+4. [Write efficiency outcome statement in exact format]
+5. [Write efficiency outcome statement in exact format]
+6. [Write efficiency outcome statement in exact format]
+7. [Write efficiency outcome statement in exact format]
+8. [Write efficiency outcome statement in exact format]
+9. [Write efficiency outcome statement in exact format]
+10. [Write efficiency outcome statement in exact format]
 
-### Requirements
-- Measurable and specific
-- Solution-independent
-- Customer perspective
-- One outcome per statement
+### EFFECTIVENESS OUTCOMES (quality and completeness):
 
-### Prioritization
-For each outcome:
-- **Importance** (1-5)
-- **Current Satisfaction** (1-5)
+1. [Write effectiveness outcome statement in exact format - e.g., "Increase the accuracy of..."]
+2. [Write effectiveness outcome statement in exact format - e.g., "Maximize the number of..."]
+3. [Write effectiveness outcome statement in exact format - e.g., "Ensure the completeness of..."]
+4. [Write effectiveness outcome statement in exact format]
+5. [Write effectiveness outcome statement in exact format]
+6. [Write effectiveness outcome statement in exact format]
+7. [Write effectiveness outcome statement in exact format]
+8. [Write effectiveness outcome statement in exact format]
+9. [Write effectiveness outcome statement in exact format]
+10. [Write effectiveness outcome statement in exact format]
+
+---
+
+## OPPORTUNITY SCORES:
+
+For each outcome statement above, add:
+- **Importance** (1-5): How important is this outcome to the customer?
+- **Current Satisfaction** (1-5): How satisfied are customers currently with this outcome?
 - **Opportunity Score** = Importance + (Importance - Satisfaction)
 
-Focus on outcomes with high opportunity scores.`,
+[List all 20-30 outcome statements with their scores. Focus on outcomes with high opportunity scores (10 or above)]`,
 
       guidance: ['Exact format', 'Two types', 'Measurable', 'Opportunity scoring'],
       knowledgeIntegration: ['Insert job statements from knowledge base', 'Include customer success criteria'],

@@ -332,8 +332,12 @@ export class EnhancedContextIntegrationService {
   ): Promise<string> {
     let synthesizedPrompt = processedTemplate.processedTemplate;
 
-    // Add research-backed context if requested
-    if (request.userPreferences.includeResearchBacking) {
+    // Skip adding research-backed context wrapper for deliverable tools
+    // Deliverable tools should generate artifacts directly, not facilitation guides
+    const deliverableTools = ['personas', 'empathy-maps', 'problem-statements', 'journey-maps', 'wireframes', 'affinity-mapping', 'job-statements', 'outcome-statements'];
+    const isDeliverableTool = deliverableTools.includes(request.tool.id);
+
+    if (!isDeliverableTool && request.userPreferences.includeResearchBacking) {
       const researchContext = frameworkIntegrationService.generateEnhancedPromptContext(
         request.framework.id,
         request.stage.id,
@@ -351,45 +355,51 @@ export class EnhancedContextIntegrationService {
       }
     }
 
-    // Add synthesized context
-    if (processedContext.synthesizedContext) {
-      synthesizedPrompt = `${processedContext.synthesizedContext}\n\n## Generated Prompt\n${synthesizedPrompt}`;
+    // Skip all wrapper sections for deliverable tools - they should generate artifacts directly
+    if (!isDeliverableTool) {
+      // Add synthesized context
+      if (processedContext.synthesizedContext) {
+        synthesizedPrompt = `${processedContext.synthesizedContext}\n\n## Generated Prompt\n${synthesizedPrompt}`;
+      }
+
+      // Add workflow continuity context
+      if (workflowContinuity.previousStageOutputs.length > 0) {
+        const continuityContext = `\n\n## Previous Stage Context\n`;
+        const recentOutputs = workflowContinuity.previousStageOutputs.slice(0, 2);
+        const outputSummaries = recentOutputs.map(output =>
+          `**${output.context.stage.name}:** ${output.content.substring(0, 200)}...`
+        ).join('\n');
+
+        synthesizedPrompt = `${synthesizedPrompt}${continuityContext}${outputSummaries}`;
+      }
+
+      // Add contextual insights
+      if (processedContext.contextualInsights.length > 0) {
+        const insightsSection = `\n\n## Key Insights\n${processedContext.contextualInsights.slice(0, 5).join('\n')}`;
+        synthesizedPrompt = `${synthesizedPrompt}${insightsSection}`;
+      }
+
+      // Add recommended actions
+      if (processedContext.recommendedActions.length > 0) {
+        const actionsSection = `\n\n## Recommended Actions\n${processedContext.recommendedActions.slice(0, 3).map((action, i) => `${i + 1}. ${action}`).join('\n')}`;
+        synthesizedPrompt = `${synthesizedPrompt}${actionsSection}`;
+      }
+
+      // Add quality checkpoints
+      if (processedContext.qualityCheckpoints.length > 0) {
+        const qualitySection = `\n\n## Quality Checkpoints\n${processedContext.qualityCheckpoints.slice(0, 3).map(checkpoint => `• ${checkpoint}`).join('\n')}`;
+        synthesizedPrompt = `${synthesizedPrompt}${qualitySection}`;
+      }
     }
 
-    // Add workflow continuity context
-    if (workflowContinuity.previousStageOutputs.length > 0) {
-      const continuityContext = `\n\n## Previous Stage Context\n`;
-      const recentOutputs = workflowContinuity.previousStageOutputs.slice(0, 2);
-      const outputSummaries = recentOutputs.map(output => 
-        `**${output.context.stage.name}:** ${output.content.substring(0, 200)}...`
-      ).join('\n');
-      
-      synthesizedPrompt = `${synthesizedPrompt}${continuityContext}${outputSummaries}`;
-    }
-
-    // Add contextual insights
-    if (processedContext.contextualInsights.length > 0) {
-      const insightsSection = `\n\n## Key Insights\n${processedContext.contextualInsights.slice(0, 5).join('\n')}`;
-      synthesizedPrompt = `${synthesizedPrompt}${insightsSection}`;
-    }
-
-    // Add recommended actions
-    if (processedContext.recommendedActions.length > 0) {
-      const actionsSection = `\n\n## Recommended Actions\n${processedContext.recommendedActions.slice(0, 3).map((action, i) => `${i + 1}. ${action}`).join('\n')}`;
-      synthesizedPrompt = `${synthesizedPrompt}${actionsSection}`;
-    }
-
-    // Add quality checkpoints
-    if (processedContext.qualityCheckpoints.length > 0) {
-      const qualitySection = `\n\n## Quality Checkpoints\n${processedContext.qualityCheckpoints.slice(0, 3).map(checkpoint => `• ${checkpoint}`).join('\n')}`;
-      synthesizedPrompt = `${synthesizedPrompt}${qualitySection}`;
-    }
-
-    // Adjust tone based on communication style
-    if (request.userPreferences.communicationStyle === 'conversational') {
-      synthesizedPrompt = `Hey there! Let's work together on this UX challenge.\n\n${synthesizedPrompt}`;
-    } else if (request.userPreferences.communicationStyle === 'formal') {
-      synthesizedPrompt = `Please provide a comprehensive response to the following UX methodology request:\n\n${synthesizedPrompt}`;
+    // Skip tone adjustments for deliverable tools - use the direct prompt as-is
+    if (!isDeliverableTool) {
+      // Adjust tone based on communication style
+      if (request.userPreferences.communicationStyle === 'conversational') {
+        synthesizedPrompt = `Hey there! Let's work together on this UX challenge.\n\n${synthesizedPrompt}`;
+      } else if (request.userPreferences.communicationStyle === 'formal') {
+        synthesizedPrompt = `Please provide a comprehensive response to the following UX methodology request:\n\n${synthesizedPrompt}`;
+      }
     }
 
     return synthesizedPrompt;

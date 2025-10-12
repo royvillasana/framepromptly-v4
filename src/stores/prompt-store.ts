@@ -831,7 +831,9 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     if (enhancedTemplate) {
       // Provide meaningful defaults for enhanced template variables
       const defaultVariables: Record<string, any> = {
-        projectName: 'Current Project',
+        projectName: enhancedContext?.projectName || 'Current Project',
+        projectDescription: enhancedContext?.projectDescription || '',
+        knowledgeBase: knowledgeContext || 'No project context available',
         framework: framework.name,
         stage: stage.name,
         tool: tool.name,
@@ -887,14 +889,8 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     let processedTemplate = '';
     
     if (template) {
-      // Combine instructions from framework, stage, and tool levels
-      const instructions = [
-        template.frameworkInstructions && `Framework Context: ${template.frameworkInstructions}`,
-        template.stageInstructions && `Stage Focus: ${template.stageInstructions}`,
-        template.toolInstructions && `Tool Guidance: ${template.toolInstructions}`,
-      ].filter(Boolean).join('\n\n');
-      
-      processedTemplate = instructions ? `${instructions}\n\n${template.template}` : template.template;
+      // Use template directly without framework/stage context wrappers
+      processedTemplate = template.template;
       
       // Add knowledge context if provided
       if (knowledgeContext) {
@@ -904,18 +900,8 @@ ${knowledgeContext}
 ${processedTemplate}`;
       }
     } else {
-      // Fallback with general instructions
-      const frameworkInstruction = FRAMEWORK_INSTRUCTIONS[framework.id] || '';
-      const stageInstruction = STAGE_INSTRUCTIONS[stage.id] || '';
-      const toolInstruction = TOOL_INSTRUCTIONS[tool.id] || '';
-      
-      const instructions = [
-        frameworkInstruction && `Framework Context: ${frameworkInstruction}`,
-        stageInstruction && `Stage Focus: ${stageInstruction}`,
-        toolInstruction && `Tool Guidance: ${toolInstruction}`,
-      ].filter(Boolean).join('\n\n');
-      
-      processedTemplate = `${instructions}\n\nCreate ${tool.name} deliverable for ${stage.name} stage using ${framework.name} framework. Generate actionable outputs for immediate practitioner use.`;
+      // Fallback - simple direct prompt
+      processedTemplate = `Create ${tool.name} deliverable for the project. Generate actionable outputs for immediate use.`;
       
       // Add knowledge context if provided
       if (knowledgeContext) {
@@ -1028,18 +1014,8 @@ ${processedTemplate}`;
         }
       });
 
-      // Add enhanced instructions
-      const enhancedInstructions = getEnhancedInstructions(templateId, enhancedContext?.industry) || [];
-      const instructionText = [...instructions, ...enhancedInstructions].join('\n- ');
-      
-      const finalPromptContent = `# Enhanced UX Tool Guidance
-
-## Instructions
-- ${instructionText}
-
-## Template Output
-
-${processedTemplate}`;
+      // Use processed template directly without wrapper headers
+      const finalPromptContent = processedTemplate;
 
       // Create enhanced prompt object
       const prompt: GeneratedPrompt = {

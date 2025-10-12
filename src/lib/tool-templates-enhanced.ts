@@ -403,269 +403,201 @@ export const enhancedToolPromptTemplates: EnhancedToolPromptTemplate[] = [
 
   {
     id: 'personas',
-    name: 'Evidence-Based User Persona Development',
-    description: 'Create research-backed user personas using triangulation methodology and behavioral data',
+    name: 'User Personas',
+    description: 'Create user personas based on research and project context',
     category: 'synthesis',
     frameworks: ['design-thinking', 'human-centered-design', 'jobs-to-be-done'],
     stages: ['define', 'synthesize', 'persona-creation'],
-    template: `# Research-Based User Persona: {{personaName}}
+    template: `You are a senior UX researcher. Create 3 user personas for {{projectName}}. {{projectDescription}}
 
-## Persona Development Methodology
-**Data Sources:** {{dataSources}}
-**Research Methods:** {{researchMethods}}
-**Sample Size:** {{sampleSize}} participants
-**Validation Approach:** {{validationApproach}}
-**Confidence Level:** {{confidenceLevel}}%
+## Project Context:
+{{knowledgeBase}}
 
-## Persona Profile
+---
 
-### Core Identity
-- **Name:** {{personaName}}
-- **Archetype:** {{personaArchetype}}
-- **Quote:** "{{personalQuote}}"
-- **Photo:** Diverse representation avoiding stereotypes
+## Instructions:
+Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all persona details on the research data, user insights, and business context provided.
 
-### Demographics & Context
-- **Age Range:** {{ageRange}}
-- **Location:** {{location}}
-- **Occupation:** {{occupation}}
-- **Education:** {{educationLevel}}
-- **Income Range:** {{incomeRange}}
-- **Living Situation:** {{livingSituation}}
-- **Technology Proficiency:** {{techProficiency}}
+---
 
-## Behavioral Profile
+## PERSONA 1
 
-### Goals Hierarchy (Jobs-to-be-Done Framework)
-#### Functional Jobs
-**Primary Goal:** {{primaryGoal}}
-**Supporting Goals:**
-{{#each supportingGoals}}
-- {{this}}
-{{/each}}
+**Name:** [Create a realistic full name based on the target audience demographics in the Project Context]
+**Age:** [Specific age based on the age range and demographics mentioned in the Project Context]
+**Occupation:** [Specific job title relevant to the project's target users as described in the Project Context]
+**Location:** [Specific city, state/country based on the target market or user base mentioned in the Project Context]
+**Quote:** "[Write a one-sentence quote that captures their essence based on user research, pain points, and goals in the Project Context]"
 
-#### Emotional Jobs
-**Desired Feelings:** {{desiredFeelings}}
-**Status/Identity Goals:** {{identityGoals}}
+**Goals:**
+- [Write specific goal 1 based on user needs, desires, and objectives mentioned in the Project Context]
+- [Write specific goal 2 based on user needs, desires, and objectives mentioned in the Project Context]
+- [Write specific goal 3 based on user needs, desires, and objectives mentioned in the Project Context]
 
-#### Social Jobs
-**Social Context:** {{socialContext}}
-**Influence Factors:** {{influenceFactors}}
+**Pain Points:**
+- [Write specific pain point 1 from user research, complaints, or frustrations documented in the Project Context]
+- [Write specific pain point 2 from user research, complaints, or frustrations documented in the Project Context]
+- [Write specific pain point 3 from user research, complaints, or frustrations documented in the Project Context]
 
-### Behavioral Patterns
-#### Daily Routines & Workflows
-{{dailyRoutines}}
+**Behaviors:**
+- [Describe specific behavior 1 based on user actions, habits, and patterns mentioned in the Project Context]
+- [Describe specific behavior 2 based on user actions, habits, and patterns mentioned in the Project Context]
+- [Describe specific behavior 3 based on user actions, habits, and patterns mentioned in the Project Context]
 
-#### Decision-Making Process
-**Information Gathering:** {{informationGathering}}
-**Evaluation Criteria:** {{evaluationCriteria}}
-**Decision Triggers:** {{decisionTriggers}}
+**Motivations:**
+- [Describe what drives them based on user motivations and values mentioned in the Project Context]
+- [Describe what they value most based on priorities and preferences in the Project Context]
+- [Describe what success looks like to them based on desired outcomes in the Project Context]
 
-#### Technology Usage Patterns
-**Primary Devices:** {{primaryDevices}}
-**Preferred Channels:** {{preferredChannels}}
-**Usage Context:** {{usageContext}}
+**Tech Comfort:** [State: Low, Medium, or High based on the technology usage and digital literacy mentioned in the Project Context]
 
-## Pain Points & Frustrations
+**Background:** [Write 2-3 sentences about their life context, work environment, and relevant circumstances based on the research data, user profiles, and contextual information in the Project Context]
 
-### Current State Challenges
-{{#each currentChallenges}}
-- **{{@key}}:** {{this}}
-{{/each}}
+---
 
-### Friction Areas
-{{#each frictionAreas}}
-- {{this}}
-{{/each}}
+## PERSONA 2
 
-### Unmet Needs
-{{#each unmetNeeds}}
-- {{this}}
-{{/each}}
+**Name:** [Create a realistic full name based on the target audience demographics in the Project Context]
+**Age:** [Specific age based on the age range and demographics mentioned in the Project Context]
+**Occupation:** [Specific job title relevant to the project's target users as described in the Project Context]
+**Location:** [Specific city, state/country based on the target market or user base mentioned in the Project Context]
+**Quote:** "[Write a one-sentence quote that captures their essence based on user research, pain points, and goals in the Project Context]"
 
-## Motivations & Drivers
+**Goals:**
+- [Write specific goal 1 based on user needs, desires, and objectives mentioned in the Project Context]
+- [Write specific goal 2 based on user needs, desires, and objectives mentioned in the Project Context]
+- [Write specific goal 3 based on user needs, desires, and objectives mentioned in the Project Context]
 
-### Intrinsic Motivators
-{{#each intrinsicMotivators}}
-- {{this}}
-{{/each}}
+**Pain Points:**
+- [Write specific pain point 1 from user research, complaints, or frustrations documented in the Project Context]
+- [Write specific pain point 2 from user research, complaints, or frustrations documented in the Project Context]
+- [Write specific pain point 3 from user research, complaints, or frustrations documented in the Project Context]
 
-### Extrinsic Motivators
-{{#each extrinsicMotivators}}
-- {{this}}
-{{/each}}
+**Behaviors:**
+- [Describe specific behavior 1 based on user actions, habits, and patterns mentioned in the Project Context]
+- [Describe specific behavior 2 based on user actions, habits, and patterns mentioned in the Project Context]
+- [Describe specific behavior 3 based on user actions, habits, and patterns mentioned in the Project Context]
 
-### Success Criteria
-**Personal Definition of Success:** {{successDefinition}}
-**Key Performance Indicators:** {{personalKPIs}}
+**Motivations:**
+- [Describe what drives them based on user motivations and values mentioned in the Project Context]
+- [Describe what they value most based on priorities and preferences in the Project Context]
+- [Describe what success looks like to them based on desired outcomes in the Project Context]
 
-## Contextual Factors
+**Tech Comfort:** [State: Low, Medium, or High based on the technology usage and digital literacy mentioned in the Project Context]
 
-### Environmental Constraints
-{{environmentalConstraints}}
+**Background:** [Write 2-3 sentences about their life context, work environment, and relevant circumstances based on the research data, user profiles, and contextual information in the Project Context]
 
-### Organizational Context (if applicable)
-{{organizationalContext}}
+---
 
-### Social & Cultural Influences
-{{socialCulturalInfluences}}
+## PERSONA 3
 
-## Persona Validation Framework
+**Name:** [Create a realistic full name based on the target audience demographics in the Project Context]
+**Age:** [Specific age based on the age range and demographics mentioned in the Project Context]
+**Occupation:** [Specific job title relevant to the project's target users as described in the Project Context]
+**Location:** [Specific city, state/country based on the target market or user base mentioned in the Project Context]
+**Quote:** "[Write a one-sentence quote that captures their essence based on user research, pain points, and goals in the Project Context]"
 
-### Research Evidence
-**Supporting Quotes:** 
-{{#each supportingQuotes}}
-- "{{this}}"
-{{/each}}
+**Goals:**
+- [Write specific goal 1 based on user needs, desires, and objectives mentioned in the Project Context]
+- [Write specific goal 2 based on user needs, desires, and objectives mentioned in the Project Context]
+- [Write specific goal 3 based on user needs, desires, and objectives mentioned in the Project Context]
 
-**Behavioral Observations:** {{behavioralObservations}}
-**Quantitative Data Points:** {{quantitativeData}}
+**Pain Points:**
+- [Write specific pain point 1 from user research, complaints, or frustrations documented in the Project Context]
+- [Write specific pain point 2 from user research, complaints, or frustrations documented in the Project Context]
+- [Write specific pain point 3 from user research, complaints, or frustrations documented in the Project Context]
 
-### Team Validation
-**Stakeholder Feedback:** {{stakeholderFeedback}}
-**User-Facing Team Validation:** {{teamValidation}}
+**Behaviors:**
+- [Describe specific behavior 1 based on user actions, habits, and patterns mentioned in the Project Context]
+- [Describe specific behavior 2 based on user actions, habits, and patterns mentioned in the Project Context]
+- [Describe specific behavior 3 based on user actions, habits, and patterns mentioned in the Project Context]
 
-### Ongoing Updates
-**Review Schedule:** {{reviewSchedule}}
-**Update Triggers:** {{updateTriggers}}
+**Motivations:**
+- [Describe what drives them based on user motivations and values mentioned in the Project Context]
+- [Describe what they value most based on priorities and preferences in the Project Context]
+- [Describe what success looks like to them based on desired outcomes in the Project Context]
 
-## Design Implications
+**Tech Comfort:** [State: Low, Medium, or High based on the technology usage and digital literacy mentioned in the Project Context]
 
-### Interface Preferences
-{{interfacePreferences}}
-
-### Content Strategy
-{{contentStrategy}}
-
-### Interaction Patterns
-{{interactionPatterns}}
-
-### Accessibility Considerations
-{{accessibilityConsiderations}}
-
-{{#if industrySpecific}}
-## Industry-Specific Considerations
-{{industrySpecific}}
-{{/if}}`,
+**Background:** [Write 2-3 sentences about their life context, work environment, and relevant circumstances based on the research data, user profiles, and contextual information in the Project Context]`,
 
     variables: [
       {
-        id: 'personaName',
-        name: 'Persona Name',
+        id: 'projectName',
+        name: 'Project Name',
         type: 'text',
         required: true,
-        description: 'Memorable name that reflects the user segment'
+        description: 'Name of the project'
       },
       {
-        id: 'dataSources',
-        name: 'Data Sources Used',
+        id: 'projectDescription',
+        name: 'Project Description',
         type: 'textarea',
-        required: true,
-        description: 'List all research data sources used to create this persona'
-      },
-      {
-        id: 'researchMethods',
-        name: 'Research Methods',
-        type: 'textarea',
-        required: true,
-        description: 'Research methodologies used (interviews, surveys, analytics, etc.)'
-      },
-      {
-        id: 'sampleSize',
-        name: 'Research Sample Size',
-        type: 'number',
-        required: true,
-        description: 'Total number of users researched for this persona',
-        validation: {
-          min: 5,
-          max: 500,
-          message: 'Sample size should be between 5 and 500 participants'
-        }
-      },
-      {
-        id: 'confidenceLevel',
-        name: 'Confidence Level',
-        type: 'select',
-        required: true,
-        options: ['60', '70', '80', '90', '95'],
-        description: 'Confidence level in persona accuracy based on data quality'
-      },
-      {
-        id: 'primaryGoal',
-        name: 'Primary Functional Goal',
-        type: 'textarea',
-        required: true,
-        description: 'Main job-to-be-done this persona is trying to accomplish'
-      },
-      {
-        id: 'personaArchetype',
-        name: 'Persona Archetype',
-        type: 'text',
         required: false,
-        description: 'Broad category or archetype this persona represents'
+        description: 'Brief description of the project'
+      },
+      {
+        id: 'knowledgeBase',
+        name: 'Knowledge Base Content',
+        type: 'textarea',
+        required: false,
+        description: 'All knowledge base content including user research, business context, target audience, pain points, behaviors, goals'
       }
     ],
 
     instructions: getEnhancedInstructions('personas'),
 
-    expectedOutput: `Evidence-based persona including:
-- Research-backed behavioral patterns and decision-making processes
-- Goals hierarchy using Jobs-to-be-Done framework
-- Validation framework with supporting evidence and team buy-in
-- Design implications and accessibility considerations
-- Industry-specific adaptations and contextual factors`,
+    expectedOutput: `3 complete user personas with research-backed attributes`,
 
     qualityMetrics: {
-      completionTime: '4-6 hours including research synthesis and validation',
+      completionTime: '30-60 minutes',
       difficultyLevel: 'intermediate',
       participantCount: {
-        min: 15,
-        max: 100,
-        recommended: 30
+        min: 5,
+        max: 30,
+        recommended: 15
       },
       successCriteria: [
-        'Create 2-3 distinct, evidence-based personas',
-        'Include direct quotes and behavioral observations',
-        'Validate personas with user-facing team members',
-        'Define clear design implications for each persona'
+        'Create 3 distinct, evidence-based personas',
+        'Include specific attributes based on research',
+        'Define clear goals, pain points, and behaviors'
       ],
       outputQuality: {
         structure: [
-          'Clear persona hierarchy from demographics to implications',
-          'Logical flow from goals to behaviors to design needs',
-          'Comprehensive validation and evidence section'
+          'Clear persona attributes',
+          'Logical organization',
+          'Comprehensive profile'
         ],
         content: [
-          'Specific, actionable behavioral insights',
-          'Authentic voice through direct quotes',
-          'Clear connection between research and persona attributes'
+          'Specific, actionable insights',
+          'Research-backed attributes',
+          'Clear connection to user needs'
         ],
         usability: [
-          'Easy reference format for design teams',
-          'Clear design implications and recommendations',
-          'Regular update schedule and maintenance plan'
+          'Easy reference format',
+          'Clear and concise',
+          'Actionable insights'
         ]
       }
     },
 
     researchBacking: {
       methodology: [
-        'Triangulation method combining multiple data sources',
-        'Jobs-to-be-Done framework for goal hierarchy',
-        'Behavioral observation over self-reported preferences',
-        'Cluster analysis for user segmentation validation'
+        'Research-based persona development',
+        'User interview synthesis',
+        'Behavioral observation',
+        'Data-driven attributes'
       ],
       bestPractices: [
-        '3-5 personas maximum to maintain team focus',
-        'Regular validation with user-facing team members',
-        'Quarterly updates based on new research and analytics',
-        'Focus on behaviors and goals over demographic details'
+        '3-5 personas maximum',
+        'Focus on behaviors and goals',
+        'Base on real research data',
+        'Keep personas actionable'
       ],
       industryStandards: [
-        'Include accessibility considerations for inclusive design',
-        'Comply with data privacy regulations in persona creation',
-        'Follow diversity and inclusion guidelines in representation',
-        'Align with business objectives and strategic goals'
+        'Include diverse representation',
+        'Focus on user needs',
+        'Align with business objectives',
+        'Regular updates based on research'
       ]
     },
 
@@ -677,80 +609,53 @@ export const enhancedToolPromptTemplates: EnhancedToolPromptTemplate[] = [
         default: 3,
         description: 'How many personas should be created? (2-5 recommended)',
         category: 'output'
-      },
-      {
-        id: 'detailLevel',
-        label: 'Detail Level',
-        type: 'select',
-        options: ['Essential', 'Detailed', 'Comprehensive'],
-        default: 'Detailed',
-        description: 'Level of detail to include in persona development',
-        category: 'output'
-      },
-      {
-        id: 'validationMethod',
-        label: 'Validation Method',
-        type: 'select',
-        options: ['Team Review', 'User Validation', 'Statistical Analysis', 'Combined'],
-        default: 'Combined',
-        description: 'Method for validating persona accuracy',
-        category: 'quality'
-      },
-      {
-        id: 'updateFrequency',
-        label: 'Update Frequency',
-        type: 'select',
-        options: ['Monthly', 'Quarterly', 'Bi-annually', 'Annually'],
-        default: 'Quarterly',
-        description: 'How often should personas be reviewed and updated?',
-        category: 'quality'
       }
     ],
 
     industryAdaptations: {
       fintech: {
-        template: 'Enhanced with financial services persona attributes',
+        template: 'Enhanced with financial services context',
         considerations: [
-          'Include financial literacy levels and investment experience',
-          'Address regulatory compliance awareness and security behaviors',
-          'Include income sources, financial goals, and debt management approaches',
-          'Consider risk tolerance and decision-making under uncertainty'
+          'Include financial literacy levels',
+          'Address security behaviors',
+          'Include financial goals',
+          'Consider risk tolerance'
         ]
       },
       healthcare: {
-        template: 'Enhanced with healthcare persona attributes',
+        template: 'Enhanced with healthcare context',
         considerations: [
-          'Include health literacy levels and caregiver relationships',
-          'Address accessibility needs and assistive technology usage',
-          'Include healthcare team relationships and decision-making authority',
-          'Consider medical conditions and treatment complexity'
+          'Include health literacy levels',
+          'Address accessibility needs',
+          'Include caregiver relationships',
+          'Consider medical conditions'
         ]
       },
       ecommerce: {
-        template: 'Enhanced with e-commerce persona attributes',
+        template: 'Enhanced with e-commerce context',
         considerations: [
-          'Include shopping preferences and brand loyalty patterns',
-          'Address multichannel shopping behaviors and device usage',
-          'Include social influence factors and review consumption habits',
-          'Consider seasonal shopping patterns and price sensitivity'
+          'Include shopping preferences',
+          'Address device usage',
+          'Include brand loyalty patterns',
+          'Consider price sensitivity'
         ]
       },
       saas: {
-        template: 'Enhanced with SaaS persona attributes',
+        template: 'Enhanced with SaaS context',
         considerations: [
-          'Include technical proficiency and tool adoption patterns',
-          'Address team roles, decision-making authority, and budget influence',
-          'Include integration requirements and workflow customization needs',
-          'Consider organizational change management and training needs'
+          'Include technical proficiency',
+          'Address team roles',
+          'Include workflow needs',
+          'Consider change management'
         ]
       },
       education: {
-        template: 'Enhanced with educational persona attributes',
+        template: 'Enhanced with educational context',
         considerations: [
-          'Include learning preferences and technology comfort levels',
-          'Address institutional constraints and administrative requirements',
-          'Include collaboration preferences and peer interaction styles',
-          'Consider motivation factors and engagement patterns'
+          'Include learning preferences',
+          'Address technology comfort',
+          'Include collaboration preferences',
+          'Consider motivation factors'
         ]
       }
     }
@@ -2346,8 +2251,8 @@ Based on this empathy map, recommended design principles:
 
   // SYNTHESIS AND ANALYSIS TOOLS
   {
-    id: 'affinity-mapping',
-    name: 'Affinity Mapping and Research Synthesis',
+    id: 'affinity-mapping-DISABLED',
+    name: 'Affinity Mapping and Research Synthesis (DISABLED - using simple template)',
     description: 'Systematically organize and synthesize qualitative research data to identify patterns, themes, and actionable insights',
     category: 'synthesis',
     frameworks: ['design-thinking', 'double-diamond'],
@@ -3642,8 +3547,8 @@ Focus on {target_user} in {context_scenario} using validated insights from {rese
 
   // AFFINITY MAPPING
   {
-    id: 'affinity-mapping',
-    name: 'Affinity Mapping',
+    id: 'affinity-mapping-DISABLED-2',
+    name: 'Affinity Mapping (DISABLED - using simple template)',
     description: 'Synthesize research insights using collaborative thematic analysis and bias mitigation techniques',
     category: 'analysis',
     frameworks: ['design-thinking'],

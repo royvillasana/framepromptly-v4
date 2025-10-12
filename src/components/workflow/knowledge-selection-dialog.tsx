@@ -218,8 +218,11 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                     rows={6}
                   />
                 </div>
-                <Button 
-                  onClick={handleCreateTextEntry}
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateTextEntry();
+                  }}
                   disabled={!newTextTitle.trim() || !newTextContent.trim() || isLoading}
                   className="w-full"
                 >
@@ -250,8 +253,11 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                     Supported: PDF, DOCX, TXT, MD, JPG, PNG
                   </p>
                 </div>
-                <Button 
-                  onClick={handleFileUpload}
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFileUpload();
+                  }}
                   disabled={!selectedFile || isLoading}
                   className="w-full"
                 >
@@ -384,8 +390,11 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                     rows={6}
                   />
                 </div>
-                <Button 
-                  onClick={handleCreateTextEntry}
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateTextEntry();
+                  }}
                   disabled={!newTextTitle.trim() || !newTextContent.trim() || isLoading}
                   className="w-full"
                 >
@@ -416,8 +425,11 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                     Supported: PDF, DOCX, TXT, MD, JPG, PNG
                   </p>
                 </div>
-                <Button 
-                  onClick={handleFileUpload}
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFileUpload();
+                  }}
                   disabled={!selectedFile || isLoading}
                   className="w-full"
                 >
@@ -432,8 +444,11 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                 <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleConfirmSelection}
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleConfirmSelection();
+                  }}
                   disabled={selectedKnowledge.length === 0}
                 >
                   <Link className="h-4 w-4 mr-2" />

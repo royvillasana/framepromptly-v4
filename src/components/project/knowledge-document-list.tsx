@@ -167,7 +167,12 @@ export const KnowledgeDocumentList: React.FC<KnowledgeDocumentListProps> = ({
           
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 New Document
               </Button>

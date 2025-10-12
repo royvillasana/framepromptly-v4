@@ -8,9 +8,6 @@ import { UXTool, useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 import { useProjectStore } from '@/stores/project-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
-import { getPlatformRecommendation, PlatformType } from '@/lib/ux-tool-platform-optimizer';
-import { generateToolSpecificInstructions } from '@/lib/tool-specific-prompt-instructions';
-import { optimizePromptForOutput } from '@/lib/ai-output-configurations';
 import { supabase } from '@/integrations/supabase/client';
 import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
@@ -19,7 +16,6 @@ import { KnowledgeSelectionDialog } from './knowledge-selection-dialog';
 import { EnhancedPromptPanel } from './enhanced-prompt-panel';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
-import { PlatformSelector } from './platform-selector';
 import { getFrameworkColors } from '@/lib/framework-colors';
 import { toast } from 'sonner';
 
@@ -54,43 +50,22 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const [currentStep, setCurrentStep] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [showEnhancedPanel, setShowEnhancedPanel] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType | undefined>();
-  const totalSteps = 4;
-  
+  const totalSteps = 5;
+
   // Check if enhanced template is available
   const enhancedTemplate = getEnhancedTemplate(tool.id);
-  
+
   // Check if project has enhanced settings configured
   const hasProjectEnhancedSettings = currentProject ? getEnhancedSettings(currentProject.id) !== null : false;
-  
-  // Get platform recommendation for this tool
-  const platformRecommendation = getPlatformRecommendation(tool.id);
-  
-  // Platform icon mapping
-  const getPlatformIcon = (platform: PlatformType) => {
-    switch (platform) {
-      case 'miro': return Cpu;
-      case 'figjam': return Users;
-      case 'figma': return Palette;
-      default: return Sparkles;
-    }
-  };
-  
-  // Platform color mapping
-  const getPlatformColor = (platform: PlatformType) => {
-    switch (platform) {
-      case 'miro': return 'bg-blue-500 text-white';
-      case 'figjam': return 'bg-purple-500 text-white';
-      case 'figma': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
-  const handleGeneratePrompt = async (platform?: PlatformType) => {
+  const handleGeneratePrompt = async (overrideLinkedKnowledge?: string[]) => {
     if (!framework || !stage || !currentProject) {
       console.error('Missing required data for prompt generation');
       return;
     }
+
+    // Use override knowledge if provided (from handleKnowledgeSelected), otherwise use prop
+    const effectiveLinkedKnowledge = overrideLinkedKnowledge || linkedKnowledge;
 
     // Get knowledge from both linked entries AND connected knowledge document nodes
     const currentEdges = useWorkflowStore.getState().edges;
@@ -102,8 +77,8 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       })
       .filter(Boolean);
 
-    const allLinkedKnowledge = [...linkedKnowledge];
-    const allKnowledgeEntries = [...entries.filter(entry => linkedKnowledge.includes(entry.id))];
+    const allLinkedKnowledge = [...effectiveLinkedKnowledge];
+    const allKnowledgeEntries = [...entries.filter(entry => effectiveLinkedKnowledge.includes(entry.id))];
 
     // Add knowledge from connected canvas nodes
     connectedKnowledgeNodes.forEach(knowledgeEntry => {
@@ -120,7 +95,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         // No knowledge in project - fetch first to be sure
         await fetchEntries(currentProject.id);
       }
-      
+
       // Still no knowledge or no linked knowledge - show dialog
       setShowKnowledgeDialog(true);
       return;
@@ -146,41 +121,18 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         .map(entry => `${entry.title}: ${entry.content}`)
         .join('\n\n');
 
-      // Generate platform-optimized prompt content
-      const selectedPlatform = platform || platformRecommendation?.platform;
-      let promptContent: string;
-      
-      if (selectedPlatform && platformRecommendation) {
-        // Use platform-optimized instructions
-        const toolInstructions = generateToolSpecificInstructions({
-          framework,
-          stage,
-          tool,
-          projectContext: knowledgeContext,
-          preferredPlatform: selectedPlatform
-        });
-        
-        promptContent = toolInstructions.platformOptimizedPrompt || toolInstructions.promptTemplate;
-      } else {
-        // Fallback to standard prompt generation
-        promptContent = await generatePrompt(
-          currentProject.id, 
-          framework, 
-          stage, 
-          tool, 
-          undefined, 
-          undefined, 
-          undefined,
-          knowledgeContext || undefined
-        );
-      }
+      // Generate prompt content
+      const promptContent = await generatePrompt(
+        currentProject.id,
+        framework,
+        stage,
+        tool,
+        undefined,
+        undefined,
+        undefined,
+        knowledgeContext || undefined
+      );
 
-      // Apply AI output optimizations from project settings
-      const projectSettings = currentProject ? await getEnhancedSettings(currentProject.id) : null;
-      const projectAiOutputSelection = projectSettings?.aiOutputSelection || 'none';
-      if (projectAiOutputSelection && projectAiOutputSelection !== 'none') {
-        promptContent = optimizePromptForOutput(promptContent, projectAiOutputSelection);
-      }
       await new Promise(resolve => setTimeout(resolve, 400));
       
       // Step 4: Executing AI Request
@@ -273,8 +225,12 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         }
       };
       
+      // Step 5: Creating Node
+      setCurrentStep(5);
+      await new Promise(resolve => setTimeout(resolve, 400));
+
       addNode(promptNode);
-      
+
       // Create edge from tool to prompt
       if (id) {
         const edge = {
@@ -287,7 +243,11 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         };
         addEdge(edge);
       }
-      
+
+      // Wait a brief moment for the node to be added to the canvas
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // Progress overlay will auto-close via onComplete after 1 second
+
     } catch (error) {
       console.error('Error generating AI prompt:', error);
       toast.error('Prompt generation failed: ' + (error.message || 'Unknown error'));
@@ -298,14 +258,18 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
   const handleKnowledgeSelected = async (knowledgeIds: string[]) => {
     if (id) {
+      // Close the dialog first
+      setShowKnowledgeDialog(false);
+
       // Update the node with linked knowledge
       updateNode(id, { linkedKnowledge: knowledgeIds });
-      
+
       toast.success(`${knowledgeIds.length} knowledge ${knowledgeIds.length === 1 ? 'entry' : 'entries'} linked to ${tool.name}`);
-      
-      // Now generate the prompt
+
+      // Now generate the prompt after ensuring dialog is closed
+      // Pass the knowledgeIds directly to avoid stale prop values
       setTimeout(() => {
-        handleGeneratePrompt();
+        handleGeneratePrompt(knowledgeIds);
       }, 500);
     }
   };
@@ -417,15 +381,6 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
                     Enhanced
                   </Badge>
                 )}
-                {platformRecommendation && (
-                  <Badge 
-                    className={`text-xs px-2 py-0 h-5 ${getPlatformColor(platformRecommendation.platform)}`}
-                    title={`Recommended for ${platformRecommendation.platform}: ${platformRecommendation.reasoning}`}
-                  >
-                    {React.createElement(getPlatformIcon(platformRecommendation.platform), { className: "w-2 h-2 mr-1" })}
-                    {platformRecommendation.platform}
-                  </Badge>
-                )}
               </div>
               <div className="max-h-12 overflow-hidden">
                 <p className="text-xs leading-relaxed line-clamp-2" style={{ color: colors.text.light }}>
@@ -525,75 +480,32 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
           {/* Actions */}
           <div className="flex flex-col gap-2 flex-shrink-0">
-            {/* Enhanced Template Button (if available and no project settings) */}
-            {enhancedTemplate && !hasProjectEnhancedSettings && (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEnhancedPanel(true);
-                }}
-                className="w-full h-8 text-xs bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-                disabled={showProgress}
-              >
-                <Zap className="w-3 h-3 mr-1" />
-                Enhanced Prompt
-              </Button>
-            )}
-
-            {/* Project Enhancement Notice (when project has enhanced settings) */}
-            {enhancedTemplate && hasProjectEnhancedSettings && (
-              <div className="w-full p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-                <div className="flex items-center gap-1 mb-1">
-                  <Settings className="w-3 h-3" />
-                  <span className="font-medium">Enhanced via Project</span>
-                </div>
-                <p className="text-blue-600">
-                  Enhanced prompts use your project's knowledge base and settings
-                </p>
-              </div>
-            )}
-            
-            {/* Platform-Aware Generation */}
-            {platformRecommendation ? (
-              <PlatformSelector
-                toolId={tool.id}
-                toolName={tool.name}
-                selectedPlatform={selectedPlatform}
-                onPlatformChange={setSelectedPlatform}
-                onGenerate={(platform) => {
-                  handleGeneratePrompt(platform);
-                }}
-                className="w-full"
-              />
-            ) : (
-              /* Fallback for tools without platform optimization */
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleGeneratePrompt();
-                }}
-                className="w-full h-8 text-xs"
-                style={{
-                  backgroundColor: colors.background.primary,
-                  color: colors.text.primary,
-                  borderColor: colors.border.primary
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = colors.background.hover;
-                  e.currentTarget.style.color = colors.text.hover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = colors.background.primary;
-                  e.currentTarget.style.color = colors.text.primary;
-                }}
-                disabled={!framework || !stage || !currentProject || showProgress}
-              >
-                <Play className="w-3 h-3 mr-1" />
-                {showProgress ? 'Generating...' : 'Generate Prompt'}
-              </Button>
-            )}
+            {/* Generate Prompt Button */}
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGeneratePrompt();
+              }}
+              className="w-full h-8 text-xs"
+              style={{
+                backgroundColor: colors.background.primary,
+                color: colors.text.primary,
+                borderColor: colors.border.primary
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.background.hover;
+                e.currentTarget.style.color = colors.text.hover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = colors.background.primary;
+                e.currentTarget.style.color = colors.text.primary;
+              }}
+              disabled={!framework || !stage || !currentProject || showProgress}
+            >
+              <Play className="w-3 h-3 mr-1" />
+              {showProgress ? 'Generating...' : 'Generate Prompt'}
+            </Button>
             
             {/* Debug and Actions Row */}
             <div className="flex items-center justify-between">

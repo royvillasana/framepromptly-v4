@@ -15,7 +15,6 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectInvitations } from './project-invitations';
-import { AIOutputSelector } from '@/components/ui/ai-output-selector';
 
 export function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -54,7 +53,6 @@ export function ProjectSettings() {
     topP: 0.9,
     topK: 50,
   });
-  const [aiOutputSelection, setAiOutputSelection] = useState<string>('none');
 
   useEffect(() => {
     if (!projects.length) {
@@ -127,7 +125,6 @@ export function ProjectSettings() {
           topP: 0.9,
           topK: 50,
         });
-        setAiOutputSelection(settings.aiOutputSelection || 'none');
       }
     } catch (error) {
       console.error('Failed to load enhanced settings:', error);
@@ -212,8 +209,7 @@ export function ProjectSettings() {
       industry: selectedIndustry,
       projectContext,
       qualitySettings,
-      aiMethodSettings,
-      aiOutputSelection
+      aiMethodSettings
     };
 
     try {
@@ -972,36 +968,6 @@ export function ProjectSettings() {
               {/* AI Output Tab */}
               <TabsContent value="ai-output" className="mt-0">
                 <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Bot className="w-5 h-5 text-blue-600" />
-                        AI Output Optimization
-                      </CardTitle>
-                      <CardDescription>
-                        Configure AI platform-specific optimizations that will be applied to all generated prompts in this project. 
-                        This enhances prompt effectiveness by adding platform-specific instructions and formatting.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <AIOutputSelector
-                        value={aiOutputSelection}
-                        onChange={setAiOutputSelection}
-                        variant="default"
-                        showDescription={true}
-                      />
-                      
-                      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-semibold text-blue-900 mb-2">How AI Output Optimization Works</h4>
-                        <ul className="text-sm text-blue-800 space-y-2">
-                          <li>• <strong>Project-Level Setting:</strong> Applies to all prompts generated in this project</li>
-                          <li>• <strong>Platform-Specific Instructions:</strong> Adds optimized prefixes and suffixes based on AI research</li>
-                          <li>• <strong>Automatic Enhancement:</strong> No additional configuration needed in individual tools</li>
-                          <li>• <strong>Research-Based:</strong> Optimizations based on 2024-2025 AI platform best practices</li>
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
               </TabsContent>
 

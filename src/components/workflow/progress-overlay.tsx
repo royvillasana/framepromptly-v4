@@ -49,6 +49,13 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
       description: 'Getting intelligent response from AI model',
       icon: <Loader2 className="w-4 h-4 animate-spin" />,
       status: 'pending'
+    },
+    {
+      id: 'creating',
+      label: 'Creating Prompt Node',
+      description: 'Adding generated prompt to canvas',
+      icon: <CheckCircle className="w-4 h-4" />,
+      status: 'pending'
     }
   ]);
 
@@ -86,7 +93,7 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed top-4 right-4 z-50 pointer-events-none"
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
