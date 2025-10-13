@@ -283,14 +283,17 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                     Select one or more knowledge entries to provide context for {toolName}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
-                      onClick={() => setSelectedKnowledge(
-                        selectedKnowledge.length === entries.length 
-                          ? [] 
-                          : entries.map(entry => entry.id)
-                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedKnowledge(
+                          selectedKnowledge.length === entries.length
+                            ? []
+                            : entries.map(entry => entry.id)
+                        );
+                      }}
                       className="h-6 px-2 text-xs"
                     >
                       {selectedKnowledge.length === entries.length ? 'Deselect All' : 'Select All'}
@@ -319,7 +322,11 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
                             <input
                               type="checkbox"
                               checked={selectedKnowledge.includes(entry.id)}
-                              onChange={() => handleKnowledgeToggle(entry.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleKnowledgeToggle(entry.id);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
                               className="h-4 w-4"
                             />
                           </div>
@@ -441,7 +448,13 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
 
             {hasKnowledgeEntries && (
               <div className="flex justify-between">
-                <Button variant="outline" onClick={onClose}>
+                <Button
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                >
                   Cancel
                 </Button>
                 <Button

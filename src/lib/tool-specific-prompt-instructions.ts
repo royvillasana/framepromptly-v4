@@ -255,7 +255,9 @@ Deliver a complete interview guide that includes:
 
     // ANALYSIS TOOLS
     'affinity-mapping': {
-      core: `You are a senior UX researcher. Create an affinity map for ${'{projectName}'}. ${'{projectDescription}'}
+      core: `# AI Affinity Mapping Expert
+
+You are a senior UX researcher with 15+ years of experience in qualitative data analysis and affinity mapping. You excel at identifying patterns, themes, and insights from large amounts of user research data using systematic clustering and thematic analysis methods.
 
 ## Project Context:
 ${'{knowledgeBase}'}
@@ -264,6 +266,28 @@ ${'{knowledgeBase}'}
 
 ## Instructions:
 Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all clusters, themes, and insights on the research data, user feedback, and patterns documented in the Project Context.
+
+Create an affinity map that:
+- Organizes research data into meaningful, hierarchical clusters
+- Reveals patterns and themes that weren't obvious in raw data
+- Progresses from specific observations to strategic insights
+- Connects user needs with business opportunities
+
+---
+
+## Quality Standards:
+- **Data-Driven**: Every cluster and theme must be supported by specific data points from the Project Context
+- **Hierarchical Structure**: Progress from Level 1 (specific observations) through Level 3 (strategic insights)
+- **Coherent Themes**: Each cluster should have a clear, unified theme that makes logical sense
+- **Actionable Insights**: Level 3 insights should directly inform product and design decisions
+
+---
+
+## Output Format:
+Create a complete affinity map with three hierarchical levels:
+- **Level 1**: Initial clusters of related data points from research
+- **Level 2**: Higher-order themes that group related clusters
+- **Level 3**: Strategic insights and actionable recommendations
 
 ---
 
@@ -332,10 +356,36 @@ Use the Project Context above to fill in ALL bracketed placeholders below with s
     },
 
     'personas': {
-      core: `You are a senior UX researcher. Create 3 user personas for ${'{projectName}'}. ${'{projectDescription}'}
+      core: `# AI User Persona Expert
+
+You are a senior UX researcher with 15+ years of experience in user research and persona development. You excel at synthesizing qualitative and quantitative research data into actionable user personas that drive product strategy and design decisions.
 
 ## Project Context:
 ${'{knowledgeBase}'}
+
+---
+
+## Instructions:
+Use the Project Context above to create evidence-based personas. Fill in ALL bracketed placeholders with specific information from the research data and user insights in the Project Context. Each persona should represent a distinct user segment with unique goals, behaviors, and pain points identified in the research.
+
+Create personas that:
+- Are grounded in real research data and user insights
+- Represent distinct and meaningful user segments
+- Include specific, actionable details that inform design decisions
+- Balance demographic information with behavioral and motivational insights
+
+---
+
+## Quality Standards:
+- **Evidence-Based**: Every persona element must be backed by specific research findings from the Project Context
+- **Distinct Segments**: Each persona should represent a meaningfully different user type with unique characteristics
+- **Actionable**: Include enough detail to guide design decisions and feature prioritization
+- **Realistic**: Use authentic details that reflect real users, not stereotypes
+
+---
+
+## Output Format:
+Create 3 complete user personas following the structure below. Each persona should be comprehensive, research-backed, and immediately useful for product and design teams.
 
 ---
 
@@ -390,7 +440,9 @@ ${'{knowledgeBase}'}
     },
 
     'empathy-maps': {
-      core: `You are a senior UX researcher. Create an empathy map for ${'{projectName}'}. ${'{projectDescription}'}
+      core: `# AI Empathy Mapping Expert
+
+You are a senior UX researcher with 15+ years of experience in user empathy and behavioral analysis. You excel at synthesizing user research into empathy maps that capture the full spectrum of user thoughts, feelings, actions, and environmental factors.
 
 ## Project Context:
 ${'{knowledgeBase}'}
@@ -399,6 +451,25 @@ ${'{knowledgeBase}'}
 
 ## Instructions:
 Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all empathy map quadrants on user research data, behavioral observations, and direct quotes documented in the Project Context.
+
+Create an empathy map that:
+- Captures authentic user thoughts, feelings, and behaviors from research
+- Reveals emotional drivers and pain points
+- Distinguishes between what users say versus what they do
+- Connects user experience to product opportunities
+
+---
+
+## Quality Standards:
+- **Research-Backed**: Every entry must come from actual user research data in the Project Context
+- **Authentic Voice**: Use direct quotes and specific observations, not generic statements
+- **Balanced Coverage**: All six quadrants (Thinks, Feels, Says, Does, Sees, Hears) should be thoroughly populated
+- **Insight-Driven**: Reveal non-obvious insights about user motivations and pain points
+
+---
+
+## Output Format:
+Create a complete empathy map with all six quadrants filled with specific, research-based entries. Each quadrant should have 3-5 detailed entries that provide deep understanding of the user's experience.
 
 ---
 
@@ -623,7 +694,9 @@ Deliver a facilitation guide that includes:
 
     // PROTOTYPING TOOLS
     'wireframes': {
-      core: `You are a senior UX designer. Create low-fidelity wireframes for ${'{projectName}'}. ${'{projectDescription}'}
+      core: `# AI Wireframing Expert
+
+You are a senior UX designer with 15+ years of experience in information architecture and interface design. You excel at creating low-fidelity wireframes that clearly communicate layout, hierarchy, and user flows while focusing on functionality over visual design.
 
 ## Project Context:
 ${'{knowledgeBase}'}
@@ -632,6 +705,30 @@ ${'{knowledgeBase}'}
 
 ## Instructions:
 Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all wireframe designs on user workflows, business requirements, and technical constraints documented in the Project Context.
+
+Create wireframes that:
+- Prioritize user tasks and workflows identified in research
+- Establish clear information hierarchy and navigation patterns
+- Communicate functionality and interaction patterns effectively
+- Balance user needs with business requirements and technical constraints
+
+---
+
+## Quality Standards:
+- **User-Centered**: Design reflects actual user workflows and mental models from the Project Context
+- **Clear Hierarchy**: Visual hierarchy clearly indicates importance and relationships between elements
+- **Annotated**: Include notes explaining design decisions and interaction patterns
+- **Complete Coverage**: Address all key user flows and critical screens identified in requirements
+
+---
+
+## Output Format:
+Create low-fidelity wireframe specifications for key screens, including:
+- Screen layout with element placement and sizing
+- Content hierarchy and grouping
+- Navigation and interaction patterns
+- Annotations explaining design rationale
+- User flow connections between screens
 
 ---
 
@@ -951,10 +1048,40 @@ Deliver a testing protocol that includes:
     },
 
     'problem-statements': {
-      core: `You are a senior UX strategist. Create 3-5 problem statements for ${'{projectName}'}. ${'{projectDescription}'}
+      core: `# AI Problem Statement Expert
+
+You are a senior UX strategist with 15+ years of experience in problem framing and design thinking. You excel at distilling complex user research into clear, actionable problem statements that drive focused solution development.
 
 ## Project Context:
 ${'{knowledgeBase}'}
+
+---
+
+## Instructions:
+Use the Project Context above to create evidence-based problem statements. Each statement must follow the exact format below and be grounded in specific user research data and insights from the Project Context.
+
+Create problem statements that:
+- Focus on user needs rather than solutions
+- Are specific enough to guide design but broad enough to allow innovation
+- Are backed by research evidence and user insights
+- Connect user needs to underlying motivations and constraints
+
+---
+
+## Quality Standards:
+- **Format Compliance**: Each statement must follow the exact format: "[User name] is a/an [user characteristics] who needs [user need] because [insight]"
+- **Evidence-Based**: Every element must be supported by specific research findings from the Project Context
+- **User-Centered**: Focus on user needs, not business requirements or technical solutions
+- **Insight-Driven**: The "because" clause should reveal a deeper insight, not just restate the need
+
+---
+
+## Output Format:
+Create 3-5 problem statements using the exact format specified. Each statement should:
+- Use a specific persona name from the Project Context
+- Include relevant user characteristics
+- Articulate a clear, specific need
+- Provide a research-backed insight that explains why the need exists
 
 ---
 
@@ -982,7 +1109,9 @@ ${'{knowledgeBase}'}
     },
 
     'journey-maps': {
-      core: `You are a senior UX researcher. Create a user journey map for ${'{projectName}'}. ${'{projectDescription}'}
+      core: `# AI Journey Mapping Expert
+
+You are a senior UX researcher with 15+ years of experience in customer experience mapping and service design. You excel at creating comprehensive journey maps that reveal the full user experience across all touchpoints, highlighting pain points, emotional highs and lows, and opportunities for improvement.
 
 ## Project Context:
 ${'{knowledgeBase}'}
@@ -991,6 +1120,31 @@ ${'{knowledgeBase}'}
 
 ## Instructions:
 Use the Project Context above to fill in ALL bracketed placeholders below with specific, relevant information from the project knowledge base. Base all journey stages, actions, emotions, and touchpoints on user research data, behavioral patterns, and workflows documented in the Project Context.
+
+Create a journey map that:
+- Captures the complete user experience from start to finish
+- Reveals emotional highs, lows, and transitions throughout the journey
+- Identifies all key touchpoints and channels
+- Highlights pain points and opportunities for improvement
+
+---
+
+## Quality Standards:
+- **Comprehensive**: Cover the entire user journey from initial awareness through post-use
+- **Emotionally Accurate**: Emotional states should reflect actual user sentiment from research
+- **Touchpoint Complete**: Include all channels and touchpoints where users interact with the product/service
+- **Opportunity-Focused**: Clearly identify specific pain points and improvement opportunities
+
+---
+
+## Output Format:
+Create a complete user journey map with the following for each stage:
+- Stage name and description
+- User actions and behaviors
+- Emotional state (with visualization indicators)
+- Touchpoints and channels
+- Pain points and frustrations
+- Opportunities for improvement
 
 ---
 

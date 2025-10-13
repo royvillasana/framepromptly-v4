@@ -448,11 +448,13 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         />
       )}
       
-      <div 
+      <div
         className={`h-full w-full ${isMarqueeMode ? 'cursor-crosshair' : ''}`}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
+        {...(isMarqueeMode ? {
+          onMouseDown,
+          onMouseMove,
+          onMouseUp
+        } : {})}
       >
         <ReactFlow
           nodes={flowNodes}

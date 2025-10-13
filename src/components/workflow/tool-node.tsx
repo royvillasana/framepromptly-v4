@@ -59,6 +59,9 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const hasProjectEnhancedSettings = currentProject ? getEnhancedSettings(currentProject.id) !== null : false;
 
   const handleGeneratePrompt = async (overrideLinkedKnowledge?: string[]) => {
+    console.log('[handleGeneratePrompt] Called with override:', overrideLinkedKnowledge);
+    console.log('[handleGeneratePrompt] Current linkedKnowledge prop:', linkedKnowledge);
+
     if (!framework || !stage || !currentProject) {
       console.error('Missing required data for prompt generation');
       return;
@@ -66,6 +69,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
     // Use override knowledge if provided (from handleKnowledgeSelected), otherwise use prop
     const effectiveLinkedKnowledge = overrideLinkedKnowledge || linkedKnowledge;
+    console.log('[handleGeneratePrompt] Effective linked knowledge:', effectiveLinkedKnowledge);
 
     // Get knowledge from both linked entries AND connected knowledge document nodes
     const currentEdges = useWorkflowStore.getState().edges;
@@ -88,8 +92,11 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       }
     });
 
+    console.log('[handleGeneratePrompt] All linked knowledge count:', allLinkedKnowledge.length);
+
     // Check if tool has any linked knowledge (traditional or canvas-connected)
     if (allLinkedKnowledge.length === 0) {
+      console.log('[handleGeneratePrompt] No knowledge found, opening dialog');
       // Check if project has any knowledge entries
       if (entries.length === 0) {
         // No knowledge in project - fetch first to be sure
@@ -100,6 +107,8 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       setShowKnowledgeDialog(true);
       return;
     }
+
+    console.log('[handleGeneratePrompt] Knowledge found, proceeding with generation');
 
     try {
       setShowProgress(true);
@@ -257,18 +266,23 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   };
 
   const handleKnowledgeSelected = async (knowledgeIds: string[]) => {
+    console.log('[handleKnowledgeSelected] Called with:', knowledgeIds);
     if (id) {
       // Close the dialog first
+      console.log('[handleKnowledgeSelected] Closing dialog');
       setShowKnowledgeDialog(false);
 
       // Update the node with linked knowledge
+      console.log('[handleKnowledgeSelected] Updating node with knowledge');
       updateNode(id, { linkedKnowledge: knowledgeIds });
 
       toast.success(`${knowledgeIds.length} knowledge ${knowledgeIds.length === 1 ? 'entry' : 'entries'} linked to ${tool.name}`);
 
       // Now generate the prompt after ensuring dialog is closed
       // Pass the knowledgeIds directly to avoid stale prop values
+      console.log('[handleKnowledgeSelected] Scheduling handleGeneratePrompt in 500ms');
       setTimeout(() => {
+        console.log('[handleKnowledgeSelected] Now calling handleGeneratePrompt');
         handleGeneratePrompt(knowledgeIds);
       }, 500);
     }
