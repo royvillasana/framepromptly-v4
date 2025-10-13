@@ -4,18 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { getEnhancedTemplateById, getAllEnhancedTemplates, EnhancedToolPromptTemplate, validateTemplateVariables, getIndustryAdaptation } from '@/lib/tool-templates-enhanced';
 import { promptQualityValidator, QualityValidationResult } from '@/lib/prompt-quality-validator';
 import { getEnhancedInstructions } from '@/lib/enhanced-tool-instructions';
-import { 
-  enhancedContextIntegrationService, 
-  IntegratedContextRequest, 
-  IntegratedContextResponse 
+import {
+  enhancedContextIntegrationService,
+  IntegratedContextRequest,
+  IntegratedContextResponse
 } from '@/lib/enhanced-context-integration-service';
-import { 
-  DestinationType, 
-  AIProviderType, 
-  DestinationContext, 
-  TailoredOutput 
+import {
+  DestinationType,
+  AIProviderType,
+  DestinationContext,
+  TailoredOutput
 } from '@/lib/destination-driven-tailoring';
 import { destinationTailoringService } from '@/lib/destination-tailoring-service';
+import { buildDynamicPrompt, ProjectSettings, validateProjectSettings } from '@/lib/dynamic-prompt-builder';
 
 export interface ConversationMessage {
   id: string;
@@ -94,7 +95,7 @@ export interface PromptState {
   
   // Actions
   loadProjectPrompts: (projectId: string) => Promise<void>;
-  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext) => Promise<string>;
+  generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext, projectSettings?: ProjectSettings) => Promise<string>;
   generateEnhancedPrompt: (templateId: string, variables: Record<string, any>, enhancedContext?: EnhancedPromptContext) => Promise<GeneratedPrompt>;
   validatePromptQuality: (promptId: string) => Promise<QualityValidationResult>;
   executePrompt: (promptId: string) => Promise<void>;
@@ -824,10 +825,19 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     }
   },
 
-  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext) => {
+  generatePrompt: async (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext, projectSettings?: ProjectSettings) => {
+    // Validate project settings if provided
+    if (projectSettings) {
+      const validation = validateProjectSettings(projectSettings);
+      if (!validation.isValid) {
+        console.warn('Invalid project settings, using defaults:', validation.errors);
+        projectSettings = undefined; // Fall back to defaults
+      }
+    }
+
     // Try to use enhanced template first
     const enhancedTemplate = get().enhancedTemplates.find(t => t.id === tool.id);
-    
+
     if (enhancedTemplate) {
       // Provide meaningful defaults for enhanced template variables
       const defaultVariables: Record<string, any> = {
@@ -880,29 +890,32 @@ export const usePromptStore = create<PromptState>((set, get) => ({
 
       return get().generateEnhancedPrompt(enhancedTemplate.id, defaultVariables, enhancedContext);
     }
-    
-    // Fallback to legacy template system
+
+    // Fallback to legacy template system with dynamic prompt building
     const template = get().templates.find(
       t => t.framework === framework.id && t.stage === stage.id && t.tool === tool.id
     );
 
     let processedTemplate = '';
-    
-    if (template) {
-      // Use template directly without framework/stage context wrappers
-      processedTemplate = template.template;
-      
-      // Add knowledge context if provided
-      if (knowledgeContext) {
-        processedTemplate = `Project Knowledge Base:
-${knowledgeContext}
 
-${processedTemplate}`;
-      }
+    if (template) {
+      // Use dynamic prompt builder to inject project settings
+      processedTemplate = buildDynamicPrompt(
+        template.template,
+        projectSettings,
+        knowledgeContext
+      );
+
+      console.log('[Dynamic Prompt] Applied project settings:', {
+        hasSettings: !!projectSettings,
+        quality: projectSettings?.qualitySettings?.methodologyDepth || 'default',
+        outputDetail: projectSettings?.qualitySettings?.outputDetail || 'default',
+        promptStructure: projectSettings?.aiMethodSettings?.promptStructure || 'default'
+      });
     } else {
       // Fallback - simple direct prompt
       processedTemplate = `Create ${tool.name} deliverable for the project. Generate actionable outputs for immediate use.`;
-      
+
       // Add knowledge context if provided
       if (knowledgeContext) {
         processedTemplate = `Project Knowledge Base:

@@ -124,13 +124,23 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
       // Step 3: Generating Prompt
       setCurrentStep(3);
-      
+
       // Get linked knowledge content from all sources
       const knowledgeContext = allKnowledgeEntries
         .map(entry => `${entry.title}: ${entry.content}`)
         .join('\n\n');
 
-      // Generate prompt content
+      // Get project settings for dynamic prompt customization
+      const projectSettings = currentProject ? getEnhancedSettings(currentProject.id) : null;
+
+      console.log('[Tool Node] Generating prompt with project settings:', {
+        projectId: currentProject.id,
+        hasSettings: !!projectSettings,
+        qualityDepth: projectSettings?.qualitySettings?.methodologyDepth || 'default',
+        outputDetail: projectSettings?.qualitySettings?.outputDetail || 'default'
+      });
+
+      // Generate prompt content with project settings
       const promptContent = await generatePrompt(
         currentProject.id,
         framework,
@@ -139,7 +149,9 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         undefined,
         undefined,
         undefined,
-        knowledgeContext || undefined
+        knowledgeContext || undefined,
+        undefined, // enhancedContext
+        projectSettings || undefined // project settings for dynamic customization
       );
 
       await new Promise(resolve => setTimeout(resolve, 400));
