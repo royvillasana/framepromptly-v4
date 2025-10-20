@@ -7,6 +7,7 @@ export interface NodeSpacing {
   stage: { width: number; height: number };
   tool: { width: number; height: number };
   prompt: { width: number; height: number };
+  'custom-prompt': { width: number; height: number };
 }
 
 export const DEFAULT_SPACING: NodeSpacing = {
@@ -15,7 +16,8 @@ export const DEFAULT_SPACING: NodeSpacing = {
   framework: { width: 320, height: 200 },
   stage: { width: 280, height: 180 },
   tool: { width: 280, height: 160 },
-  prompt: { width: 800, height: 300 }
+  prompt: { width: 800, height: 300 },
+  'custom-prompt': { width: 320, height: 200 }
 };
 
 export interface PositionCalculator {
@@ -33,6 +35,7 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
       case 'stage': return spacing.stage;
       case 'tool': return spacing.tool;
       case 'prompt': return spacing.prompt;
+      case 'custom-prompt': return spacing['custom-prompt'];
       default: return spacing.tool;
     }
   };
@@ -297,6 +300,7 @@ function createHierarchicalLayout(analysis: any, spacing: NodeSpacing) {
       case 'stage': return spacing.stage;
       case 'tool': return spacing.tool;
       case 'prompt': return spacing.prompt;
+      case 'custom-prompt': return spacing['custom-prompt'];
       default: return spacing.tool;
     }
   };

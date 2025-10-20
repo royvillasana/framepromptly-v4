@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { X, Sparkles, Layers, Settings, ChevronRight, AlertCircle } from 'lucide-react';
+import { X, Sparkles, Layers, Settings, ChevronRight, AlertCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { getSmartPosition } from '@/utils/node-positioning';
 import { NodeDetails } from './node-details';
+import { CustomPromptSelectionDialog } from './custom-prompt-selection-dialog';
 import { toast } from 'sonner';
+import type { StructuredPrompt } from '@/types/structured-prompt';
 
 interface AddElementPanelProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
   const [activeSection, setActiveSection] = useState<'main' | 'frameworks' | 'stages' | 'tools'>('main');
   const [selectedFramework, setSelectedFramework] = useState<any>(null);
   const [selectedStage, setSelectedStage] = useState<any>(null);
+  const [showCustomPromptDialog, setShowCustomPromptDialog] = useState(false);
 
   if (!isOpen) return null;
 
@@ -115,8 +118,8 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
 
   const handleToolSelection = (tool: any, framework: any, stage: any) => {
     // Find the parent stage node
-    const parentStageNode = nodes.find(node => 
-      node.type === 'stage' && 
+    const parentStageNode = nodes.find(node =>
+      node.type === 'stage' &&
       node.data.stage?.id === stage.id &&
       node.data.framework?.id === framework.id
     );
@@ -139,9 +142,9 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
         isDone: false,
       },
     };
-    
+
     addNode(newToolNode);
-    
+
     // Create edge from stage to tool
     const newEdge = {
       id: `edge-${parentStageNode.id}-${newToolNode.id}`,
@@ -150,9 +153,30 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
       type: 'default'
     };
     addEdge(newEdge);
-    
+
     onClearSelection?.();
     onClose();
+  };
+
+  const handleCustomPromptSelection = (prompt: StructuredPrompt) => {
+    const position = getSmartPosition('custom-prompt', nodes);
+    const newCustomPromptNode = {
+      id: `custom-prompt-${prompt.id}-${Date.now()}`,
+      type: 'custom-prompt' as const,
+      position,
+      data: {
+        prompt,
+        linkedKnowledge: [],
+        isActive: false,
+        isCompleted: false,
+      },
+    };
+
+    addNode(newCustomPromptNode);
+
+    onClearSelection?.();
+    onClose();
+    toast.success(`Custom prompt "${prompt.title}" added to canvas`);
   };
 
   const renderMainView = () => (
@@ -202,6 +226,23 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
             <div className="font-medium">Add UX Tool</div>
             <div className="text-xs text-muted-foreground">
               Browse tools by framework and stage
+            </div>
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        className="w-full justify-between p-4 h-auto"
+        onClick={() => setShowCustomPromptDialog(true)}
+      >
+        <div className="flex items-center gap-3">
+          <FileText className="h-5 w-5 text-purple-500" />
+          <div className="text-left">
+            <div className="font-medium">Add Custom Prompt</div>
+            <div className="text-xs text-muted-foreground">
+              Use prompts from your library
             </div>
           </div>
         </div>
@@ -701,24 +742,33 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
   };
 
   return (
-    <div className="fixed right-0 top-[5.3rem] h-[calc(100vh-4rem)] w-80 bg-card border-l border-border shadow-lg z-40 flex flex-col">
-      {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between">
-        <h3 className="font-semibold text-sm">Add Elements</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="w-8 h-8 p-0"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+    <>
+      <div className="fixed right-0 top-[5.3rem] h-[calc(100vh-4rem)] w-80 bg-card border-l border-border shadow-lg z-40 flex flex-col">
+        {/* Header */}
+        <div className="border-b border-border p-4 flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Add Elements</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="w-8 h-8 p-0"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <ScrollArea className="flex-1 p-4">
+          {renderContent()}
+        </ScrollArea>
       </div>
 
-      {/* Content */}
-      <ScrollArea className="flex-1 p-4">
-        {renderContent()}
-      </ScrollArea>
-    </div>
+      {/* Custom Prompt Selection Dialog */}
+      <CustomPromptSelectionDialog
+        isOpen={showCustomPromptDialog}
+        onClose={() => setShowCustomPromptDialog(false)}
+        onPromptSelected={handleCustomPromptSelection}
+      />
+    </>
   );
 }

@@ -55,6 +55,7 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
       case 'stage': return data.stage?.name || 'Stage';
       case 'tool': return data.tool?.name || 'Tool';
       case 'prompt': return data.prompt?.context?.tool?.name || 'Generated Prompt';
+      case 'custom-prompt': return data.prompt?.title || 'Custom Prompt';
       default: return 'Node';
     }
   }
@@ -65,6 +66,7 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
       case 'stage': return data.stage?.description || '';
       case 'tool': return data.tool?.description || '';
       case 'prompt': return 'AI-generated prompt for ' + (data.prompt?.context?.tool?.name || 'workflow');
+      case 'custom-prompt': return data.prompt?.description || 'Custom prompt from library';
       default: return '';
     }
   }
@@ -231,7 +233,7 @@ export function NodeActionsMenu({ nodeId, nodeType, nodeData, position }: NodeAc
               />
             </div>
 
-            {nodeData.hasKnowledgeLink && (
+            {nodeData?.hasKnowledgeLink && (
               <div className="p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Database className="w-4 h-4 text-primary" />

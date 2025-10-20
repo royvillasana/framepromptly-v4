@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { parseAIPromptToStructured } from '../_shared/ai-prompt-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -180,8 +181,10 @@ serve(async (req) => {
 
     // Save prompt to database (skip for anonymous stress tests)
     let promptData = null;
-    
+    let structuredPromptId = null;
+
     if (!isStressTest && user) {
+      // Step 1: Save to old "prompts" table (backwards compatibility)
       const { data: savedPrompt, error: insertError } = await supabase
         .from('prompts')
         .insert({
@@ -200,6 +203,65 @@ serve(async (req) => {
       if (insertError) {
         console.error('Error saving prompt:', insertError);
         throw new Error('Failed to save prompt to database');
+      }
+
+      promptData = savedPrompt;
+      console.log('✅ Flat prompt saved to database with ID:', promptData.id);
+
+      // Step 2: Parse and save to "structured_prompts" table
+      try {
+        console.log('🔄 Parsing prompt into structured sections...');
+        const parseResult = parseAIPromptToStructured(processedPrompt, toolName);
+
+        console.log('📊 Parse result:', {
+          confidence: parseResult.confidence,
+          warnings: parseResult.warnings,
+          parser_version: parseResult.parser_version
+        });
+
+        // Save structured prompt
+        const { data: structuredPrompt, error: structuredError } = await supabase
+          .from('structured_prompts')
+          .insert({
+            user_id: user.id,
+            project_id: projectId,
+            framework_name: frameworkName,
+            stage_name: stageName,
+            tool_name: toolName,
+            title: `${toolName} - AI Generated`,
+            description: `AI-generated prompt for ${toolName} in ${frameworkName}`,
+            role_section: parseResult.role_section,
+            context_section: parseResult.context_section,
+            task_section: parseResult.task_section,
+            constraints_section: parseResult.constraints_section,
+            format_section: parseResult.format_section,
+            examples_section: parseResult.examples_section,
+            compiled_prompt: processedPrompt,
+            is_library_prompt: true,
+            // Store parsing metadata for debugging
+            // metadata: {
+            //   parse_confidence: parseResult.confidence,
+            //   parse_warnings: parseResult.warnings,
+            //   parser_version: parseResult.parser_version
+            // }
+          })
+          .select('id')
+          .single();
+
+        if (structuredError) {
+          console.error('⚠️  Error saving structured prompt:', structuredError);
+          // Don't fail the request - flat prompt is already saved
+        } else {
+          structuredPromptId = structuredPrompt.id;
+          console.log('✅ Structured prompt saved with ID:', structuredPromptId);
+          console.log(`   Confidence: ${(parseResult.confidence * 100).toFixed(0)}%`);
+          if (parseResult.warnings.length > 0) {
+            console.log('   Warnings:', parseResult.warnings.join(', '));
+          }
+        }
+      } catch (parseError) {
+        console.error('⚠️  Error during parsing/saving structured prompt:', parseError);
+        // Continue - flat prompt is already saved
       }
 
       promptData = savedPrompt;
@@ -222,6 +284,7 @@ serve(async (req) => {
       id: promptData.id,
       prompt: processedPrompt,
       aiResponse: aiResponse,
+      structured_prompt_id: structuredPromptId, // NEW: Link to structured version
       success: true
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

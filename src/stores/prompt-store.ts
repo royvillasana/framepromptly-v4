@@ -49,6 +49,7 @@ export interface EnhancedPromptContext {
 
 export interface GeneratedPrompt {
   id: string;
+  structured_prompt_id?: string; // NEW: Link to structured_prompts table for card-based editing
   workflowId: string;
   projectId: string;
   content: string;

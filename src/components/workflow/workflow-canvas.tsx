@@ -25,6 +25,7 @@ import { PromptNode } from './prompt-node';
 import { ProjectNode } from './project-node';
 import { ContextNode } from './context-node';
 import { KnowledgeDocumentNode } from './knowledge-document-node';
+import { CustomPromptNode } from './custom-prompt-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
@@ -38,25 +39,26 @@ const staticNodeTypes = {
   project: ProjectNode,
   context: ContextNode,
   'knowledge-document': KnowledgeDocumentNode,
+  'custom-prompt': CustomPromptNode,
 };
 
 // Connection validation function
 const isValidConnection = (connection: Connection, nodes: Node[]) => {
   const sourceNode = nodes.find(n => n.id === connection.source);
   const targetNode = nodes.find(n => n.id === connection.target);
-  
+
   if (!sourceNode || !targetNode) return false;
-  
-  // Knowledge documents can only connect TO tools
+
+  // Knowledge documents can connect TO tools OR custom-prompts
   if (sourceNode.type === 'knowledge-document') {
-    return targetNode.type === 'tool';
+    return targetNode.type === 'tool' || targetNode.type === 'custom-prompt';
   }
-  
-  // Prevent tools from connecting to knowledge documents
+
+  // Prevent nodes from connecting to knowledge documents
   if (targetNode.type === 'knowledge-document') {
     return false;
   }
-  
+
   // Allow all other connection types (existing workflow logic)
   return true;
 };

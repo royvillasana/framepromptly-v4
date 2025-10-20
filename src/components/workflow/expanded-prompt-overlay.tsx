@@ -47,14 +47,14 @@ interface ExpandedPromptOverlayProps {
   onView: () => void;
 }
 
-function ExpandedPromptOverlayComponent({ 
-  prompt, 
-  sourceToolName, 
-  onContract, 
-  onCopy, 
-  onView 
+function ExpandedPromptOverlayComponent({
+  prompt,
+  sourceToolName,
+  onContract,
+  onCopy,
+  onView
 }: ExpandedPromptOverlayProps) {
-  const { 
+  const {
     updatePromptConversation,
     clearDestination,
     tailorPromptForDestination
@@ -62,10 +62,16 @@ function ExpandedPromptOverlayComponent({
   const { entries } = useKnowledgeStore();
   const { currentProject } = useProjectStore();
   const { expandedPromptId } = useWorkflowStore();
-  
+
+  // Extract context info - handle both tool prompts and custom prompts
+  const frameworkName = prompt.context?.framework?.name || 'Custom Prompt';
+  const stageName = prompt.context?.stage?.name || 'Library';
+  const toolName = prompt.context?.tool?.name || prompt.context?.customPrompt?.title || sourceToolName || 'Custom Prompt';
+  const frameworkId = prompt.context?.framework?.id || 'design-thinking';
+
   // Get framework colors for theming
-  const frameworkColors = getFrameworkColors(prompt.context.framework.id || 'design-thinking');
-  const frameworkClasses = getFrameworkTailwindClasses(prompt.context.framework.id || 'design-thinking', 'framework');
+  const frameworkColors = getFrameworkColors(frameworkId);
+  const frameworkClasses = getFrameworkTailwindClasses(frameworkId, 'framework');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -268,11 +274,11 @@ function ExpandedPromptOverlayComponent({
       const libraryPrompt = {
         title: versionTitle,
         content: currentPromptContent,
-        framework: prompt.context.framework.name,
-        stage: prompt.context.stage.name,
-        tool: prompt.context.tool.name,
+        framework: frameworkName,
+        stage: stageName,
+        tool: toolName,
         variables: Object.keys(prompt.variables),
-        description: `Saved version of ${prompt.context.tool.name} prompt`,
+        description: `Saved version of ${toolName} prompt`,
         project_id: currentProject.id,
         created_at: new Date().toISOString()
       };
@@ -400,9 +406,9 @@ function ExpandedPromptOverlayComponent({
                   projectId: currentProject?.id,
                   knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
                   promptContext: {
-                    framework: prompt.context.framework.name,
-                    stage: prompt.context.stage.name,
-                    tool: prompt.context.tool.name,
+                    framework: frameworkName,
+                    stage: stageName,
+                    tool: toolName,
                     industry: prompt.industry,
                     destination: destinationContext.destination,
                     userIntent: destinationContext.userIntent
@@ -567,9 +573,9 @@ function ExpandedPromptOverlayComponent({
           projectId: currentProject?.id,
           knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
           frameworkContext: {
-            framework: prompt.context.framework.name,
-            stage: prompt.context.stage.name,
-            tool: prompt.context.tool.name
+            framework: frameworkName,
+            stage: stageName,
+            tool: toolName
           }
         }
       });
@@ -650,9 +656,9 @@ function ExpandedPromptOverlayComponent({
           projectId: currentProject?.id,
           knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
           frameworkContext: {
-            framework: prompt.context.framework.name,
-            stage: prompt.context.stage.name,
-            tool: prompt.context.tool.name
+            framework: frameworkName,
+            stage: stageName,
+            tool: toolName
           }
         }
       });
@@ -780,9 +786,9 @@ function ExpandedPromptOverlayComponent({
           projectId: currentProject?.id,
           knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
           frameworkContext: {
-            framework: prompt.context.framework.name,
-            stage: prompt.context.stage.name,
-            tool: prompt.context.tool.name
+            framework: frameworkName,
+            stage: stageName,
+            tool: toolName
           },
           executeAsNewPrompt: true // Flag to indicate this should be treated as executing a new prompt
         }
@@ -1130,7 +1136,7 @@ function ExpandedPromptOverlayComponent({
                     AI Chat Assistant
                   </h3>
                   <p className="text-sm text-white/80">
-                    {prompt.context.framework.name} • {prompt.context.stage.name} • {prompt.context.tool.name}
+                    {frameworkName} • {stageName} • {toolName}
                   </p>
                 </div>
               </div>
@@ -1139,13 +1145,13 @@ function ExpandedPromptOverlayComponent({
                 {/* Framework Context Badges */}
                 <div className="hidden md:flex items-center gap-2">
                   <Badge variant="glass-dark">
-                    {prompt.context.framework.name}
+                    {frameworkName}
                   </Badge>
                   <Badge variant="glass-dark">
-                    {prompt.context.stage.name}
+                    {stageName}
                   </Badge>
                   <Badge variant="glass-dark">
-                    {prompt.context.tool.name}
+                    {toolName}
                   </Badge>
                 </div>
                 
@@ -1205,7 +1211,7 @@ function ExpandedPromptOverlayComponent({
                           </div>
                           <h4 className="font-semibold mb-2">Ready to chat!</h4>
                           <p className="text-sm leading-relaxed">
-                            Your {prompt.context.tool.name} prompt is ready. Start a conversation to refine and improve it.
+                            Your {toolName} prompt is ready. Start a conversation to refine and improve it.
                           </p>
                           <div className="flex flex-wrap gap-2 justify-center mt-4">
                             <Button
@@ -1251,7 +1257,7 @@ function ExpandedPromptOverlayComponent({
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className="font-semibold text-sm">Initial Prompt</span>
                                   <Badge variant="outline" className="text-xs">
-                                    {prompt.context.tool.name}
+                                    {toolName}
                                   </Badge>
                                 </div>
                                 <div className="bg-background rounded-lg p-3 text-sm font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
@@ -1620,9 +1626,9 @@ function ExpandedPromptOverlayComponent({
                         originalPrompt: prompt.content,
                         variables: prompt.variables,
                         metadata: {
-                          framework: prompt.context.framework.name,
-                          stage: prompt.context.stage.name,
-                          tool: prompt.context.tool.name,
+                          framework: frameworkName,
+                          stage: stageName,
+                          tool: toolName,
                           industry: prompt.industry,
                           teamSize: prompt.context.enhancedContext?.teamSize,
                           timeConstraints: prompt.context.enhancedContext?.timeConstraints,

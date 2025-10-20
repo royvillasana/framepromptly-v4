@@ -1,9 +1,10 @@
 import { memo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand, Database } from 'lucide-react';
+import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand, Database, Edit3 } from 'lucide-react';
 import { GeneratedPrompt, usePromptStore } from '@/stores/prompt-store';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +55,7 @@ interface PromptNodeProps {
 
 export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?: string }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { setCurrentPrompt } = usePromptStore();
   const { expandedPromptId, setExpandedPromptId } = useWorkflowStore();
   const { prompt, isActive, onSwitchToPromptTab, sourceToolName } = data;
@@ -104,34 +106,67 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
 
   const handleExport = () => {
     const hasKnowledgeBase = prompt.content.includes('=== PROJECT KNOWLEDGE BASE ===');
-    const knowledgeBaseLine = hasKnowledgeBase 
+    const knowledgeBaseLine = hasKnowledgeBase
       ? `Knowledge Base: Included (project-specific context integrated)\n`
       : `Knowledge Base: None\n`;
-    
-    const exportContent = latestAIResponse 
-      ? `Generated Prompt for ${prompt.context.tool.name}\n` +
-        `Framework: ${prompt.context.framework.name}\n` +
-        `Stage: ${prompt.context.stage.name}\n` +
+
+    const toolName = prompt.context?.tool?.name || prompt.context?.customPrompt?.title || 'Custom Prompt';
+    const frameworkName = prompt.context?.framework?.name || 'N/A';
+    const stageName = prompt.context?.stage?.name || 'N/A';
+
+    const exportContent = latestAIResponse
+      ? `Generated Prompt for ${toolName}\n` +
+        `Framework: ${frameworkName}\n` +
+        `Stage: ${stageName}\n` +
         `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n` +
         knowledgeBaseLine + `\n` +
         `GENERATED PROMPT:\n${'-'.repeat(50)}\n${displayPromptContent}\n\n` +
         `AI RESPONSE:\n${'-'.repeat(50)}\n${latestAIResponse}`
-      : `Generated Prompt for ${prompt.context.tool.name}\n` +
-        `Framework: ${prompt.context.framework.name}\n` +
-        `Stage: ${prompt.context.stage.name}\n` +
+      : `Generated Prompt for ${toolName}\n` +
+        `Framework: ${frameworkName}\n` +
+        `Stage: ${stageName}\n` +
         `Generated: ${new Date(prompt.timestamp).toLocaleString()}\n` +
         knowledgeBaseLine + `\n` +
         `GENERATED PROMPT:\n${'-'.repeat(50)}\n${displayPromptContent}`;
-    
+
     const blob = new Blob([exportContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `prompt-${prompt.context.tool.name}-${Date.now()}.txt`;
+    a.download = `prompt-${toolName.replace(/\s+/g, '-')}-${Date.now()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleEditInLibrary = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (prompt.structured_prompt_id) {
+      try {
+        // Navigate to library editor with the structured prompt ID
+        navigate(`/library/${prompt.structured_prompt_id}`);
+        toast({
+          title: "Opening in Library",
+          description: "Edit your prompt with card-based sections."
+        });
+      } catch (error) {
+        console.error('Navigation error:', error);
+        toast({
+          title: "Navigation Failed",
+          description: "Could not open the library editor. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // No structured version available
+      toast({
+        title: "Not Available",
+        description: "This prompt doesn't have a structured version yet. Only AI-generated prompts can be edited in the library.",
+        variant: "destructive"
+      });
+    }
   };
 
 
@@ -197,7 +232,8 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
                 <h3 className="font-bold text-lg">AI Response</h3>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {sourceToolName || prompt.context.tool.name} • {prompt.context.stage.name}
+                {sourceToolName || prompt.context?.tool?.name || prompt.context?.customPrompt?.title || 'Custom Prompt'}
+                {prompt.context?.stage?.name && ` • ${prompt.context.stage.name}`}
                 {prompt.timestamp && (
                   <span className="ml-2 text-xs opacity-70">
                     {new Date(prompt.timestamp).toLocaleString()}
@@ -209,15 +245,21 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
 
           {/* Framework → Stage → Tool Info */}
           <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
-            <Badge variant="outline" className="text-sm px-3 py-1">
-              {prompt.context.framework.name}
-            </Badge>
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              {prompt.context.stage.name}
-            </Badge>
-            <Badge variant="default" className="text-sm px-3 py-1">
-              {prompt.context.tool.name}
-            </Badge>
+            {prompt.context?.framework?.name && (
+              <Badge variant="outline" className="text-sm px-3 py-1">
+                {prompt.context.framework.name}
+              </Badge>
+            )}
+            {prompt.context?.stage?.name && (
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                {prompt.context.stage.name}
+              </Badge>
+            )}
+            {(prompt.context?.tool?.name || prompt.context?.customPrompt?.title) && (
+              <Badge variant="default" className="text-sm px-3 py-1">
+                {prompt.context?.tool?.name || prompt.context?.customPrompt?.title}
+              </Badge>
+            )}
             {hasKnowledgeBase && (
               <Badge variant="outline" className="text-sm px-2 py-1 bg-blue-50 border-blue-200 text-blue-700">
                 <Database className="w-3 h-3 mr-1" />
@@ -262,6 +304,19 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
               <Copy className="w-3 h-3 mr-1" />
               Copy
             </Button>
+
+            {prompt.structured_prompt_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEditInLibrary}
+                className="h-8 px-3 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                title="Edit in Library with card-based editor"
+              >
+                <Edit3 className="w-3 h-3 mr-1" />
+                Edit in Library
+              </Button>
+            )}
 
             <NodeActionsMenu
               nodeId={id || ''}

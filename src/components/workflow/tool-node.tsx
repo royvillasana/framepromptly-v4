@@ -215,6 +215,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       // Create the generated prompt object with AI response
       const generatedPrompt = {
         id: data.id,
+        structured_prompt_id: data.structured_prompt_id, // NEW: Link to structured version in library
         workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
         projectId: currentProject.id,
         content: data.prompt,
@@ -271,7 +272,34 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
     } catch (error) {
       console.error('Error generating AI prompt:', error);
-      toast.error('Prompt generation failed: ' + (error.message || 'Unknown error'));
+
+      // Determine error type and provide specific guidance
+      let errorMessage = 'Prompt generation failed';
+      let shouldOfferRetry = true;
+
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        errorMessage = 'Network error - please check your connection';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out - the AI service might be busy';
+      } else if (error.message?.includes('auth') || error.message?.includes('unauthorized')) {
+        errorMessage = 'Authentication error - please sign in again';
+        shouldOfferRetry = false;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Show error toast with retry option
+      if (shouldOfferRetry) {
+        toast.error(errorMessage, {
+          description: 'Click the Generate button to try again',
+          duration: 5000,
+        });
+      } else {
+        toast.error(errorMessage, {
+          duration: 5000,
+        });
+      }
+
       setShowProgress(false);
       setCurrentStep(0);
     }
