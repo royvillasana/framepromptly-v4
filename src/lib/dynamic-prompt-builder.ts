@@ -30,6 +30,10 @@ export interface ProjectSettings {
     reasoning?: 'step-by-step' | 'direct' | 'exploratory';
     adaptability?: 'static' | 'context-aware' | 'dynamic-learning';
     validation?: 'none' | 'basic' | 'built-in' | 'comprehensive';
+    personalization?: 'none' | 'basic-profile' | 'user-preferences' | 'adaptive-learning';
+    temperature?: number;
+    topP?: number;
+    topK?: number;
   };
 }
 
@@ -51,6 +55,10 @@ export const STANDARD_DEFAULTS = {
     reasoning: 'step-by-step' as const,
     adaptability: 'context-aware' as const,
     validation: 'built-in' as const,
+    personalization: 'user-preferences' as const,
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 50,
   },
 };
 
@@ -249,6 +257,177 @@ export function buildInstructions(
 }
 
 /**
+ * Build AI Generation Parameters section to display settings visibly in the prompt
+ * Shows all configuration details including advanced parameters
+ */
+export function buildAIGenerationParameters(projectSettings?: ProjectSettings): string {
+  if (!projectSettings) {
+    return ''; // Return empty if no settings provided
+  }
+
+  const sections: string[] = [];
+  sections.push('# AI GENERATION PARAMETERS');
+  sections.push('');
+  sections.push('*These parameters were configured for this project and influence how this prompt is structured and executed:*');
+  sections.push('');
+
+  // Project Context
+  if (projectSettings.projectContext) {
+    const ctx = projectSettings.projectContext;
+    const contextParts: string[] = [];
+
+    if (ctx.primaryGoals) contextParts.push(`**Primary Goals:** ${ctx.primaryGoals}`);
+    if (ctx.targetAudience) contextParts.push(`**Target Audience:** ${ctx.targetAudience}`);
+    if (ctx.keyConstraints) contextParts.push(`**Key Constraints:** ${ctx.keyConstraints}`);
+    if (ctx.successMetrics) contextParts.push(`**Success Metrics:** ${ctx.successMetrics}`);
+    if (ctx.teamComposition) contextParts.push(`**Team Composition:** ${ctx.teamComposition}`);
+    if (ctx.timeline) contextParts.push(`**Timeline:** ${ctx.timeline}`);
+
+    if (contextParts.length > 0) {
+      sections.push('## 📋 Project Context');
+      contextParts.forEach(part => sections.push(`- ${part}`));
+      sections.push('');
+    }
+  }
+
+  // Quality Preferences
+  if (projectSettings.qualitySettings) {
+    const quality = { ...STANDARD_DEFAULTS.qualitySettings, ...projectSettings.qualitySettings };
+    sections.push('## ✓ Quality Preferences');
+
+    // Methodology Depth
+    sections.push(`- **Methodology Depth:** ${quality.methodologyDepth.toUpperCase()}`);
+    const depthDescriptions = {
+      'basic': 'Simple explanations without unnecessary jargon',
+      'intermediate': 'Balanced detail with appropriate methodology context',
+      'advanced': 'Comprehensive analysis with detailed methodology and research citations'
+    };
+    sections.push(`  _${depthDescriptions[quality.methodologyDepth]}_`);
+
+    // Output Detail Level
+    sections.push(`- **Output Detail Level:** ${quality.outputDetail.toUpperCase()}`);
+    const detailDescriptions = {
+      'brief': 'Focus on key insights and essential recommendations',
+      'moderate': 'Sufficient detail with clear structure and explanations',
+      'comprehensive': 'Detailed analysis with examples and complete coverage'
+    };
+    sections.push(`  _${detailDescriptions[quality.outputDetail]}_`);
+
+    // Time Constraints
+    sections.push(`- **Time Constraints:** ${quality.timeConstraints.toUpperCase()}`);
+    const timeDescriptions = {
+      'urgent': 'Quick solutions with immediate actionability',
+      'standard': 'Balanced approach with reasonable depth',
+      'extended': 'Thorough exploration with comprehensive details'
+    };
+    sections.push(`  _${timeDescriptions[quality.timeConstraints]}_`);
+
+    sections.push(`- **Industry Compliance Required:** ${quality.industryCompliance ? 'YES' : 'NO'}`);
+    sections.push(`- **Accessibility Focus:** ${quality.accessibilityFocus ? 'YES (WCAG guidelines applied)' : 'NO'}`);
+    sections.push('');
+  }
+
+  // AI Method Settings - Comprehensive Display
+  if (projectSettings.aiMethodSettings) {
+    const ai = { ...STANDARD_DEFAULTS.aiMethodSettings, ...projectSettings.aiMethodSettings };
+
+    // Prompt Structure Method
+    sections.push('## 🎯 Prompt Structure Method');
+    sections.push(`- **Selected Method:** ${ai.promptStructure.toUpperCase()}`);
+    const structureDescriptions = {
+      'framework-guided': 'Follows UX methodology structure with stage-based organization and systematic progression',
+      'open-ended': 'Flexible exploratory prompts that encourage creative thinking and diverse approaches',
+      'structured-templates': 'Consistent format patterns with predefined sections and standardized layouts'
+    };
+    sections.push(`  _${structureDescriptions[ai.promptStructure]}_`);
+    sections.push('');
+
+    // AI Creativity Level - Check for advanced parameters
+    const hasAdvancedParams = ai.temperature !== undefined || ai.topP !== undefined || ai.topK !== undefined;
+    sections.push('## 🎨 AI Creativity Level');
+
+    if (hasAdvancedParams) {
+      sections.push(`- **Mode:** ADVANCED PARAMETERS (overrides creativity level)`);
+      if (ai.temperature !== undefined) {
+        sections.push(`- **Temperature:** ${ai.temperature}`);
+        sections.push(`  _Controls randomness: ${ai.temperature < 0.3 ? 'Very focused' : ai.temperature < 0.7 ? 'Balanced' : ai.temperature < 1.0 ? 'Creative' : 'Highly experimental'}_`);
+      }
+      if (ai.topP !== undefined) {
+        sections.push(`- **Top P (Nucleus Sampling):** ${ai.topP}`);
+        sections.push(`  _Diversity control: ${ai.topP < 0.5 ? 'Narrow choices' : ai.topP < 0.9 ? 'Balanced diversity' : 'Maximum diversity'}_`);
+      }
+      if (ai.topK !== undefined) {
+        sections.push(`- **Top K:** ${ai.topK}`);
+        sections.push(`  _Consider top ${ai.topK} most likely tokens_`);
+      }
+    } else {
+      sections.push(`- **Creativity Level:** ${ai.creativityLevel.toUpperCase()}`);
+      const creativityDescriptions = {
+        'conservative': 'Proven, well-established approaches and industry best practices',
+        'balanced': 'Mix of proven methodologies with appropriate innovation',
+        'creative': 'Innovative approaches and creative suggestions alongside proven methods',
+        'experimental': 'Cutting-edge methods and forward-thinking solutions'
+      };
+      sections.push(`  _${creativityDescriptions[ai.creativityLevel]}_`);
+    }
+    sections.push('');
+
+    // Reasoning Approach
+    sections.push('## 🧠 Reasoning Approach');
+    sections.push(`- **Reasoning Style:** ${ai.reasoning.toUpperCase()}`);
+    const reasoningDescriptions = {
+      'step-by-step': 'Clear step-by-step explanations with reasoning at each stage',
+      'direct': 'Direct confident recommendations with concise justification',
+      'exploratory': 'Multiple approaches and alternative perspectives with trade-offs'
+    };
+    sections.push(`  _${reasoningDescriptions[ai.reasoning]}_`);
+    sections.push('');
+
+    // Adaptability Method
+    sections.push('## 🔄 Adaptability Method');
+    sections.push(`- **Adaptability Level:** ${ai.adaptability.toUpperCase()}`);
+    const adaptabilityDescriptions = {
+      'static': 'Consistent approach following fixed patterns',
+      'context-aware': 'Adapts based on specific project context and constraints',
+      'dynamic-learning': 'Continuously adjusts based on patterns and user feedback'
+    };
+    sections.push(`  _${adaptabilityDescriptions[ai.adaptability]}_`);
+    sections.push('');
+
+    // Validation & Quality Control
+    sections.push('## ✅ Validation & Quality Control');
+    sections.push(`- **Validation Level:** ${ai.validation.toUpperCase()}`);
+    const validationDescriptions = {
+      'none': 'No validation requirements - rapid output focused',
+      'basic': 'Basic validation guidelines and quality checkpoints',
+      'built-in': 'Validation checkpoints and verification methods throughout',
+      'comprehensive': 'Comprehensive validation methods, testing criteria, and success metrics'
+    };
+    sections.push(`  _${validationDescriptions[ai.validation]}_`);
+    sections.push('');
+
+    // Personalization Levels
+    if (ai.personalization) {
+      sections.push('## 👤 Personalization Level');
+      sections.push(`- **Personalization:** ${ai.personalization.toUpperCase()}`);
+      const personalizationDescriptions = {
+        'none': 'Generic responses without personalization',
+        'basic-profile': 'Uses basic user profile information',
+        'user-preferences': 'Adapts to documented user preferences and project settings',
+        'adaptive-learning': 'Learns from interactions and continuously improves recommendations'
+      };
+      sections.push(`  _${personalizationDescriptions[ai.personalization]}_`);
+      sections.push('');
+    }
+  }
+
+  sections.push('---');
+  sections.push('');
+
+  return sections.join('\n');
+}
+
+/**
  * Main function: Build complete dynamic prompt from base template
  *
  * @param baseTemplate - The base template with placeholder sections
@@ -263,7 +442,22 @@ export function buildDynamicPrompt(
 ): string {
   let prompt = baseTemplate;
 
-  // 1. Replace Knowledge Base placeholder
+  // 1. Insert AI Generation Parameters at the very top (right after the title if exists)
+  const aiParameters = buildAIGenerationParameters(projectSettings);
+  if (aiParameters) {
+    // Find the first markdown header (# Title) if it exists
+    const titleMatch = prompt.match(/^#\s+.+\n\n/);
+    if (titleMatch) {
+      // Insert after the title
+      const insertIndex = titleMatch[0].length;
+      prompt = prompt.slice(0, insertIndex) + aiParameters + prompt.slice(insertIndex);
+    } else {
+      // Insert at the very beginning
+      prompt = aiParameters + prompt;
+    }
+  }
+
+  // 2. Replace Knowledge Base placeholder
   if (knowledgeBase) {
     prompt = prompt.replace(
       /\$\{'\{knowledgeBase\}'\}/g,
@@ -271,7 +465,7 @@ export function buildDynamicPrompt(
     );
   }
 
-  // 2. Enhance Instructions section with project context
+  // 3. Enhance Instructions section with project context
   const instructionsMatch = prompt.match(/(## Instructions:[\s\S]*?)(?=\n---|\n##)/);
   if (instructionsMatch) {
     const originalInstructions = instructionsMatch[1];
@@ -279,7 +473,7 @@ export function buildDynamicPrompt(
     prompt = prompt.replace(originalInstructions, enhancedInstructions);
   }
 
-  // 3. Replace Quality Standards section
+  // 4. Replace Quality Standards section
   const qualityStandards = buildQualityStandards(projectSettings?.qualitySettings);
   const qualityMatch = prompt.match(/## Quality Standards:[\s\S]*?(?=\n---|\n##|$)/);
   if (qualityMatch) {
@@ -292,7 +486,7 @@ export function buildDynamicPrompt(
     }
   }
 
-  // 4. Replace Output Format section
+  // 5. Replace Output Format section
   const outputFormat = buildOutputFormat(projectSettings?.aiMethodSettings);
   const formatMatch = prompt.match(/## Output Format:[\s\S]*?(?=\n---|\n##|$)/);
   if (formatMatch) {

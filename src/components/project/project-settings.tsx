@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProjectStore } from '@/stores/project-store';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Target, CheckCircle, Brain, Settings, Save, Users, Bot } from 'lucide-react';
+import { ArrowLeft, Target, CheckCircle, Brain, Settings, Save, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -300,36 +300,29 @@ export function ProjectSettings() {
               });
             }} className="w-full">
               <div className="flex items-center justify-between mb-6">
-                <TabsList className="grid w-fit grid-cols-5 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger 
+                <TabsList className="grid w-fit grid-cols-4 bg-gray-100 p-1 rounded-lg">
+                  <TabsTrigger
                     value="context"
                     className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
                   >
                     <Target className="w-4 h-4 mr-2" />
                     Context
                   </TabsTrigger>
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="quality"
                     className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Quality
                   </TabsTrigger>
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="ai-methods"
                     className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
                   >
                     <Brain className="w-4 h-4 mr-2" />
                     AI Methods
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="ai-output"
-                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
-                  >
-                    <Bot className="w-4 h-4 mr-2" />
-                    AI Output
-                  </TabsTrigger>
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="team"
                     className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium py-2.5 px-3 rounded-md transition-all"
                   >
@@ -962,12 +955,6 @@ export function ProjectSettings() {
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              </TabsContent>
-
-              {/* AI Output Tab */}
-              <TabsContent value="ai-output" className="mt-0">
-                <div className="space-y-6">
                 </div>
               </TabsContent>
 

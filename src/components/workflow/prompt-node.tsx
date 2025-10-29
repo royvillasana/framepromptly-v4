@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Eye, Copy, Download, Sparkles, Bot, Expand, Database, Edit3 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { motion } from 'framer-motion';
+import { FileText, Copy, Sparkles, Bot, Expand, Database, Edit3, AlertCircle } from 'lucide-react';
 import { GeneratedPrompt, usePromptStore } from '@/stores/prompt-store';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useToast } from '@/hooks/use-toast';
@@ -69,8 +70,16 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
   // Extract only the generated prompt content (without knowledge base) for node display
   const displayPromptContent = extractGeneratedPromptOnly(prompt.content);
   const hasKnowledgeBase = prompt.content.includes('=== PROJECT KNOWLEDGE BASE ===');
-  
+
   const isExpanded = expandedPromptId === prompt.id;
+
+  // Tab state - default to "result" tab as specified
+  const [activeTab, setActiveTab] = useState<'prompt' | 'result'>('result');
+
+  // Determine if we have an error or result
+  const hasError = !!prompt.executionError;
+  const hasResult = !!prompt.executionResult;
+  const resultContent = prompt.executionResult || latestAIResponse || '';
 
   const handleExpand = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -85,14 +94,15 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
 
   const handleCopy = (event: React.MouseEvent) => {
     event.stopPropagation();
-    const contentToCopy = latestAIResponse || displayPromptContent;
-    
+    // Copy content based on active tab
+    const contentToCopy = activeTab === 'prompt' ? prompt.content : resultContent;
+
     navigator.clipboard.writeText(contentToCopy);
     toast({
       title: "Copied to clipboard",
-      description: latestAIResponse 
-        ? "AI response has been copied to your clipboard."
-        : "Generated prompt has been copied to your clipboard."
+      description: activeTab === 'prompt'
+        ? "AI prompt has been copied to your clipboard."
+        : "Generated result has been copied to your clipboard."
     });
   };
 
@@ -268,29 +278,71 @@ export const PromptNode = memo(({ data, selected, id }: PromptNodeProps & { id?:
             )}
           </div>
 
-          {/* AI Output Section - Max Height 400px with Scrollbar */}
-          {latestAIResponse ? (
-            <div className="bg-success/10 border border-success/20 p-4 rounded text-sm space-y-3 flex flex-col max-h-96">
-              <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-                <Bot className="w-4 h-4 text-success" />
-                <span className="font-semibold text-success">AI Response</span>
-                <Badge variant="default" className="text-sm bg-success px-3 py-1">
-                  {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
-                </Badge>
-              </div>
-              <div className="overflow-y-auto max-h-80">
-                <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-2">
-                  {formatForChatDisplay(latestAIResponse)}
+          {/* Tabs for Prompt and Result */}
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'prompt' | 'result')} className="w-full flex-1 flex flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="prompt" className="text-xs">
+                <FileText className="w-3 h-3 mr-1" />
+                AI Prompt
+              </TabsTrigger>
+              <TabsTrigger value="result" className="text-xs">
+                {hasError ? (
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                ) : (
+                  <Sparkles className="w-3 h-3 mr-1" />
+                )}
+                Result
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Prompt Tab Content */}
+            <TabsContent value="prompt" className="flex-1 overflow-hidden mt-3">
+              <div className="bg-muted/30 border p-3 rounded text-xs h-full overflow-y-auto max-h-80">
+                <pre className="text-foreground whitespace-pre-wrap leading-relaxed font-mono">
+                  {prompt.content}
                 </pre>
               </div>
-            </div>
-          ) : (
-            <div className="bg-muted/20 border border-dashed border-muted-foreground/30 p-4 rounded text-sm flex flex-col justify-center items-center max-h-96">
-              <Bot className="w-8 h-8 text-muted-foreground/50 mb-2" />
-              <span className="text-muted-foreground">No AI response yet</span>
-              <span className="text-xs text-muted-foreground/70 mt-1">Run the prompt to see AI output</span>
-            </div>
-          )}
+            </TabsContent>
+
+            {/* Result Tab Content */}
+            <TabsContent value="result" className="flex-1 overflow-hidden mt-3">
+              {hasError ? (
+                // Error Display
+                <div className="bg-destructive/10 border border-destructive/20 p-3 rounded text-xs space-y-2 max-h-80 overflow-y-auto">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-destructive mb-1">Execution Failed</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {prompt.executionError}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : hasResult || latestAIResponse ? (
+                // Success Display
+                <div className="bg-success/10 border border-success/20 p-3 rounded text-xs space-y-2 max-h-80 overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="w-4 h-4 text-success" />
+                    <span className="font-semibold text-success">Generated Result</span>
+                    <Badge variant="default" className="text-xs bg-success px-2 py-0.5">
+                      {prompt.conversation && prompt.conversation.length > 1 ? 'Updated' : 'Generated'}
+                    </Badge>
+                  </div>
+                  <pre className="text-foreground whitespace-pre-wrap leading-relaxed">
+                    {formatForChatDisplay(resultContent)}
+                  </pre>
+                </div>
+              ) : (
+                // No Result Yet
+                <div className="bg-muted/20 border border-dashed border-muted-foreground/30 p-4 rounded text-xs flex flex-col justify-center items-center h-32">
+                  <Bot className="w-6 h-6 text-muted-foreground/50 mb-2" />
+                  <span className="text-muted-foreground">No result yet</span>
+                  <span className="text-xs text-muted-foreground/70 mt-1">Generating...</span>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
           {/* Actions */}
           <div className="flex items-center gap-2">

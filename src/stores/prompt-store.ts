@@ -68,6 +68,8 @@ export interface GeneratedPrompt {
   };
   variables: Record<string, string>;
   output?: string;
+  executionResult?: string; // NEW: Result from auto-executing the generated prompt
+  executionError?: string; // NEW: Error message if auto-execution fails
   conversation?: ConversationMessage[];
   timestamp: number;
   qualityScore?: QualityValidationResult;

@@ -44,16 +44,23 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
       status: 'pending'
     },
     {
+      id: 'saving',
+      label: 'Saving Prompt',
+      description: 'Storing generated prompt to database',
+      icon: <FileText className="w-4 h-4" />,
+      status: 'pending'
+    },
+    {
       id: 'executing',
-      label: 'Executing AI Request',
-      description: 'Getting intelligent response from AI model',
+      label: 'Executing Prompt',
+      description: 'Auto-executing prompt to get deliverable',
       icon: <Loader2 className="w-4 h-4 animate-spin" />,
       status: 'pending'
     },
     {
       id: 'creating',
-      label: 'Creating Prompt Node',
-      description: 'Adding generated prompt to canvas',
+      label: 'Creating Node',
+      description: 'Adding prompt and result to canvas',
       icon: <CheckCircle className="w-4 h-4" />,
       status: 'pending'
     }

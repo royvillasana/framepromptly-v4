@@ -7,12 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { 
-  FileText, Bot, Copy, Download, Eye, Minimize2, Send, MessageSquare, 
-  Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw, 
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  FileText, Bot, Copy, Download, Eye, Minimize2, Send, MessageSquare,
+  Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw,
   ChevronLeft, ChevronRight, Loader2, User, Sparkles,
   Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock,
-  Target, Truck, Key, Play
+  Target, Truck, Key, Play, AlertCircle
 } from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
@@ -99,6 +100,9 @@ function ExpandedPromptOverlayComponent({
   const [isSaving, setIsSaving] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [showPromptPanel, setShowPromptPanel] = useState(true);
+
+  // Main view tab state - default to "chat" as it's the interactive view
+  const [mainViewTab, setMainViewTab] = useState<'prompt' | 'chat'>('chat');
   
   // Prompt editing state
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
@@ -128,61 +132,6 @@ function ExpandedPromptOverlayComponent({
   const [isTailoring, setIsTailoring] = useState(false);
   const [showDeliveryDashboard, setShowDeliveryDashboard] = useState(false);
   const [showConnectionManager, setShowConnectionManager] = useState(false);
-  
-  // Multi-bubble selection state
-  const [selectedBubbles, setSelectedBubbles] = useState<Set<string>>(new Set());
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  
-  
-  // Multi-bubble selection handlers
-  const handleBubbleSelect = useCallback((messageId: string) => {
-    setSelectedBubbles(prev => {
-      const newSelection = new Set(prev);
-      if (newSelection.has(messageId)) {
-        newSelection.delete(messageId);
-      } else {
-        newSelection.add(messageId);
-      }
-      
-      // Enable selection mode when first bubble is selected
-      if (newSelection.size > 0 && !isSelectionMode) {
-        setIsSelectionMode(true);
-      }
-      // Disable selection mode when no bubbles are selected
-      else if (newSelection.size === 0 && isSelectionMode) {
-        setIsSelectionMode(false);
-      }
-      
-      return newSelection;
-    });
-  }, [isSelectionMode]);
-  
-  const handleCopySelectedBubbles = useCallback(() => {
-    const selectedMessages = conversationMessages.filter(msg => 
-      selectedBubbles.has(msg.id) && msg.type === 'ai'
-    );
-    
-    // Sort messages by timestamp to maintain chronological order
-    selectedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-    
-    const combinedContent = selectedMessages.map(msg => msg.content).join('\n\n');
-    
-    if (combinedContent.trim()) {
-      navigator.clipboard.writeText(combinedContent);
-      toast.success(`Copied ${selectedMessages.length} chat bubbles to clipboard`, {
-        description: `${combinedContent.slice(0, 50)}${combinedContent.length > 50 ? '...' : ''}`
-      });
-      
-      // Clear selection after copying
-      setSelectedBubbles(new Set());
-      setIsSelectionMode(false);
-    }
-  }, [selectedBubbles, conversationMessages]);
-  
-  const handleClearSelection = useCallback(() => {
-    setSelectedBubbles(new Set());
-    setIsSelectionMode(false);
-  }, []);
   
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -701,153 +650,6 @@ function ExpandedPromptOverlayComponent({
     toast.success('Message copied to clipboard');
   };
 
-  // Function to detect if a message contains actionable content that can be used as a prompt
-  const isGeneratedPrompt = (content: string): boolean => {
-    // Don't show button for very short messages or typing indicators
-    if (content.length < 50 || content.trim() === '...' || content.includes('...')) {
-      return false;
-    }
-    
-    // Don't show for error messages
-    const lowerContent = content.toLowerCase();
-    if (lowerContent.includes('error') && lowerContent.includes('apologize')) {
-      return false;
-    }
-    
-    // Don't show for simple system/context messages
-    if (content.includes("I've updated my context") || 
-        content.includes("context change") ||
-        lowerContent.includes("i don't") ||
-        lowerContent.includes("i can't") ||
-        lowerContent.includes("i cannot")) {
-      return false;
-    }
-    
-    // Show button for most substantial AI responses
-    // This is more permissive - users can decide what they want to use as a prompt
-    
-    // Always show for content that looks like instructions or structured content
-    const hasStructure = 
-      content.includes('1.') || 
-      content.includes('2.') || 
-      content.includes('3.') ||
-      content.includes('•') ||
-      content.includes('*') ||
-      content.includes('-') ||
-      content.includes('#') ||
-      content.includes('**') ||
-      content.split('\n').length > 2; // Multi-line content
-    
-    // Show for substantial content (let users decide if they want to use it as a prompt)
-    const isSubstantial = content.length > 100;
-    
-    // Show for most content except very basic responses
-    const isBasicResponse = 
-      lowerContent.includes('yes') && content.length < 100 ||
-      lowerContent.includes('no') && content.length < 100 ||
-      lowerContent.includes('okay') && content.length < 100 ||
-      lowerContent.includes('sure') && content.length < 100;
-    
-    return (hasStructure || isSubstantial) && !isBasicResponse;
-  };
-
-  // Function to handle "Use Prompt" button click
-  const handleUsePrompt = async (promptContent: string) => {
-    if (!promptContent.trim() || isGenerating) return;
-    
-    const userMessage: ConversationMessage = {
-      id: `prompt-execution-${Date.now()}`,
-      type: 'user',
-      content: promptContent, // Show the full prompt content that will be executed
-      timestamp: new Date()
-    };
-    
-    setConversationMessages(prev => [...prev, userMessage]);
-    setIsGenerating(true);
-    setIsTyping(true);
-    
-    // Show typing indicator immediately
-    const typingIndicator: ConversationMessage = {
-      id: 'typing-indicator',
-      type: 'ai',
-      content: '...',
-      timestamp: new Date()
-    };
-    
-    setConversationMessages(prev => [...prev, typingIndicator]);
-    
-    try {
-      // Call the AI conversation function with the AI-generated content as a completely new prompt
-      const { data, error } = await supabase.functions.invoke('ai-conversation', {
-        body: {
-          userMessage: promptContent, // Use the AI-generated content as the new user prompt
-          initialPrompt: "", // No initial prompt context - treat this as a brand new conversation
-          conversationHistory: [], // Completely fresh start
-          projectId: currentProject?.id,
-          knowledgeContext: entries.filter(entry => entry.project_id === currentProject?.id),
-          frameworkContext: {
-            framework: frameworkName,
-            stage: stageName,
-            tool: toolName
-          },
-          executeAsNewPrompt: true // Flag to indicate this should be treated as executing a new prompt
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to execute prompt');
-      }
-
-      // Remove typing indicator
-      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
-      
-      // Create AI response message with the full response (no cropping)
-      const aiMessage: ConversationMessage = {
-        id: `ai-execution-response-${Date.now()}`,
-        type: 'ai',
-        content: data.response, // Full AI response without any cropping
-        timestamp: new Date()
-      };
-      
-      setConversationMessages(prev => [...prev, aiMessage]);
-      
-      console.log('💬 Prompt Execution Response:', {
-        originalPromptLength: promptContent.length,
-        responseLength: data.response.length
-      });
-      
-      toast.success('Prompt executed successfully!', {
-        description: 'AI has executed the prompt and provided a new response'
-      });
-      
-    } catch (error) {
-      console.error('Error executing prompt:', error);
-      
-      // Remove typing indicator
-      setConversationMessages(prev => prev.filter(msg => msg.id !== 'typing-indicator'));
-      
-      // Fallback error message
-      const errorMessage: ConversationMessage = {
-        id: `ai-error-${Date.now()}`,
-        type: 'ai',
-        content: `I apologize, but I encountered an error while executing the prompt. Please try again or modify the prompt.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        timestamp: new Date()
-      };
-      
-      setConversationMessages(prev => [...prev, errorMessage]);
-      
-      toast.error('Failed to execute prompt', {
-        description: error instanceof Error ? error.message : 'Please try again'
-      });
-    } finally {
-      setIsGenerating(false);
-      setIsTyping(false);
-    }
-  };
 
   const handleEditPrompt = () => {
     setIsEditingPrompt(true);
@@ -949,9 +751,7 @@ function ExpandedPromptOverlayComponent({
   const MessageBubble = memo(({ message }: { message: ConversationMessage }) => {
     const isUser = message.type === 'user';
     const isTyping = message.content === '...' && message.id === 'typing-indicator';
-    const isSelected = selectedBubbles.has(message.id);
-    const canBeSelected = message.type === 'ai' && !isTyping;
-    
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -959,30 +759,15 @@ function ExpandedPromptOverlayComponent({
         transition={{ duration: 0.3 }}
         className={cn(
           "group flex gap-3 py-4 px-6 transition-all duration-200",
-          isUser ? "justify-end" : "justify-start",
-          canBeSelected && "hover:bg-muted/30 cursor-pointer",
-          isSelected && "bg-primary/10 border-l-4 border-primary"
+          isUser ? "justify-end" : "justify-start"
         )}
-        onClick={canBeSelected ? () => handleBubbleSelect(message.id) : undefined}
       >
         {!isUser && (
-          <div className="flex flex-col items-center gap-1">
-            <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-              frameworkClasses[0]
-            )}>
-              <Bot className="w-4 h-4 text-white" />
-            </div>
-            {canBeSelected && (
-              <div className={cn(
-                "w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-200",
-                isSelected 
-                  ? "bg-primary border-primary" 
-                  : "border-muted-foreground/30 hover:border-primary/50"
-              )}>
-                {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
-              </div>
-            )}
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+            frameworkClasses[0]
+          )}>
+            <Bot className="w-4 h-4 text-white" />
           </div>
         )}
         
@@ -1026,31 +811,7 @@ function ExpandedPromptOverlayComponent({
                     <TooltipContent>Copy message</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                
-                {/* Use Prompt Button for Generated Prompts */}
-                {!isUser && isGeneratedPrompt(message.content) && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleUsePrompt(message.content)}
-                          disabled={isGenerating}
-                          className="h-6 w-6 p-0"
-                        >
-                          {isGenerating ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Use this prompt</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                
+
                 {!isUser && (
                   <TooltipProvider>
                     <Tooltip>
@@ -1197,8 +958,118 @@ function ExpandedPromptOverlayComponent({
                 "flex flex-col min-h-0 transition-all duration-300",
                 showPromptPanel ? "flex-1" : "w-full"
               )}>
-                {/* Messages Container */}
-                <ScrollArea className="flex-1 px-0">
+                {/* Tab Navigation */}
+                <div className="border-b bg-muted/30 px-4 py-2">
+                  <Tabs value={mainViewTab} onValueChange={(value) => setMainViewTab(value as 'prompt' | 'chat')} className="w-full">
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                      <TabsTrigger value="prompt" className="text-sm">
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Prompt
+                      </TabsTrigger>
+                      <TabsTrigger value="chat" className="text-sm">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Chat
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+
+                {/* Prompt Tab Content */}
+                {mainViewTab === 'prompt' && (
+                  <ScrollArea className="flex-1 p-6">
+                    <div className="max-w-4xl mx-auto space-y-4">
+                      {/* Prompt Header */}
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="w-5 h-5 text-primary" />
+                            <h3 className="font-semibold text-lg">AI-Generated Prompt</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            This is the meta-prompt that was generated to create your deliverable
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(currentPromptContent);
+                            toast.success('AI Prompt copied to clipboard');
+                          }}
+                        >
+                          <Copy className="w-3 h-3 mr-2" />
+                          Copy Prompt
+                        </Button>
+                      </div>
+
+                      {/* Prompt Content */}
+                      <div className="bg-muted/50 rounded-lg p-6 border">
+                        <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-foreground">
+                          {currentPromptContent}
+                        </pre>
+                      </div>
+
+                      {/* Execution Result Section */}
+                      {(prompt.executionResult || prompt.executionError) && (
+                        <div className="mt-6 pt-6 border-t">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Sparkles className="w-5 h-5 text-primary" />
+                            <h3 className="font-semibold text-lg">Execution Result</h3>
+                          </div>
+
+                          {prompt.executionError ? (
+                            // Error Display
+                            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                              <div className="flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-sm text-destructive mb-1">Execution Error</h4>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                    {prompt.executionError}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            // Success Display
+                            <div className="bg-background rounded-lg p-6 border">
+                              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                                {formatForChatDisplay(prompt.executionResult || '')}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Metadata */}
+                      <div className="mt-6 pt-6 border-t">
+                        <h4 className="font-semibold text-sm mb-3">Details</h4>
+                        <dl className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <dt className="text-muted-foreground">Prompt Length:</dt>
+                            <dd className="font-medium">{currentPromptContent.length} characters</dd>
+                          </div>
+                          <div className="flex justify-between">
+                            <dt className="text-muted-foreground">Generated:</dt>
+                            <dd className="font-medium">{new Date(prompt.timestamp).toLocaleString()}</dd>
+                          </div>
+                          {prompt.executionResult && (
+                            <div className="flex justify-between">
+                              <dt className="text-muted-foreground">Result Length:</dt>
+                              <dd className="font-medium">{prompt.executionResult.length} characters</dd>
+                            </div>
+                          )}
+                        </dl>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                )}
+
+                {/* Chat Tab Content */}
+                {mainViewTab === 'chat' && (
+                  <>
+                    {/* Messages Container */}
+                    <ScrollArea className="flex-1 px-0">
                   <div className="min-h-full flex flex-col justify-end">
                     {conversationMessages.length === 0 ? (
                       <div className="flex items-center justify-center h-full py-20">
@@ -1279,42 +1150,6 @@ function ExpandedPromptOverlayComponent({
                   </div>
                 </ScrollArea>
 
-                {/* Floating Copy Button for Selected Bubbles */}
-                <AnimatePresence>
-                  {selectedBubbles.size > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10"
-                    >
-                      <div className="bg-background border rounded-lg shadow-lg p-2 flex items-center gap-2">
-                        <div className="text-sm text-muted-foreground px-2">
-                          {selectedBubbles.size} bubble{selectedBubbles.size > 1 ? 's' : ''} selected
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={handleCopySelectedBubbles}
-                          className={cn("h-8", frameworkClasses[0])}
-                        >
-                          <Copy className="w-3 h-3 mr-1" />
-                          Copy All
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleClearSelection}
-                          className="h-8"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                
                 {/* Chat Input */}
                 <div className="p-4 border-t bg-background">
                   <div className="flex gap-3 items-end">
@@ -1346,61 +1181,6 @@ function ExpandedPromptOverlayComponent({
                   {/* Action Buttons */}
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
-                      {/* Choose Destination Button */}
-                      <Button
-                        size="sm"
-                        variant={prompt.destination ? "default" : "ghost"}
-                        onClick={handleShowDestinationSelector}
-                        disabled={isTailoring}
-                        className="text-xs"
-                      >
-                        {isTailoring ? (
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                        ) : (
-                          <Target className="w-3 h-3 mr-1" />
-                        )}
-                        {prompt.destination 
-                          ? `${prompt.destination.type}` 
-                          : 'Choose Destination'
-                        }
-                      </Button>
-                      
-                      {/* Clear Destination Button (when tailored) */}
-                      {prompt.destination && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleClearDestination}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Clear
-                        </Button>
-                      )}
-                      
-                      
-                      {/* Delivery Dashboard Button */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setShowDeliveryDashboard(true)}
-                        className="text-xs"
-                      >
-                        <Truck className="w-3 h-3 mr-1" />
-                        Deliver
-                      </Button>
-                      
-                      {/* Connection Manager Button */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setShowConnectionManager(true)}
-                        className="text-xs"
-                      >
-                        <Key className="w-3 h-3 mr-1" />
-                        Connections
-                      </Button>
-                      
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1412,12 +1192,14 @@ function ExpandedPromptOverlayComponent({
                         {isSaving ? 'Saving...' : 'Save Version'}
                       </Button>
                     </div>
-                    
+
                     <div className="text-xs text-muted-foreground">
                       Press Enter to send • Shift+Enter for new line
                     </div>
                   </div>
                 </div>
+                  </>
+                )}
               </div>
               
               {/* Prompt Versions Panel */}

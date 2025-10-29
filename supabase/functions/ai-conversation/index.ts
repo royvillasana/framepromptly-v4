@@ -166,7 +166,7 @@ ${initialPrompt ? `INITIAL PROMPT CONTEXT:\n${initialPrompt}\n\n` : ''}${context
           model,
           messages,
           temperature: 0.7,
-          max_tokens: 800,
+          max_tokens: 4000, // Increased from 800 to allow much longer, complete responses
           top_p: 1,
           frequency_penalty: 0.1,
           presence_penalty: 0.1

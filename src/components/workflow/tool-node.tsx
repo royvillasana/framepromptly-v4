@@ -50,7 +50,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   const [currentStep, setCurrentStep] = useState(0);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [showEnhancedPanel, setShowEnhancedPanel] = useState(false);
-  const totalSteps = 5;
+  const totalSteps = 6; // Updated from 5 to include auto-execution step
 
   // Check if enhanced template is available
   const enhancedTemplate = getEnhancedTemplate(tool.id);
@@ -212,7 +212,53 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         hasResponse: !!data.aiResponse
       });
 
-      // Create the generated prompt object with AI response
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      // Step 5: Auto-Execute the Generated Prompt
+      setCurrentStep(5);
+
+      let executionResult: string | undefined;
+      let executionError: string | undefined;
+
+      try {
+        console.log('🚀 Auto-executing generated prompt...');
+
+        const executionResponse = await supabase.functions.invoke('ai-conversation', {
+          body: {
+            userMessage: data.prompt,
+            initialPrompt: '',
+            conversationHistory: [],
+            projectId: currentProject.id,
+            knowledgeContext: knowledgeData,
+            frameworkContext: {
+              framework: framework.name,
+              stage: stage.name,
+              tool: tool.name
+            },
+            executeAsNewPrompt: true
+          }
+        });
+
+        if (executionResponse.error) {
+          throw new Error(executionResponse.error.message || 'Execution failed');
+        }
+
+        if (!executionResponse.data?.success) {
+          throw new Error(executionResponse.data?.error || 'Failed to execute prompt');
+        }
+
+        executionResult = executionResponse.data.response;
+        console.log('✅ Prompt executed successfully, result length:', executionResult.length);
+
+      } catch (execError) {
+        console.error('❌ Auto-execution failed:', execError);
+        executionError = execError instanceof Error ? execError.message : 'Unknown execution error';
+        // Don't throw - we'll still create the node with the error message
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      // Create the generated prompt object with both prompt and execution result
       const generatedPrompt = {
         id: data.id,
         structured_prompt_id: data.structured_prompt_id, // NEW: Link to structured version in library
@@ -222,7 +268,9 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         context: { framework, stage, tool },
         variables: {},
         timestamp: Date.now(),
-        output: data.aiResponse
+        output: data.aiResponse,
+        executionResult, // NEW: Store the execution result
+        executionError  // NEW: Store any execution error
       };
       
       // Set as current prompt
