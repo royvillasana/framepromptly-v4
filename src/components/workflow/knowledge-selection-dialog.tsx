@@ -13,6 +13,7 @@ import { useKnowledgeStore, KnowledgeEntry } from '@/stores/knowledge-store';
 import { useProjectStore } from '@/stores/project-store';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { getSmartPosition } from '@/utils/node-positioning';
+import { createConnectedEdge } from '@/utils/edge-creation';
 import { 
   FileText, 
   Image, 
@@ -140,14 +141,7 @@ export const KnowledgeSelectionDialog: React.FC<KnowledgeSelectionDialogProps> =
       addNode(contextNode);
 
       // Create edge from tool to context
-      const edge = {
-        id: `edge-${toolId}-${contextNode.id}`,
-        source: toolId,
-        target: contextNode.id,
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: 'hsl(var(--primary))' }
-      };
+      const edge = createConnectedEdge(toolId, contextNode.id);
       addEdge(edge);
     }
 

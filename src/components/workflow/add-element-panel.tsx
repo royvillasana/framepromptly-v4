@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { getSmartPosition } from '@/utils/node-positioning';
+import { createConnectedEdge } from '@/utils/edge-creation';
 import { NodeDetails } from './node-details';
 import { CustomPromptSelectionDialog } from './custom-prompt-selection-dialog';
 import { toast } from 'sonner';
@@ -102,14 +103,13 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
     };
     
     addNode(newStageNode);
-    
+
     // Create edge from framework to stage
-    const newEdge = {
-      id: `edge-${parentFrameworkNode.id}-${newStageNode.id}`,
-      source: parentFrameworkNode.id,
-      target: newStageNode.id,
-      type: 'default'
-    };
+    const newEdge = createConnectedEdge(
+      parentFrameworkNode.id,
+      newStageNode.id,
+      { type: 'default' }
+    );
     addEdge(newEdge);
     
     onClearSelection?.();
@@ -146,12 +146,11 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
     addNode(newToolNode);
 
     // Create edge from stage to tool
-    const newEdge = {
-      id: `edge-${parentStageNode.id}-${newToolNode.id}`,
-      source: parentStageNode.id,
-      target: newToolNode.id,
-      type: 'default'
-    };
+    const newEdge = createConnectedEdge(
+      parentStageNode.id,
+      newToolNode.id,
+      { type: 'default' }
+    );
     addEdge(newEdge);
 
     onClearSelection?.();
@@ -743,7 +742,7 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
 
   return (
     <>
-      <div className="fixed right-0 top-[5.3rem] h-[calc(100vh-4rem)] w-80 bg-card border-l border-border shadow-lg z-40 flex flex-col">
+      <div className="fixed right-0 top-[3.5rem] h-[calc(100vh-4rem)] w-80 bg-card border-l border-border shadow-lg z-40 flex flex-col">
         {/* Header */}
         <div className="border-b border-border p-4 flex items-center justify-between">
           <h3 className="font-semibold text-sm">Add Elements</h3>

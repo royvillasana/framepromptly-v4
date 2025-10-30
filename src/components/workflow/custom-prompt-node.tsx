@@ -11,6 +11,7 @@ import { useStructuredPromptStore } from '@/stores/structured-prompt-store';
 import { supabase } from '@/integrations/supabase/client';
 import { ProgressOverlay } from './progress-overlay';
 import { getSmartPosition } from '@/utils/node-positioning';
+import { createConnectedEdge } from '@/utils/edge-creation';
 import { NodeActionsMenu } from './node-actions-menu';
 import { KnowledgeSelectionDialog } from './knowledge-selection-dialog';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
@@ -197,13 +198,10 @@ export const CustomPromptNode = memo(({ data, selected, id }: CustomPromptNodePr
         };
 
         addNode(resultNode);
-        addEdge({
-          id: `edge-${id}-${resultNode.id}`,
-          source: id,
-          target: resultNode.id,
+        addEdge(createConnectedEdge(id, resultNode.id, {
           type: 'default',
           style: { stroke: '#f59e0b', strokeWidth: 2 }
-        });
+        }));
 
         setShowProgress(false);
         toast.error('AI call failed, but prompt was created. Check console for details.');
@@ -257,13 +255,10 @@ export const CustomPromptNode = memo(({ data, selected, id }: CustomPromptNodePr
       addNode(resultNode);
 
       // Connect this node to the result
-      addEdge({
-        id: `edge-${id}-${resultNode.id}`,
-        source: id,
-        target: resultNode.id,
+      addEdge(createConnectedEdge(id, resultNode.id, {
         type: 'default',
         style: { stroke: '#10b981', strokeWidth: 2 }
-      });
+      }));
 
       // Increment run count
       await incrementRunCount(prompt.id);

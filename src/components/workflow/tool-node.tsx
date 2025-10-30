@@ -17,6 +17,7 @@ import { EnhancedPromptPanel } from './enhanced-prompt-panel';
 import { DraggableHandle, useDraggableHandles } from './draggable-handle';
 import { ResizableNode } from './resizable-node';
 import { getFrameworkColors } from '@/lib/framework-colors';
+import { createConnectedEdge } from '@/utils/edge-creation';
 import { toast } from 'sonner';
 
 interface ToolNodeData {
@@ -295,28 +296,30 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         }
       };
       
-      // Step 5: Creating Node
-      setCurrentStep(5);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Step 6: Creating Node
+      setCurrentStep(6);
 
       addNode(promptNode);
 
-      // Create edge from tool to prompt
+      // Create edge from tool to prompt (right side of tool to left side of prompt)
       if (id) {
-        const edge = {
-          id: `edge-${id}-${promptNode.id}`,
-          source: id,
-          target: promptNode.id,
-          type: 'smoothstep',
+        const edge = createConnectedEdge(id, promptNode.id, {
+          sourceHandle: `${id}-source-1`, // Tool node uses prefixed handles
+          targetHandle: 'target-1', // Prompt node uses unprefixed handles
           animated: true,
-          style: { stroke: 'hsl(var(--primary))' }
-        };
+          style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
+        });
         addEdge(edge);
       }
 
       // Wait a brief moment for the node to be added to the canvas
       await new Promise(resolve => setTimeout(resolve, 300));
-      // Progress overlay will auto-close via onComplete after 1 second
+
+      // Progress overlay will auto-close via onComplete after currentStep reaches totalSteps
+      // The overlay waits 1 second before calling onComplete which closes it
+
+      // Ensure knowledge dialog stays closed after successful generation
+      setShowKnowledgeDialog(false);
 
     } catch (error) {
       console.error('Error generating AI prompt:', error);
@@ -350,29 +353,29 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
       setShowProgress(false);
       setCurrentStep(0);
+      // Ensure knowledge dialog is closed on error too
+      setShowKnowledgeDialog(false);
     }
   };
 
   const handleKnowledgeSelected = async (knowledgeIds: string[]) => {
     console.log('[handleKnowledgeSelected] Called with:', knowledgeIds);
     if (id) {
-      // Close the dialog first
-      console.log('[handleKnowledgeSelected] Closing dialog');
-      setShowKnowledgeDialog(false);
-
       // Update the node with linked knowledge
       console.log('[handleKnowledgeSelected] Updating node with knowledge');
       updateNode(id, { linkedKnowledge: knowledgeIds });
 
       toast.success(`${knowledgeIds.length} knowledge ${knowledgeIds.length === 1 ? 'entry' : 'entries'} linked to ${tool.name}`);
 
-      // Now generate the prompt after ensuring dialog is closed
-      // Pass the knowledgeIds directly to avoid stale prop values
-      console.log('[handleKnowledgeSelected] Scheduling handleGeneratePrompt in 500ms');
+      // Close the dialog and generate prompt
+      console.log('[handleKnowledgeSelected] Closing dialog and generating prompt');
+      setShowKnowledgeDialog(false);
+
+      // Small delay to ensure dialog close animation completes
       setTimeout(() => {
         console.log('[handleKnowledgeSelected] Now calling handleGeneratePrompt');
         handleGeneratePrompt(knowledgeIds);
-      }, 500);
+      }, 100);
     }
   };
 

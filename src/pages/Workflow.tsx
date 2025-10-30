@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen, ArrowLeft, Copy, Download, ChevronRight, X } from 'lucide-react';
 import { NodeDetails } from '@/components/workflow/node-details';
-import { KnowledgeBasePanel } from '@/components/knowledge/knowledge-base-panel';
+import { KnowledgeTabPanel } from '@/components/knowledge/knowledge-tab-panel';
 import { ProjectSidebar } from '@/components/workflow/project-sidebar';
 import { toast } from 'sonner';
 
@@ -375,7 +375,7 @@ function WorkflowWithProject() {
             </TabsContent>
             
             <TabsContent value="knowledge" className="m-0 h-[calc(100vh-380px)]">
-              <KnowledgeBasePanel />
+              <KnowledgeTabPanel />
             </TabsContent>
           </ProjectSidebar>
         )}

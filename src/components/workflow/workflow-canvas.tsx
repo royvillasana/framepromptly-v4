@@ -15,6 +15,7 @@ import {
   BackgroundVariant,
   SelectionMode,
   ViewportChangeEvent,
+  PanOnScrollMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -26,9 +27,13 @@ import { ProjectNode } from './project-node';
 import { ContextNode } from './context-node';
 import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CustomPromptNode } from './custom-prompt-node';
+import { AIBuilderNode } from './ai-builder-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
+import { useCanvasKeyboardControls } from '@/hooks/use-canvas-keyboard-controls';
+import { useToast } from '@/hooks/use-toast';
+import { useAutoLayout } from '@/hooks/use-auto-layout';
 
 // Define nodeTypes outside the component to prevent recreation on each render
 const staticNodeTypes = {
@@ -40,6 +45,7 @@ const staticNodeTypes = {
   context: ContextNode,
   'knowledge-document': KnowledgeDocumentNode,
   'custom-prompt': CustomPromptNode,
+  'ai-builder': AIBuilderNode,
 };
 
 // Connection validation function
@@ -64,19 +70,21 @@ const isValidConnection = (connection: Connection, nodes: Node[]) => {
 };
 
 export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
-  const { 
-    nodes, 
-    edges, 
-    setNodes, 
-    setEdges, 
-    addEdge: addStoreEdge, 
-    selectNode, 
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    addEdge: addStoreEdge,
+    selectNode,
     selectedNode,
     updateNodePosition,
     updateNodeDimensions,
-    saveWorkflowToStorage 
+    saveWorkflowToStorage
   } = useWorkflowStore();
-  
+
+  const { toast } = useToast();
+
   // We'll get the ReactFlow instance after the component mounts
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const updateRef = useRef(false);
@@ -92,19 +100,20 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     currentY: number;
   } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
 
   // Create stable nodeTypes - tool node will get onSwitchToPromptTab via context or props
   const nodeTypes = useMemo(() => ({
     ...staticNodeTypes,
     tool: ToolNode,
   }), []);
-  
+
   // Add onSwitchToPromptTab to tool nodes - let React Flow handle selection
-  const enhancedNodes = useMemo(() => 
+  const enhancedNodes = useMemo(() =>
     nodes.map(node => ({
       ...node,
-      data: { 
-        ...node.data, 
+      data: {
+        ...node.data,
         ...(node.type === 'tool' ? { onSwitchToPromptTab } : {})
       }
     })), [nodes, onSwitchToPromptTab]
@@ -112,6 +121,67 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(enhancedNodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(edges);
+
+  // Handle node double-click to open details
+  const handleNodeDoubleClick = useCallback((node: Node) => {
+    toast({
+      title: 'Opening Node',
+      description: `Double-clicked on ${node.data?.label || node.type}`,
+    });
+    // You can add custom logic here to open node details panel
+    selectNode(node);
+  }, [toast, selectNode]);
+
+  // Handle add sticky note
+  const handleAddStickyNote = useCallback(() => {
+    toast({
+      title: 'Add Sticky Note',
+      description: 'Sticky note feature coming soon!',
+    });
+  }, [toast]);
+
+  // Handle rename node
+  const handleRenameNode = useCallback((nodeId: string) => {
+    toast({
+      title: 'Rename Node',
+      description: 'Rename feature coming soon!',
+    });
+  }, [toast]);
+
+  // Initialize keyboard controls
+  useCanvasKeyboardControls({
+    reactFlowInstance,
+    nodes: flowNodes,
+    edges: flowEdges,
+    selectedNodes,
+    onNodesChange: setNodes,
+    onEdgesChange: setEdges,
+    onNodeDoubleClick: handleNodeDoubleClick,
+    onAddStickyNote: handleAddStickyNote,
+    onRenameNode: handleRenameNode,
+    onDeleteNodes: (nodeIds) => {
+      saveWorkflowToStorage();
+    },
+  });
+
+  // Initialize auto-layout (manual only - disabled automatic layout on node changes)
+  const { applyLayout } = useAutoLayout(
+    reactFlowInstance,
+    flowNodes,
+    flowEdges,
+    setFlowNodes,
+    {
+      enabled: true,
+      layoutOnMount: false, // Don't auto-layout on mount
+      layoutOnNodesChange: false, // Don't auto-layout when new nodes are added
+      debounceMs: 300,
+      layoutOptions: {
+        direction: 'LR', // Left-to-right for workflow progression
+        nodeSpacing: 100,
+        rankSpacing: 250,
+      },
+    }
+  );
 
   // Sync store nodes with flow nodes when store nodes change
   useEffect(() => {
@@ -211,14 +281,14 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       const newEdge = {
         ...params,
         id: edgeId,
-        type: 'smoothstep',
+        type: 'default',
         animated: true,
-        style: isKnowledgeToTool 
-          ? { stroke: '#f59e0b', strokeWidth: 3, strokeDasharray: '5,5' } // Amber dashed line
+        style: isKnowledgeToTool
+          ? { stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5,5' } // Amber dashed line
           : { stroke: 'white', strokeWidth: 2 },
         label: isKnowledgeToTool ? 'Knowledge' : undefined,
-        labelStyle: isKnowledgeToTool 
-          ? { fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' } 
+        labelStyle: isKnowledgeToTool
+          ? { fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' }
           : undefined,
       } as Edge;
       
@@ -465,6 +535,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           onEdgesChange={onEdgesChangeHandler}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onNodeDoubleClick={(event, node) => handleNodeDoubleClick(node)}
           onPaneClick={() => {
             if (isMarqueeMode) {
               handleClearSelection();
@@ -479,6 +550,12 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           connectionMode={ConnectionMode.Loose}
           selectionMode={isMarqueeMode ? SelectionMode.Full : SelectionMode.Partial}
           multiSelectionKeyCode={["Meta", "Control", "Shift"]}
+          panActivationKeyCode={["Space", "Control"]}
+          panOnDrag={[1, 2]} // Middle mouse (1) and right mouse (2)
+          panOnScroll={false}
+          zoomOnScroll={false}
+          zoomOnDoubleClick={false}
+          zoomOnPinch={true}
           nodeOrigin={[0, 0]}
           nodesDraggable={true}
           nodesConnectable={true}
@@ -491,7 +568,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
           style={{ backgroundColor: '#333446' }}
           colorMode="system"
           defaultEdgeOptions={{
-            type: 'smoothstep',
+            type: 'default',
             animated: true,
             style: { stroke: 'white', strokeWidth: 2 }
           }}
@@ -505,8 +582,8 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         </ReactFlow>
       </div>
 
-      {/* Zoom Indicator */}
-      <div className="fixed bottom-4 left-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium z-20">
+      {/* Zoom Indicator - Bottom Right */}
+      <div className="fixed bottom-4 right-4 bg-card border border-border rounded-md px-3 py-2 shadow-lg text-sm font-medium z-20">
         {Math.round(zoom * 100)}%
       </div>
 
@@ -537,6 +614,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onFitView={handleFitView}
+        onApplyLayout={applyLayout}
         selectedNode={selectedNode}
       />
     </motion.div>

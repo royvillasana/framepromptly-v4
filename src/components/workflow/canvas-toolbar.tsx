@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize, Sparkles, Settings, Square } from 'lucide-react';
+import { Plus, Grid3x3, Layers, MousePointer2, ZoomIn, ZoomOut, Maximize, Sparkles, Settings, Square, HelpCircle } from 'lucide-react';
 import { Toolbar, ToolbarButton, ToolbarSeparator } from '@/components/ui/toolbar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { autoLayoutNodes, getSmartPosition } from '@/utils/node-positioning';
 import { ToolbarCenteredAIBuilder } from './ai-builder-input-toolbar-centered';
 import { AddElementPanel } from './add-element-panel';
 import { Button } from '@/components/ui/button';
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 
 interface CanvasToolbarProps {
   onClearSelection?: () => void;
@@ -15,25 +16,33 @@ interface CanvasToolbarProps {
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onFitView?: () => void;
+  onApplyLayout?: () => void;
   selectedNode?: any;
 }
 
-export function CanvasToolbar({ 
-  onClearSelection, 
-  isMarqueeMode, 
-  onToggleMarqueeMode, 
-  zoom, 
-  onZoomIn, 
-  onZoomOut, 
+export function CanvasToolbar({
+  onClearSelection,
+  isMarqueeMode,
+  onToggleMarqueeMode,
+  zoom,
+  onZoomIn,
+  onZoomOut,
   onFitView,
+  onApplyLayout,
   selectedNode
 }: CanvasToolbarProps) {
   const { nodes, setNodes, addNode, addEdge, frameworks, selectFramework } = useWorkflowStore();
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
   const handleRearrangeNodes = () => {
-    const rearrangedNodes = autoLayoutNodes(nodes);
-    setNodes(rearrangedNodes);
+    // Use the new Dagre-based layout if available, otherwise fallback to old layout
+    if (onApplyLayout) {
+      onApplyLayout();
+    } else {
+      const rearrangedNodes = autoLayoutNodes(nodes);
+      setNodes(rearrangedNodes);
+    }
     onClearSelection?.();
   };
 
@@ -102,30 +111,16 @@ export function CanvasToolbar({
     <>
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-30">
         <Toolbar className="bg-card/95 backdrop-blur-sm border shadow-lg">
-          {/* Zoom Controls */}
-          <ToolbarButton
-            onClick={onZoomOut}
-            title="Zoom out"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </ToolbarButton>
-          
-          <ToolbarButton
-            onClick={onZoomIn}
-            title="Zoom in"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </ToolbarButton>
-          
+          {/* Fit View Control */}
           <ToolbarButton
             onClick={onFitView}
             title="Fit view"
           >
             <Maximize className="h-4 w-4" />
           </ToolbarButton>
-          
+
           <ToolbarSeparator />
-          
+
           <ToolbarButton
             onClick={handleRearrangeNodes}
             title="Rearrange nodes automatically"
@@ -152,18 +147,36 @@ export function CanvasToolbar({
           
           <ToolbarSeparator />
           
-          <ToolbarButton 
+          <ToolbarButton
             onClick={() => setIsAddPanelOpen(true)}
             title="Add new element to canvas"
             className={isAddPanelOpen ? "bg-primary text-primary-foreground" : ""}
           >
             <Plus className="h-4 w-4" />
           </ToolbarButton>
+
+          <ToolbarSeparator />
+
+          {/* Help / Keyboard Shortcuts */}
+          <ToolbarButton
+            onClick={() => setShowKeyboardShortcuts(true)}
+            title="Keyboard shortcuts"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </ToolbarButton>
         </Toolbar>
       </div>
 
+      {/* Keyboard Shortcuts Dialog */}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcutsDialog
+          isOpen={showKeyboardShortcuts}
+          onClose={() => setShowKeyboardShortcuts(false)}
+        />
+      )}
+
       {/* Add Element Panel */}
-      <AddElementPanel 
+      <AddElementPanel
         isOpen={isAddPanelOpen}
         onClose={() => setIsAddPanelOpen(false)}
         onClearSelection={onClearSelection}

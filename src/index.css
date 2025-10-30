@@ -524,3 +524,20 @@ a:hover:not(.no-hover-styles) {
   color: hsl(var(--primary));
   text-decoration: underline;
 }
+
+/* React Flow Edge Styles - Always 2px wide regardless of zoom */
+.react-flow__edge-path {
+  stroke-width: 2px !important;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Ensure animated edges maintain consistent stroke width */
+.react-flow__edge.animated path {
+  stroke-width: 2px !important;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Edge markers (arrows) should also maintain size */
+.react-flow__arrowhead {
+  vector-effect: non-scaling-stroke;
+}

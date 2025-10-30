@@ -8,6 +8,7 @@ export interface NodeSpacing {
   tool: { width: number; height: number };
   prompt: { width: number; height: number };
   'custom-prompt': { width: number; height: number };
+  'ai-builder': { width: number; height: number };
 }
 
 export const DEFAULT_SPACING: NodeSpacing = {
@@ -17,7 +18,8 @@ export const DEFAULT_SPACING: NodeSpacing = {
   stage: { width: 280, height: 180 },
   tool: { width: 280, height: 160 },
   prompt: { width: 800, height: 300 },
-  'custom-prompt': { width: 320, height: 200 }
+  'custom-prompt': { width: 320, height: 200 },
+  'ai-builder': { width: 600, height: 400 }
 };
 
 export interface PositionCalculator {
@@ -36,6 +38,7 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
       case 'tool': return spacing.tool;
       case 'prompt': return spacing.prompt;
       case 'custom-prompt': return spacing['custom-prompt'];
+      case 'ai-builder': return spacing['ai-builder'];
       default: return spacing.tool;
     }
   };
@@ -301,6 +304,7 @@ function createHierarchicalLayout(analysis: any, spacing: NodeSpacing) {
       case 'tool': return spacing.tool;
       case 'prompt': return spacing.prompt;
       case 'custom-prompt': return spacing['custom-prompt'];
+      case 'ai-builder': return spacing['ai-builder'];
       default: return spacing.tool;
     }
   };
@@ -446,23 +450,60 @@ function createHierarchicalLayout(analysis: any, spacing: NodeSpacing) {
 
 // Utility to get smart positioning for new nodes based on workflow context
 export function getSmartPosition(
-  nodeType: string, 
-  existingNodes: Node[], 
+  nodeType: string,
+  existingNodes: Node[],
   context?: { sourceNodeId?: string; workflowType?: string }
 ): { x: number; y: number } {
   const calculator = createPositionCalculator();
-  
+
   if (context?.sourceNodeId) {
     const sourceNode = existingNodes.find(n => n.id === context.sourceNodeId);
     if (sourceNode) {
       return calculator.getConnectedPosition(sourceNode, nodeType, existingNodes);
     }
   }
-  
+
+  // Special positioning for AI Builder nodes - place at bottom-left of canvas
+  if (nodeType === 'ai-builder') {
+    if (existingNodes.length === 0) {
+      // If no nodes exist, position at top-left
+      return { x: 100, y: 100 };
+    }
+
+    // Find the bottommost node position
+    const getNodeHeight = (type: string) => {
+      switch (type) {
+        case 'framework': return DEFAULT_SPACING.framework.height;
+        case 'stage': return DEFAULT_SPACING.stage.height;
+        case 'tool': return DEFAULT_SPACING.tool.height;
+        case 'prompt': return DEFAULT_SPACING.prompt.height;
+        case 'custom-prompt': return DEFAULT_SPACING['custom-prompt'].height;
+        case 'ai-builder': return DEFAULT_SPACING['ai-builder'].height;
+        default: return DEFAULT_SPACING.framework.height;
+      }
+    };
+
+    let maxBottomY = 0;
+    existingNodes.forEach(node => {
+      const nodeHeight = getNodeHeight(node.type || 'framework');
+      const bottomY = node.position.y + nodeHeight;
+      if (bottomY > maxBottomY) {
+        maxBottomY = bottomY;
+      }
+    });
+
+    // Position at bottom-left with vertical spacing
+    const verticalSpacing = 100;
+    return {
+      x: 100,
+      y: maxBottomY + verticalSpacing
+    };
+  }
+
   // Default positioning based on node type and existing nodes
   const nodesOfType = existingNodes.filter(n => n.type === nodeType);
   const row = Math.floor(nodesOfType.length / 3);
   const col = nodesOfType.length % 3;
-  
+
   return calculator.getGridPosition(row, col, nodeType);
 }

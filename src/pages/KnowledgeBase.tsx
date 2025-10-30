@@ -11,7 +11,7 @@ import { ArrowLeft, Database, BookOpen, FolderOpen } from 'lucide-react';
 export default function KnowledgeBase() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects, fetchProjects } = useProjectStore();
+  const { projects, fetchProjects, setCurrentProject } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
   const [project, setProject] = useState(projects.find(p => p.id === projectId));
 
@@ -46,8 +46,23 @@ export default function KnowledgeBase() {
     navigate(`/knowledge/${projectId}/document/${newDocId}?new=true`);
   };
 
-  const handleBackToProjects = () => {
-    navigate('/projects');
+  const handleBackToWorkflow = () => {
+    // Set the current project in the store before navigating back
+    if (project) {
+      setCurrentProject(project);
+      navigate('/workflow');
+    } else if (projectId) {
+      // If we have projectId but no project object yet, try to find it
+      const foundProject = projects.find(p => p.id === projectId);
+      if (foundProject) {
+        setCurrentProject(foundProject);
+        navigate('/workflow');
+      } else {
+        navigate('/projects');
+      }
+    } else {
+      navigate('/projects');
+    }
   };
 
   if (!project) {
@@ -60,9 +75,9 @@ export default function KnowledgeBase() {
             <p className="text-muted-foreground mb-4">
               The requested project could not be found.
             </p>
-            <Button onClick={handleBackToProjects}>
+            <Button onClick={handleBackToWorkflow}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Projects
+              Back to Workflow
             </Button>
           </div>
         </div>
@@ -85,11 +100,11 @@ export default function KnowledgeBase() {
             <div className="flex items-center gap-4 mb-4">
               <Button
                 variant="ghost"
-                onClick={handleBackToProjects}
+                onClick={handleBackToWorkflow}
                 className="text-gray-600 hover:text-gray-800"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Projects
+                Back to Workflow
               </Button>
               <div className="h-6 w-px bg-gray-300" />
               <div className="flex items-center gap-2">
