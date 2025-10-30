@@ -1,0 +1,22 @@
+{
+  "name": "FramePromptly",
+  "short_name": "FramePromptly",
+  "description": "AI-Powered UX Workflow Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/logo_header.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png", 
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ]
+}
