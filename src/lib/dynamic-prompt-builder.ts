@@ -257,22 +257,106 @@ export function buildInstructions(
 }
 
 /**
+ * Build LLM Configuration block in XML format for LLM consumption
+ * This goes at the very beginning of the prompt to configure the AI's behavior
+ */
+export function buildLLMConfig(projectSettings?: ProjectSettings): string {
+  // Merge with defaults
+  const ai = { ...STANDARD_DEFAULTS.aiMethodSettings, ...(projectSettings?.aiMethodSettings || {}) };
+
+  // Map creativity level to temperature if not explicitly set
+  let temperature = ai.temperature;
+  if (temperature === undefined) {
+    const creativityToTemp = {
+      'conservative': 0.3,
+      'balanced': 0.7,
+      'creative': 0.85,
+      'experimental': 1.0
+    };
+    temperature = creativityToTemp[ai.creativityLevel] || 0.7;
+  }
+
+  // Map creativity level to top_p if not explicitly set
+  let topP = ai.topP;
+  if (topP === undefined) {
+    const creativityToTopP = {
+      'conservative': 0.7,
+      'balanced': 0.9,
+      'creative': 0.95,
+      'experimental': 1.0
+    };
+    topP = creativityToTopP[ai.creativityLevel] || 0.9;
+  }
+
+  // Map creativity level to top_k if not explicitly set
+  let topK = ai.topK;
+  if (topK === undefined) {
+    const creativityToTopK = {
+      'conservative': 20,
+      'balanced': 50,
+      'creative': 80,
+      'experimental': 100
+    };
+    topK = creativityToTopK[ai.creativityLevel] || 50;
+  }
+
+  // Calculate max_tokens based on output detail
+  const quality = { ...STANDARD_DEFAULTS.qualitySettings, ...(projectSettings?.qualitySettings || {}) };
+  const maxTokensMap = {
+    'brief': 800,
+    'moderate': 1500,
+    'comprehensive': 3000
+  };
+  const maxTokens = maxTokensMap[quality.outputDetail] || 1500;
+
+  // Map reasoning style to mode
+  const modeMap = {
+    'step-by-step': 'analytical_reasoning',
+    'direct': 'direct_response',
+    'exploratory': 'creative_reasoning'
+  };
+  const mode = modeMap[ai.reasoning] || 'analytical_reasoning';
+
+  // Map prompt structure to response_style
+  const responseStyleMap = {
+    'framework-guided': 'structured',
+    'open-ended': 'conversational',
+    'structured-templates': 'templated'
+  };
+  const responseStyle = responseStyleMap[ai.promptStructure] || 'structured';
+
+  // Build the XML config block
+  const config = `<LLM_CONFIG>
+temperature=${temperature}
+top_p=${topP}
+top_k=${topK}
+max_tokens=${maxTokens}
+mode=${mode}
+response_style=${responseStyle}
+</LLM_CONFIG>`;
+
+  return config;
+}
+
+/**
  * Build AI Generation Parameters section to display settings visibly in the prompt
  * Shows all configuration details including advanced parameters
  */
 export function buildAIGenerationParameters(projectSettings?: ProjectSettings): string {
-  if (!projectSettings) {
-    return ''; // Return empty if no settings provided
-  }
+  // Build LLM Config block first
+  const llmConfig = buildLLMConfig(projectSettings);
 
+  // Always show AI parameters, using defaults if no settings provided
   const sections: string[] = [];
+  sections.push(llmConfig);
+  sections.push('');
   sections.push('# AI GENERATION PARAMETERS');
   sections.push('');
-  sections.push('*These parameters were configured for this project and influence how this prompt is structured and executed:*');
+  sections.push('*These parameters influence how this prompt is structured and executed:*');
   sections.push('');
 
   // Project Context
-  if (projectSettings.projectContext) {
+  if (projectSettings?.projectContext) {
     const ctx = projectSettings.projectContext;
     const contextParts: string[] = [];
 
@@ -291,7 +375,7 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
   }
 
   // Quality Preferences
-  if (projectSettings.qualitySettings) {
+  if (projectSettings?.qualitySettings) {
     const quality = { ...STANDARD_DEFAULTS.qualitySettings, ...projectSettings.qualitySettings };
     sections.push('## ✓ Quality Preferences');
 
@@ -327,9 +411,8 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
     sections.push('');
   }
 
-  // AI Method Settings - Comprehensive Display
-  if (projectSettings.aiMethodSettings) {
-    const ai = { ...STANDARD_DEFAULTS.aiMethodSettings, ...projectSettings.aiMethodSettings };
+  // AI Method Settings - Comprehensive Display (always show, using defaults if not configured)
+  const ai = { ...STANDARD_DEFAULTS.aiMethodSettings, ...(projectSettings?.aiMethodSettings || {}) };
 
     // Prompt Structure Method
     sections.push('## 🎯 Prompt Structure Method');
@@ -419,7 +502,6 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
       sections.push(`  _${personalizationDescriptions[ai.personalization]}_`);
       sections.push('');
     }
-  }
 
   sections.push('---');
   sections.push('');
@@ -444,18 +526,23 @@ export function buildDynamicPrompt(
 
   // 1. Insert AI Generation Parameters at the very top (right after the title if exists)
   const aiParameters = buildAIGenerationParameters(projectSettings);
+  console.log('[buildDynamicPrompt] AI Parameters:', aiParameters?.substring(0, 200));
+  console.log('[buildDynamicPrompt] Project Settings:', projectSettings);
   if (aiParameters) {
     // Find the first markdown header (# Title) if it exists
     const titleMatch = prompt.match(/^#\s+.+\n\n/);
     if (titleMatch) {
       // Insert after the title
       const insertIndex = titleMatch[0].length;
-      prompt = prompt.slice(0, insertIndex) + aiParameters + prompt.slice(insertIndex);
+      prompt = prompt.slice(0, insertIndex) + '\n\n' + aiParameters + '\n\n' + prompt.slice(insertIndex);
+      console.log('[buildDynamicPrompt] Inserted after title');
     } else {
       // Insert at the very beginning
-      prompt = aiParameters + prompt;
+      prompt = aiParameters + '\n\n' + prompt;
+      console.log('[buildDynamicPrompt] Inserted at beginning');
     }
   }
+  console.log('[buildDynamicPrompt] Final prompt preview:', prompt.substring(0, 400));
 
   // 2. Replace Knowledge Base placeholder
   if (knowledgeBase) {

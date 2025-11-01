@@ -29,8 +29,8 @@ export interface SpecificToolInstructions {
 export function generateToolSpecificInstructions(context: ToolPromptContext): SpecificToolInstructions {
   const { framework, stage, tool } = context;
 
-  // Get base template for this tool type
-  const baseInstructions = getBaseToolInstructions(tool.id);
+  // Get base template for this tool type (pass the whole tool object for name matching)
+  const baseInstructions = getBaseToolInstructions(tool.id, tool.name);
 
   // Customize based on framework context
   const frameworkCustomizations = getFrameworkSpecificCustomizations(tool.id, framework.id);
@@ -51,30 +51,15 @@ export function generateToolSpecificInstructions(context: ToolPromptContext): Sp
 
 /**
  * Base instructions for each specific tool
+ * @param toolId - The tool ID (e.g., 'personas', 'proto-personas', or 'ai-tool-0-1')
+ * @param toolName - The tool name (e.g., 'Persona Creation', 'Proto-Personas')
  */
-function getBaseToolInstructions(toolId: string): any {
+function getBaseToolInstructions(toolId: string, toolName?: string): any {
   const instructions: Record<string, any> = {
     
     // RESEARCH TOOLS
     'user-interviews': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for user interview guide development. Generate a complete AI prompt that users can copy and paste into their AI assistant to create professional-quality user interview guides.
-
-The generated prompt must:
-1. Include instructions for AI to act as a senior UX researcher with interview expertise
-2. Incorporate ALL project knowledge base content for contextual relevance
-3. Provide structured methodology using funnel technique and 5 Whys approach
-4. Include specific question types and interview flow requirements
-5. Request validation methods and quality checks
-6. Be comprehensive enough to generate complete interview guides without additional input
-
-Template Structure for Generated Prompt:
----
-# AI User Interview Expert
-
-You are a senior UX researcher and user interview specialist with 15+ years of experience conducting insightful user research. You excel at designing interview guides that reveal deep user motivations, mental models, and behavioral patterns using advanced interviewing techniques.
-
-## Project Context
-[Insert all relevant project knowledge base content here - business goals, user segments, existing research, industry constraints, product context, etc.]
+      core: `You are a senior UX researcher and user interview specialist with 15+ years of experience conducting insightful user research. You excel at designing interview guides that reveal deep user motivations, mental models, and behavioral patterns using advanced interviewing techniques.
 
 ## Your Task
 Create a comprehensive user interview guide for this project using the following research methodology:
@@ -159,98 +144,217 @@ Deliver a complete interview guide that includes:
 - Analysis framework for captured data
 ---`,
       guidance: [
-        'Generate prompts that instruct AI to use funnel technique: broad to specific questioning progression',
-        'Include instructions for AI to apply 5 Whys methodology for uncovering root motivations',
-        'Ensure prompts direct AI to include emotional archaeology questions exploring feelings and satisfaction moments',
-        'Generate prompts instructing AI to design task-based scenarios that reveal behavioral demonstrations',
-        'Include instructions for AI to build in validation opportunities through prioritization and choice exercises',
-        'Ensure prompts direct AI to create questions that reveal mental models and decision-making processes',
-        'Generate prompts that instruct AI to include strategic silence and active listening guidance'
+        'Use funnel technique: start with broad questions, progressively narrow to specific details',
+        'Apply 5 Whys methodology to uncover root motivations beyond surface responses',
+        'Include emotional archaeology questions exploring feelings and satisfaction moments',
+        'Design task-based scenarios that prompt behavioral demonstrations',
+        'Build in validation opportunities through prioritization and choice exercises',
+        'Create questions that reveal mental models and decision-making processes',
+        'Include strategic silence and active listening guidance for moderators'
       ],
       knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL project knowledge base content including user segments, business context, existing research, and domain expertise',
-        'Insert specific user pain points, behavioral patterns, and research findings from knowledge base into the project context section',
-        'Include industry-specific terminology, processes, and constraints from knowledge base in the interview requirements',
+        'CRITICAL: Incorporate ALL project knowledge base content including user segments, business context, existing research, and domain expertise',
+        'Use specific user pain points, behavioral patterns, and research findings from knowledge base to inform interview questions',
+        'Include industry-specific terminology, processes, and constraints from knowledge base in the interview guide',
         'Reference business goals, success metrics, and strategic objectives from knowledge base to align interview objectives',
         'Incorporate existing user insights and research gaps from knowledge base to focus interview areas',
         'Use organizational context, team structure, and project constraints from knowledge base to optimize interview approach',
         'Include target audience characteristics, user roles, and contextual factors from knowledge base in participant criteria'
       ],
       qualityChecks: [
-        'Verify the generated prompt includes comprehensive project context from knowledge base',
-        'Ensure the prompt provides detailed interview methodology and question design guidance',
-        'Confirm the prompt specifies complete interview structure with timing and flow requirements',
-        'Validate that the prompt includes specific validation methods and quality assurance approaches',
-        'Check that the prompt generates complete interview guides without requiring additional input',
-        'Ensure the prompt instructs AI to provide moderator guidance and logistical considerations'
+        'Verify the interview guide includes comprehensive project context from knowledge base',
+        'Ensure detailed interview methodology and question design guidance is provided',
+        'Confirm complete interview structure with timing and flow requirements',
+        'Validate that specific validation methods and quality assurance approaches are included',
+        'Check that the guide is complete and ready to use without requiring additional input',
+        'Ensure moderator guidance and logistical considerations are provided'
       ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that generates professional user interview guides with methodology, questions, probes, timing, and validation framework'
+      outputFormat: 'Complete, ready-to-use user interview guide with methodology, specific questions, follow-up probes, timing estimates, moderator tips, and validation framework'
     },
 
     'stakeholder-interviews': {
-      core: `You are generating AI prompts for conducting stakeholder interviews in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts focused on understanding business context, constraints, and organizational dynamics.`,
+      core: `You are a senior business analyst and stakeholder engagement specialist with extensive experience facilitating strategic conversations with executives, product owners, and organizational decision-makers. You excel at uncovering business context, organizational dynamics, and strategic constraints through structured stakeholder interviews.
+
+## Your Task
+Create a comprehensive stakeholder interview guide that helps understand business objectives, success metrics, organizational dynamics, and strategic constraints. Design questions that reveal both explicit requirements and implicit assumptions that shape the project context.
+
+### Interview Structure
+Develop a complete interview guide with:
+
+1. **Executive Alignment (10-15 minutes)**
+   - Business objectives and strategic priorities
+   - Success criteria and measurement methods
+   - Competitive context and market positioning
+   - Expected business outcomes and ROI
+
+2. **Organizational Context (10-15 minutes)**
+   - Decision-making processes and approval chains
+   - Team structure and resource availability
+   - Competing priorities and trade-offs
+   - Political dynamics and stakeholder relationships
+
+3. **Constraints & Requirements (15-20 minutes)**
+   - Technical constraints and dependencies
+   - Budget and timeline constraints
+   - Regulatory and compliance requirements
+   - Brand and policy constraints
+
+4. **Risk & Change Management (10-15 minutes)**
+   - Known risks and mitigation strategies
+   - Change readiness and adoption concerns
+   - Historical context and lessons learned
+   - Potential barriers to success
+
+5. **Vision & Validation (5-10 minutes)**
+   - Ideal outcome descriptions
+   - Must-have vs nice-to-have features
+   - Success validation methods
+   - Stakeholder communication preferences`,
       guidance: [
         'Focus on understanding business objectives, success metrics, and constraints',
         'Explore organizational dynamics and decision-making processes',
         'Uncover hidden assumptions and unstated requirements',
-        'Identify potential risks, challenges, and resource limitations'
+        'Identify potential risks, challenges, and resource limitations',
+        'Balance diplomatic questioning with direct inquiry about difficult topics',
+        'Create questions that reveal competing priorities and trade-off decisions'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to understand the organizational hierarchy and stakeholder relationships',
-        'Reference business goals and strategic objectives from the knowledge base',
-        'Incorporate known constraints and requirements from previous stakeholder interactions',
-        'Align interview questions with the specific business domain and industry context'
+        'CRITICAL: Incorporate ALL project knowledge base content including organizational hierarchy, stakeholder relationships, business goals, and strategic objectives',
+        'Use known constraints and requirements from previous stakeholder interactions documented in knowledge base',
+        'Align interview questions with the specific business domain and industry context from knowledge base',
+        'Reference existing strategic initiatives and organizational priorities from knowledge base'
       ],
       qualityChecks: [
-        'Ensure questions address both explicit and implicit stakeholder concerns',
-        'Include questions about success criteria and measurement methods',
-        'Plan for understanding competing priorities and trade-offs'
+        'Verify the interview guide addresses both explicit and implicit stakeholder concerns',
+        'Ensure questions about success criteria and measurement methods are included',
+        'Confirm questions explore competing priorities and trade-offs',
+        'Validate that the guide is complete and ready to use with stakeholders'
       ],
-      outputFormat: 'Business-focused interview guide with strategic questions, constraint exploration, and success criteria discussion'
+      outputFormat: 'Complete business-focused stakeholder interview guide with strategic questions, constraint exploration, success criteria discussion, and organizational context mapping'
     },
 
     'observations': {
-      core: `You are generating AI prompts for conducting user observations in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that guide systematic observation of user behavior in natural contexts.`,
+      core: `You are an expert ethnographic researcher and behavioral analyst with deep experience conducting contextual observations of users in their natural environments. You excel at designing observation protocols that capture authentic behaviors, environmental factors, and non-verbal cues while minimizing observer influence.
+
+## Your Task
+Create a comprehensive user observation protocol that enables systematic documentation of user behaviors, environmental context, and interaction patterns. Design methods that reveal what users actually do (not what they say they do) in their natural settings.
+
+### Observation Framework
+Develop a complete observation protocol with:
+
+1. **Pre-Observation Planning**
+   - Observation objectives and research questions
+   - Target user roles and contexts to observe
+   - Optimal observation locations and timing
+   - Equipment and documentation needs
+   - Ethical considerations and consent procedures
+
+2. **Observation Structure**
+   - Environmental context documentation
+   - User behavior and action sequences
+   - Tool and artifact usage patterns
+   - Communication and collaboration behaviors
+   - Problem-solving and workaround identification
+   - Emotional cues and frustration indicators
+   - Interruptions and context switches
+
+3. **Documentation Methods**
+   - Structured field notes templates
+   - Photography and video capture guidelines
+   - Time-stamped behavior logging
+   - Contextual artifact collection
+   - Observer reflection notes
+
+4. **Analysis Framework**
+   - Pattern identification methods
+   - Behavioral anomaly tracking
+   - Context-behavior relationship mapping
+   - Triangulation with other data sources
+   - Insight synthesis approaches`,
       guidance: [
         'Focus on observing actual behaviors rather than stated intentions',
         'Design observation frameworks that capture context, environment, and constraints',
         'Include methods for documenting non-verbal cues and emotional responses',
-        'Create structured approaches for identifying patterns and anomalies'
+        'Create structured approaches for identifying patterns and anomalies',
+        'Minimize observer influence through unobtrusive positioning and neutral documentation',
+        'Plan for multiple observation sessions to capture behavioral variations across contexts'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to identify optimal observation contexts and environments',
-        'Reference known user workflows and touchpoints from the knowledge base',
-        'Incorporate understanding of user roles and responsibilities from project documentation',
+        'CRITICAL: Incorporate ALL project knowledge base content to identify optimal observation contexts, environments, and user workflows',
+        'Reference known user workflows and touchpoints from the knowledge base to focus observation areas',
+        'Use understanding of user roles and responsibilities from knowledge base to structure observation categories',
         'Align observation focus areas with business objectives and user goals from the knowledge base'
       ],
       qualityChecks: [
-        'Ensure observation methods minimize disruption to natural behaviors',
-        'Include multiple observation sessions to capture behavioral variations',
-        'Plan for triangulating observations with other data sources'
+        'Verify observation methods minimize disruption to natural behaviors',
+        'Ensure multiple observation sessions are planned to capture behavioral variations',
+        'Confirm triangulation approaches with other data sources are included',
+        'Validate that the protocol is complete and ready to execute in the field'
       ],
-      outputFormat: 'Structured observation protocol with context documentation, behavior tracking, and insight synthesis methods'
+      outputFormat: 'Complete structured observation protocol with planning guidance, context documentation templates, behavior tracking methods, and insight synthesis framework'
     },
 
     'surveys': {
-      core: `You are generating AI prompts for creating surveys in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that design statistically sound surveys for quantitative insights.`,
+      core: `You are a quantitative research specialist and survey methodologist with expertise in designing statistically sound survey instruments. You excel at creating surveys that gather reliable, actionable data through validated scales, unbiased question design, and optimal response formats.
+
+## Your Task
+Create a comprehensive survey instrument that gathers quantitative insights about user behaviors, attitudes, preferences, and demographics. Design questions that enable statistical analysis, pattern identification, and evidence-based decision making.
+
+### Survey Design Framework
+Develop a complete survey with:
+
+1. **Survey Objectives & Methodology**
+   - Research questions and hypotheses to test
+   - Target audience and sampling strategy
+   - Expected sample size and statistical power
+   - Survey distribution channels and timeline
+
+2. **Question Structure**
+   - Demographic profiling questions
+   - Behavioral frequency and usage questions
+   - Attitudinal and preference questions using validated scales
+   - Satisfaction and sentiment measurements
+   - Open-ended questions for qualitative context
+   - Screening and segmentation logic
+
+3. **Response Design**
+   - Appropriate scale types (Likert, semantic differential, rating scales)
+   - Multiple choice with exhaustive, mutually exclusive options
+   - Ranking and prioritization questions
+   - Matrix questions for efficiency
+   - Skip logic and branching rules
+
+4. **Quality Assurance**
+   - Attention check questions
+   - Response validation rules
+   - Question randomization where appropriate
+   - Progress indicators and completion estimates
+
+5. **Analysis Plan**
+   - Key metrics and statistical tests to perform
+   - Data segmentation and cohort analysis approach
+   - Visualization and reporting methods`,
       guidance: [
         'Design questions that can be statistically analyzed for patterns',
-        'Use validated scales and measurement instruments where possible',
-        'Balance closed-ended questions with strategic open-ended items',
-        'Structure surveys for optimal completion rates and data quality'
+        'Use validated scales and measurement instruments where possible (NPS, SUS, CSAT, etc.)',
+        'Balance closed-ended questions with strategic open-ended items for context',
+        'Structure surveys for optimal completion rates (8-12 minutes ideal)',
+        'Avoid double-barreled questions, leading language, and biased framing',
+        'Include validation questions and attention checks for data quality'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to identify the right target audience and sampling approach',
-        'Reference known user segments and demographics from the knowledge base',
-        'Incorporate validated hypotheses and research questions from previous project work',
-        'Align survey objectives with business metrics and success criteria from the knowledge base'
+        'CRITICAL: Incorporate ALL project knowledge base content to identify target audience, sampling approach, and relevant metrics',
+        'Reference known user segments and demographics from knowledge base to design screening questions',
+        'Use validated hypotheses and research questions from knowledge base to structure survey objectives',
+        'Align survey questions with business metrics and success criteria from the knowledge base'
       ],
       qualityChecks: [
-        'Ensure questions are unbiased and avoid leading responses',
-        'Include validation questions and attention checks',
-        'Test survey length and completion time for optimal response rates'
+        'Verify all questions are unbiased and avoid leading responses',
+        'Ensure validation questions and attention checks are included',
+        'Confirm survey length and completion time are optimized for target response rates',
+        'Validate that the survey instrument is complete and ready to deploy'
       ],
-      outputFormat: 'Complete survey instrument with question logic, response validation, and analysis plan'
+      outputFormat: 'Complete survey instrument with question logic, response validation rules, skip logic, attention checks, and statistical analysis plan'
     },
 
     // ANALYSIS TOOLS
@@ -671,25 +775,60 @@ Deliver a facilitation guide that includes:
     },
 
     'how-might-we': {
-      core: `You are generating AI prompts for How Might We questions in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that reframe problems as opportunities for innovation.`,
+      core: `You are an innovation strategist and design thinking facilitator with expertise in problem reframing and opportunity identification. You excel at transforming challenges into "How Might We" questions that inspire creative solutions while maintaining strategic focus.
+
+## Your Task
+Create a comprehensive set of How Might We (HMW) questions that reframe problems as opportunities for innovation. Design questions that balance breadth for creative exploration with specificity for actionable solutions.
+
+### HMW Question Framework
+Develop a complete set of HMW questions including:
+
+1. **Problem Analysis**
+   - Core problems identified from user research and business context
+   - Root causes and contributing factors
+   - Stakeholder perspectives on the challenge
+   - Current constraints and limitations
+
+2. **HMW Question Categories**
+   - **Amplifying Questions**: How might we amplify what's working?
+   - **Removing Questions**: How might we remove barriers?
+   - **Exploring Questions**: How might we explore opposites or alternatives?
+   - **Questioning Assumptions**: How might we challenge fundamental beliefs?
+   - **Unexpected Resource Questions**: How might we use available resources differently?
+
+3. **Question Characteristics**
+   - Broad enough to allow creativity and multiple solutions
+   - Specific enough to be actionable and focused
+   - Positively framed to inspire rather than constrain
+   - Assume solutions are possible
+   - Multiple questions exploring different angles of the same challenge
+
+4. **Strategic Alignment**
+   - Connection to user pain points and needs
+   - Alignment with business objectives
+   - Consideration of technical constraints
+   - Feasibility within project context`,
       guidance: [
         'Frame problems as opportunities starting with "How might we..."',
         'Create questions that are broad enough to allow creativity but specific enough to be actionable',
-        'Include multiple HMW questions to explore different angles of the same problem',
-        'Design questions that inspire rather than constrain solution thinking'
+        'Include multiple HMW questions (5-10) exploring different angles of the same problem',
+        'Design questions that inspire rather than constrain solution thinking',
+        'Avoid suggesting solutions within the question itself',
+        'Use different reframing techniques: amplify, remove, explore, question assumptions, find unexpected resources'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to identify the most important problems to address',
-        'Reference user pain points and unmet needs from the knowledge base',
-        'Incorporate business objectives and constraints to frame realistic opportunities',
+        'CRITICAL: Incorporate ALL project knowledge base content to identify the most important problems to address',
+        'Reference user pain points and unmet needs from the knowledge base to ground HMW questions',
+        'Use business objectives and constraints from knowledge base to frame realistic opportunities',
         'Align HMW questions with strategic priorities and success metrics from project documentation'
       ],
       qualityChecks: [
-        'Ensure HMW questions are properly scoped - not too broad or too narrow',
-        'Include multiple perspectives and stakeholder viewpoints',
-        'Plan for generating multiple solution concepts from each HMW question'
+        'Verify HMW questions are properly scoped - not too broad ("How might we change the world?") or too narrow ("How might we change button color?")',
+        'Ensure multiple perspectives and stakeholder viewpoints are represented',
+        'Confirm questions inspire multiple solution concepts rather than pointing to single answer',
+        'Validate that questions are complete and ready to use in ideation sessions'
       ],
-      outputFormat: 'Set of well-crafted How Might We questions with explanation of problem framing and opportunity areas'
+      outputFormat: 'Comprehensive set of 5-10 well-crafted How Might We questions with problem analysis, strategic context, and guidance for using questions in ideation'
     },
 
     // PROTOTYPING TOOLS
@@ -793,47 +932,70 @@ Create low-fidelity wireframe specifications for key screens, including:
     },
 
     'paper-prototypes': {
-      core: `You are generating AI prompts for paper prototyping in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that guide rapid, testable prototype creation.`,
+      core: `You are a rapid prototyping specialist and interaction designer with expertise in creating low-fidelity, testable prototypes. You excel at translating concepts into tangible artifacts that enable quick validation, iteration, and stakeholder alignment through paper-based or simple digital mockups.
+
+## Your Task
+Create comprehensive paper prototype specifications that enable rapid creation of testable, interactive prototypes. Design prototypes that focus on core interactions and user flows rather than visual polish, allowing for fast iteration based on feedback.
+
+### Paper Prototype Framework
+Develop complete prototype specifications including:
+
+1. **Prototype Scope & Objectives**
+   - Key features and flows to prototype
+   - Primary user tasks to validate
+   - Specific hypotheses to test
+   - Success criteria for prototype
+
+2. **Screen & State Inventory**
+   - All screens/views needed for core flows
+   - Interaction states (default, hover, active, error, success)
+   - Navigation elements and connections
+   - Modal, overlay, and secondary interfaces
+
+3. **Interaction Specifications**
+   - User flow diagrams showing screen transitions
+   - Tap/click targets and interactive elements
+   - Input fields and form interactions
+   - Button behaviors and system responses
+   - Error states and recovery paths
+
+4. **Content & Component Details**
+   - Information architecture for each screen
+   - Content hierarchy and priority
+   - Component specifications (buttons, inputs, cards, etc.)
+   - Placeholder content that reflects realistic use
+
+5. **Testing Plan**
+   - Test scenarios and tasks for participants
+   - Facilitator guidance for demonstrating interactions
+   - Areas to gather specific feedback on
+   - Iteration approach based on findings`,
       guidance: [
-        'Focus on core interactions and user flows rather than visual polish',
-        'Create prototypes that can be easily modified based on test feedback',
-        'Include multiple interaction states and error conditions',
-        'Design prototypes that facilitate user testing and stakeholder review'
+        'Focus on core interactions and user flows rather than visual polish or final design details',
+        'Create prototypes that can be easily modified based on test feedback (loose sheets vs bound)',
+        'Include multiple interaction states and error conditions to validate complete user journeys',
+        'Design prototypes that facilitate user testing and stakeholder review with clear interaction patterns',
+        'Specify realistic content and data to make prototype scenarios believable',
+        'Include annotations for facilitators about how to demonstrate interactions'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to prioritize which features and flows to prototype',
-        'Reference user scenarios and tasks from the knowledge base',
-        'Incorporate business constraints and technical limitations into prototype scope',
+        'CRITICAL: Incorporate ALL project knowledge base content to prioritize which features and flows to prototype',
+        'Reference user scenarios and tasks from the knowledge base to structure prototype interactions',
+        'Use business constraints and technical limitations from knowledge base to inform prototype scope',
         'Align prototype functionality with user goals and business objectives from project documentation'
       ],
       qualityChecks: [
-        'Ensure prototypes are testable and interactive enough for meaningful feedback',
-        'Include consideration of edge cases and error states',
-        'Plan for rapid iteration based on user testing results'
+        'Verify prototypes are testable and interactive enough for meaningful feedback',
+        'Ensure consideration of edge cases and error states in the prototype',
+        'Confirm rapid iteration plan based on user testing results is included',
+        'Validate that prototype specifications are complete and ready to build'
       ],
-      outputFormat: 'Paper prototype specifications with interaction design, testing plan, and iteration approach'
+      outputFormat: 'Complete paper prototype specifications with screen inventory, interaction flows, content details, facilitator guidance, and testing plan'
     },
 
     // TESTING TOOLS
     'usability-tests': {
-      core: `You are an AI prompt generator that creates comprehensive, ready-to-use prompts for usability testing design and execution. Generate a complete AI prompt that users can copy and paste into their AI assistant to create rigorous, insightful usability testing protocols.
-
-The generated prompt must:
-1. Include instructions for AI to act as a usability testing expert with statistical rigor
-2. Incorporate ALL project knowledge base content for realistic testing scenarios
-3. Provide structured methodology for both quantitative and qualitative measurement
-4. Include specific requirements for test design, execution, and analysis
-5. Request validation methods and statistical significance approaches
-6. Be comprehensive enough to generate complete testing protocols without additional input
-
-Template Structure for Generated Prompt:
----
-# AI Usability Testing Expert
-
-You are a senior UX researcher and usability testing specialist with 15+ years of experience designing and conducting rigorous user testing. You excel at creating testing protocols that reveal actionable insights about user behavior and interface effectiveness.
-
-## Project Context
-[Insert all relevant project knowledge base content here - user goals, workflows, business metrics, interface requirements, etc.]
+      core: `You are a senior UX researcher and usability testing specialist with 15+ years of experience designing and conducting rigorous user testing. You excel at creating testing protocols that reveal actionable insights about user behavior and interface effectiveness through evidence-based methodology.
 
 ## Your Task
 Design a comprehensive usability testing protocol for this project using evidence-based methodology that captures both quantitative performance and qualitative user experience insights.
@@ -944,25 +1106,24 @@ Define criteria for:
 - Long-term impact measurement and tracking
 
 ### Output Requirements
-Deliver a testing protocol that includes:
-- Complete test plan with methodology and procedures
+Deliver a complete testing protocol that includes:
+- Test plan with methodology and procedures
 - Participant recruitment and management protocols
 - Task scenarios with success criteria and measurements
 - Data collection instruments and analysis frameworks
-- Reporting templates and insight presentation formats
----`,
+- Reporting templates and insight presentation formats`,
       guidance: [
-        'Generate prompts that instruct AI to design tests revealing actual user behavior rather than stated preferences',
-        'Include instructions for AI to create realistic task scenarios based on authentic user workflows',
-        'Ensure prompts direct AI to apply statistical rigor for quantitative measurements and significance testing',
-        'Generate prompts instructing AI to include systematic qualitative observation and thematic analysis',
-        'Include instructions for AI to plan for actionable findings that drive specific design improvements',
-        'Ensure prompts direct AI to consider accessibility requirements and diverse participant inclusion',
-        'Generate prompts that instruct AI to provide complete testing protocols ready for immediate execution'
+        'Design tests that reveal actual user behavior rather than stated preferences',
+        'Create realistic task scenarios based on authentic user workflows from project context',
+        'Apply statistical rigor for quantitative measurements and significance testing',
+        'Include systematic qualitative observation and thematic analysis',
+        'Plan for actionable findings that drive specific design improvements',
+        'Consider accessibility requirements and diverse participant inclusion',
+        'Provide complete testing protocols ready for immediate execution'
       ],
       knowledgeIntegration: [
-        'CRITICAL: The generated prompt must incorporate ALL project knowledge base content including user workflows, business metrics, and interface requirements',
-        'Insert specific user goals, task patterns, and workflow requirements from knowledge base into task scenario development',
+        'CRITICAL: Incorporate ALL project knowledge base content including user workflows, business metrics, and interface requirements',
+        'Use specific user goals, task patterns, and workflow requirements from knowledge base to develop task scenarios',
         'Include business success criteria, performance benchmarks, and strategic objectives from knowledge base in testing goals',
         'Reference user segment characteristics, behavioral patterns, and contextual factors from knowledge base in participant strategy',
         'Incorporate technical constraints, platform requirements, and usability standards from knowledge base in testing approach',
@@ -970,81 +1131,210 @@ Deliver a testing protocol that includes:
         'Include organizational constraints, timeline requirements, and resource availability from knowledge base in protocol planning'
       ],
       qualityChecks: [
-        'Verify the generated prompt includes comprehensive project context for realistic testing scenarios',
-        'Ensure the prompt provides rigorous methodology with statistical and qualitative analysis frameworks',
-        'Confirm the prompt specifies complete protocol including participant management and data collection',
-        'Validate that the prompt includes actionable insight generation and reporting approaches',
-        'Check that the prompt generates testing protocols ready for immediate implementation',
-        'Ensure the prompt instructs AI to provide statistical justification and quality assurance measures'
+        'Verify the testing protocol includes comprehensive project context for realistic testing scenarios',
+        'Ensure rigorous methodology with statistical and qualitative analysis frameworks is provided',
+        'Confirm complete protocol including participant management and data collection is specified',
+        'Validate that actionable insight generation and reporting approaches are included',
+        'Check that testing protocols are ready for immediate implementation',
+        'Ensure statistical justification and quality assurance measures are provided'
       ],
-      outputFormat: 'Complete, copy-paste ready AI prompt that generates rigorous usability testing protocols with statistical methodology, realistic scenarios, and actionable insight frameworks'
+      outputFormat: 'Complete rigorous usability testing protocol with statistical methodology, realistic task scenarios, participant management, data collection frameworks, and actionable insight generation'
     },
 
     'a-b-testing': {
-      core: `You are generating AI prompts for A/B testing in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that design statistically valid comparative tests.`,
+      core: `You are an experimentation strategist and data scientist specializing in A/B testing and controlled experiments. You excel at designing statistically valid comparative tests that isolate variables, measure meaningful outcomes, and drive data-informed product decisions.
+
+## Your Task
+Create a comprehensive A/B testing design that enables rigorous comparison of design variations. Design tests with proper statistical methodology, clear hypotheses, and actionable success metrics.
+
+### A/B Testing Framework
+Develop a complete testing plan including:
+
+1. **Hypothesis & Test Design**
+   - Primary hypothesis and expected outcome
+   - Independent variable(s) to test (what's changing)
+   - Dependent variable(s) to measure (success metrics)
+   - Control vs treatment condition specifications
+   - Confounding variables to control or monitor
+
+2. **Statistical Planning**
+   - Sample size calculation and power analysis
+   - Minimum detectable effect size
+   - Statistical significance threshold (alpha level)
+   - Test duration and temporal considerations
+   - Randomization and assignment methodology
+
+3. **Success Metrics**
+   - Primary success metrics (conversion, engagement, retention)
+   - Secondary metrics for holistic evaluation
+   - Guardrail metrics to prevent negative impacts
+   - Leading and lagging indicators
+   - Measurement instrumentation and tracking
+
+4. **Test Implementation**
+   - Traffic allocation and segmentation rules
+   - Technical implementation requirements
+   - Quality assurance and validation checks
+   - Monitoring and alerting setup
+
+5. **Analysis Plan**
+   - Statistical tests to perform
+   - Subgroup analysis considerations
+   - Multiple comparison corrections if needed
+   - Practical significance thresholds
+   - Decision criteria for launch/iterate/abandon`,
       guidance: [
         'Design tests that isolate specific variables for clear causal inference',
         'Include proper statistical planning for sample sizes and significance testing',
-        'Create testing frameworks that measure both behavioral and attitudinal outcomes',
-        'Plan for long-term impact assessment beyond immediate test metrics'
+        'Create testing frameworks that measure both behavioral outcomes and business metrics',
+        'Plan for long-term impact assessment beyond immediate test metrics',
+        'Consider novelty effects and plan appropriate test duration',
+        'Include guardrail metrics to catch unintended negative consequences'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to identify the most important metrics and hypotheses to test',
+        'CRITICAL: Incorporate ALL project knowledge base content to identify the most important metrics and hypotheses to test',
         'Reference user behavior patterns and business objectives from the knowledge base',
-        'Incorporate existing performance baselines and success criteria from project documentation',
+        'Use existing performance baselines and success criteria from knowledge base as comparison benchmarks',
         'Align testing hypotheses with strategic goals and user needs from the knowledge base'
       ],
       qualityChecks: [
-        'Ensure tests have sufficient statistical power to detect meaningful differences',
-        'Include plans for avoiding testing biases and external confounds',
-        'Plan for proper interpretation and action based on test results'
+        'Verify tests have sufficient statistical power to detect meaningful differences',
+        'Ensure plans for avoiding testing biases and external confounds are included',
+        'Confirm proper interpretation criteria and action plans based on test results',
+        'Validate that the testing design is complete and ready to implement'
       ],
-      outputFormat: 'A/B testing design with hypothesis, methodology, success metrics, and analysis plan'
+      outputFormat: 'Complete A/B testing design with hypothesis, statistical methodology, success metrics, implementation plan, and analysis framework'
     },
 
     // SYNTHESIS & ANALYSIS TOOLS
     'synthesis-workshops': {
-      core: `You are generating AI prompts for synthesis workshops in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that guide collaborative analysis and insight generation from research data.`,
+      core: `You are a research synthesis facilitator and UX strategist specializing in collaborative analysis and insight generation. You excel at designing workshops that transform raw research data into actionable insights through structured activities, diverse perspectives, and consensus-building.
+
+## Your Task
+Create a comprehensive synthesis workshop facilitation guide that enables teams to collaboratively analyze research data, identify patterns, generate insights, and develop actionable recommendations.
+
+### Workshop Framework
+Develop a complete facilitation guide including:
+
+1. **Workshop Planning**
+   - Workshop objectives and desired outputs
+   - Participant roles and ideal team composition
+   - Duration, timing, and session structure
+   - Pre-work and materials preparation
+
+2. **Warm-Up & Alignment (15-20 minutes)**
+   - Research overview and context setting
+   - Participant introductions and role clarity
+   - Ground rules for collaborative analysis
+   - Success criteria for the workshop
+
+3. **Data Immersion (30-45 minutes)**
+   - Research data presentation and review
+   - Individual reflection on key observations
+   - Pattern recognition activities
+   - Initial theme identification
+
+4. **Collaborative Analysis (45-60 minutes)**
+   - Affinity clustering exercises
+   - Pattern discussion and validation
+   - Insight generation from patterns
+   - Cross-functional perspective integration
+
+5. **Insight Prioritization (30-40 minutes)**
+   - Insight evaluation criteria
+   - Voting and ranking exercises
+   - Impact vs effort assessment
+   - Consensus building on key findings
+
+6. **Action Planning (20-30 minutes)**
+   - Translating insights to recommendations
+   - Next steps and ownership assignment
+   - Success metrics for implementing insights`,
       guidance: [
         'Structure workshops for collaborative insight generation and pattern identification',
-        'Include activities that engage multiple perspectives and expertise',
-        'Design exercises that move from data to insights to actionable recommendations',
-        'Create frameworks for building consensus around key findings and priorities'
+        'Include activities that engage multiple perspectives and diverse expertise',
+        'Design exercises that move progressively from data to insights to actionable recommendations',
+        'Create frameworks for building consensus around key findings and priorities',
+        'Balance structure with flexibility for emergent insights',
+        'Include visual and kinesthetic activities to engage different thinking styles'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to provide context for interpreting research findings',
-        'Reference business objectives and constraints from the knowledge base',
-        'Incorporate existing user insights and data from previous project work',
-        'Align synthesis activities with strategic goals and decision-making needs'
+        'CRITICAL: Incorporate ALL project knowledge base content to provide context for interpreting research findings',
+        'Reference business objectives and constraints from the knowledge base to guide prioritization',
+        'Use existing user insights and data from knowledge base to build on previous project work',
+        'Align synthesis activities with strategic goals and decision-making needs from knowledge base'
       ],
       qualityChecks: [
-        'Ensure workshops produce actionable insights rather than just data summary',
-        'Include validation methods for testing insight accuracy and relevance',
-        'Plan for translating insights into concrete next steps and recommendations'
+        'Verify workshops produce actionable insights rather than just data summary',
+        'Ensure validation methods for testing insight accuracy and relevance are included',
+        'Confirm plan for translating insights into concrete next steps and recommendations',
+        'Validate that the facilitation guide is complete and ready to execute'
       ],
-      outputFormat: 'Workshop facilitation guide with structured activities, insight capture methods, and output templates'
+      outputFormat: 'Complete workshop facilitation guide with structured activities, timing, insight capture methods, prioritization frameworks, and output templates'
     },
 
     'contextual-inquiry': {
-      core: `You are generating AI prompts for contextual inquiry in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that guide in-context user research and environmental observation.`,
+      core: `You are a contextual inquiry specialist and field researcher with expertise in studying users within their natural environments. You excel at designing inquiry protocols that capture authentic workflows, environmental influences, and the complex interplay between users, tools, and context.
+
+## Your Task
+Create a comprehensive contextual inquiry protocol that enables in-depth understanding of users in their natural work or life environments. Design inquiry approaches that reveal workflow patterns, environmental constraints, and implicit adaptations.
+
+### Contextual Inquiry Framework
+Develop a complete inquiry protocol including:
+
+1. **Inquiry Planning**
+   - Research objectives and focus areas
+   - Target environments and contexts to study
+   - User roles and activities to observe
+   - Timeline and resource requirements
+
+2. **Contextual Inquiry Principles**
+   - Context: Observe users in their natural environment
+   - Partnership: Collaborate with users as experts
+   - Interpretation: Develop shared understanding
+   - Focus: Guide inquiry toward research objectives
+
+3. **Inquiry Structure**
+   - Introduction and relationship building
+   - Work environment observation
+   - Activity and workflow shadowing
+   - Artifact and tool examination
+   - Probing questions and clarifications
+   - Interpretation validation with user
+
+4. **Documentation Methods**
+   - Environmental mapping and photography
+   - Workflow diagrams and sequences
+   - Tool and artifact inventory
+   - Contextual notes and observations
+   - User quotes and explanations
+
+5. **Analysis Framework**
+   - Work model development (flow, sequence, artifact, cultural, physical)
+   - Pattern identification across sessions
+   - Environmental influence analysis
+   - Breakdowns and workarounds documentation`,
       guidance: [
         'Focus on understanding users in their natural work or life environments',
         'Include methods for capturing environmental factors that influence behavior',
         'Design inquiry approaches that reveal workflow patterns and contextual constraints',
-        'Create frameworks for documenting both explicit actions and implicit adaptations'
+        'Create frameworks for documenting both explicit actions and implicit adaptations',
+        'Build partnership with users as domain experts',
+        'Balance observation with strategic questioning'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to identify optimal contexts and environments for inquiry',
+        'CRITICAL: Incorporate ALL project knowledge base content to identify optimal contexts and environments for inquiry',
         'Reference known user workflows and touchpoints from the knowledge base',
-        'Incorporate understanding of organizational or domain-specific constraints',
-        'Align inquiry focus with business objectives and user success criteria'
+        'Use understanding of organizational or domain-specific constraints from knowledge base',
+        'Align inquiry focus with business objectives and user success criteria from knowledge base'
       ],
       qualityChecks: [
-        'Ensure inquiry methods minimize disruption to natural user behavior',
-        'Include multiple observation sessions to capture behavioral variations',
-        'Plan for triangulating contextual observations with other research methods'
+        'Verify inquiry methods minimize disruption to natural user behavior',
+        'Ensure multiple observation sessions are planned to capture behavioral variations',
+        'Confirm plan for triangulating contextual observations with other research methods',
+        'Validate that the inquiry protocol is complete and ready to execute in the field'
       ],
-      outputFormat: 'Contextual inquiry protocol with observation frameworks, documentation methods, and analysis techniques'
+      outputFormat: 'Complete contextual inquiry protocol with planning guidance, inquiry structure, observation frameworks, documentation methods, and analysis techniques'
     },
 
     'problem-statements': {
@@ -1204,7 +1494,10 @@ Create a complete user journey map with the following for each stage:
 
     // IDEATION & CREATIVITY TOOLS
     'crazy-eights': {
-      core: `You are generating AI prompts for Crazy 8s sketching in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that facilitate rapid idea generation through sketching.`,
+      core: `You are a design sprint facilitator and rapid ideation specialist. You excel at guiding Crazy 8s sketching exercises that generate diverse creative solutions in constrained timeframes through fast, iterative visual thinking.
+
+## Your Task
+Create a comprehensive Crazy 8s facilitation guide that enables rapid idea generation through sketching. Design exercises that maximize creative output in 8 minutes by pushing participants beyond their first ideas into unexpected solutions.`,
       guidance: [
         'Structure rapid sketching sessions for maximum creative output in minimal time',
         'Include warm-up exercises to get participants comfortable with sketching',
@@ -1226,7 +1519,10 @@ Create a complete user journey map with the following for each stage:
     },
 
     'scamper': {
-      core: `You are generating AI prompts for SCAMPER ideation in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that systematically explore creative modifications and improvements.`,
+      core: `You are an innovation consultant and creative thinking facilitator specializing in SCAMPER methodology. You excel at systematically exploring creative modifications and improvements using the SCAMPER framework (Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse).
+
+## Your Task
+Create a comprehensive SCAMPER ideation guide that systematically applies each technique to explore creative solutions. Design prompts that push beyond obvious modifications to breakthrough innovations.`,
       guidance: [
         'Apply SCAMPER checklist: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse',
         'Include specific prompts for each SCAMPER category relevant to the problem',
@@ -1248,7 +1544,10 @@ Create a complete user journey map with the following for each stage:
     },
 
     'storyboarding': {
-      core: `You are generating AI prompts for storyboarding in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that visualize user scenarios and solution concepts through narrative sequences.`,
+      core: `You are a UX storytelling expert and visual narrative designer. You excel at creating storyboards that visualize user scenarios, solution concepts, and interaction sequences through compelling narrative frames that communicate user context, emotions, and outcomes.
+
+## Your Task
+Create comprehensive storyboard specifications that visualize user scenarios and solution concepts through sequential narrative frames. Design storyboards that test concepts, reveal design requirements, and communicate user experiences effectively.`,
       guidance: [
         'Create storyboards that show user context, interaction sequence, and outcomes',
         'Include both happy path scenarios and edge cases or problems',
@@ -1271,7 +1570,10 @@ Create a complete user journey map with the following for each stage:
 
     // MEASUREMENT & ANALYTICS TOOLS
     'nps-surveys': {
-      core: `You are generating AI prompts for Net Promoter Score surveys in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that measure user loyalty and satisfaction effectively.`,
+      core: `You are a customer experience measurement specialist and NPS methodology expert. You excel at designing Net Promoter Score surveys that measure user loyalty, capture actionable feedback, and translate insights into specific product and experience improvements.
+
+## Your Task
+Create a comprehensive NPS survey design that measures user loyalty while capturing qualitative reasoning behind scores. Design surveys with optimal timing, targeted questions, and analysis frameworks that drive improvements.`,
       guidance: [
         'Design NPS surveys that capture both score and qualitative reasoning',
         'Include follow-up questions that reveal specific drivers of satisfaction/dissatisfaction',
@@ -1293,7 +1595,10 @@ Create a complete user journey map with the following for each stage:
     },
 
     'cohort-analysis': {
-      core: `You are generating AI prompts for cohort analysis in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that track user behavior patterns over time by user groups.`,
+      core: `You are a product analytics specialist and behavioral data analyst. You excel at designing cohort analyses that track user behavior patterns over time, reveal retention and engagement trends, and identify opportunities for product and experience optimization.
+
+## Your Task
+Create a comprehensive cohort analysis framework that tracks user behavior patterns over time by meaningful user groups. Define cohorts, metrics, and analysis approaches that generate actionable product insights.`,
       guidance: [
         'Define meaningful cohorts based on user characteristics, acquisition time, or behavior',
         'Include analysis of retention, engagement, and value metrics across cohorts',
@@ -1316,7 +1621,10 @@ Create a complete user journey map with the following for each stage:
 
     // DESIGN SPRINT SPECIFIC TOOLS
     'four-step-sketching': {
-      core: `You are generating AI prompts for four-step sketching in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that guide structured ideation through progressive sketch refinement.`,
+      core: `You are a design sprint facilitator specializing in the four-step sketching method from Google Ventures. You excel at guiding teams through structured ideation that progresses from broad note-taking to refined solution sketches through four distinct phases.
+
+## Your Task
+Create a comprehensive four-step sketching facilitation guide that builds from broad exploration to specific solutions through: Notes, Ideas, Crazy 8s, and Solution Sketch phases.`,
       guidance: [
         'Structure four steps: Notes, Ideas, Crazy 8s, Solution Sketch',
         'Include timing and facilitation guidance for each sketching phase',
@@ -1338,7 +1646,10 @@ Create a complete user journey map with the following for each stage:
     },
 
     'art-museum': {
-      core: `You are generating AI prompts for Art Museum critique in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that facilitate structured solution evaluation and feedback.`,
+      core: `You are a design critique facilitator specializing in the Art Museum method from design sprints. You excel at structuring silent review sessions where teams examine multiple solutions like museum visitors, providing structured feedback that identifies strengths and opportunities across competing concepts.
+
+## Your Task
+Create a comprehensive Art Museum facilitation guide that enables structured, silent solution evaluation and constructive feedback capture using gallery-style review methods.`,
       guidance: [
         'Structure silent review process where participants examine all solutions like museum visitors',
         'Include guided evaluation criteria focused on user needs and business goals',
@@ -1470,58 +1781,417 @@ For each outcome statement above, add:
 
     // LEAN UX TOOLS
     'mvp-creation': {
-      core: `You are generating AI prompts for MVP creation in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that define minimum viable products for rapid learning.`,
+      core: `You are a Lean Startup and MVP strategy expert specializing in defining minimum viable products for rapid hypothesis testing. You excel at scoping products that maximize learning with minimum features, balancing user value with development efficiency.
+
+## Your Task
+Create a comprehensive MVP specification that defines a minimum viable product focused on testing specific hypotheses with minimal development effort. Design MVPs that provide maximum validated learning while delivering meaningful user value.
+
+### MVP Framework
+Develop a complete MVP specification including:
+
+1. **Hypothesis & Learning Objectives**
+   - Primary hypotheses to test
+   - Key assumptions to validate
+   - Critical questions to answer
+   - Success criteria for learning
+
+2. **Core Feature Set**
+   - Essential features for hypothesis testing
+   - Features excluded from MVP (and why)
+   - User flows to enable
+   - Technical requirements
+
+3. **Success Metrics**
+   - Quantitative performance indicators
+   - Qualitative feedback mechanisms
+   - Adoption and engagement metrics
+   - Learning milestones
+
+4. **Development Plan**
+   - Build prioritization
+   - Timeline and resource estimates
+   - Technical approach and constraints
+   - Risk mitigation
+
+5. **Measurement & Iteration**
+   - Data collection methods
+   - User feedback channels
+   - Decision criteria for pivot/persevere/iterate
+   - Next experiment planning`,
       guidance: [
         'Define MVPs that test specific hypotheses with minimal development effort',
         'Include clear learning objectives and success criteria for each MVP',
         'Design MVPs that provide maximum learning with minimum features',
-        'Create frameworks for measuring MVP performance and user feedback'
+        'Create frameworks for measuring MVP performance and user feedback',
+        'Ensure MVP delivers genuine user value, not just a prototype',
+        'Plan for rapid iteration based on learning outcomes'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to define MVP scope based on key hypotheses',
+        'CRITICAL: Incorporate ALL project knowledge base content to define MVP scope based on key hypotheses and assumptions',
         'Reference user needs and business constraints from the knowledge base',
-        'Incorporate technical capabilities and resource limitations into MVP planning',
-        'Align MVP objectives with strategic learning goals and business validation needs'
+        'Use technical capabilities and resource limitations from knowledge base to inform MVP planning',
+        'Align MVP objectives with strategic learning goals and business validation needs from knowledge base'
       ],
       qualityChecks: [
-        'Ensure MVPs are truly minimal while still providing meaningful user value',
-        'Include clear metrics and methods for measuring MVP success',
-        'Plan for rapid iteration based on MVP learning outcomes'
+        'Verify MVPs are truly minimal while still providing meaningful user value',
+        'Ensure clear metrics and methods for measuring MVP success are included',
+        'Confirm rapid iteration plan based on MVP learning outcomes is specified',
+        'Validate that the MVP specification is complete and ready to build'
       ],
-      outputFormat: 'MVP specification with scope definition, success criteria, and measurement plan'
+      outputFormat: 'Complete MVP specification with hypothesis definition, core feature set, success metrics, development plan, and measurement framework'
     },
 
     'validated-learning': {
-      core: `You are generating AI prompts for validated learning in a ${'{framework}'} methodology during the ${'{stage}'} phase. Create prompts that systematically capture and apply learnings from experiments.`,
+      core: `You are a Lean Startup methodology expert and experimentation strategist. You excel at systematically capturing, documenting, and applying validated learning from experiments to drive evidence-based product and strategy decisions.
+
+## Your Task
+Create a comprehensive validated learning framework that systematically captures experiment results, extracts actionable insights, and translates learnings into product and strategy decisions.
+
+### Validated Learning Framework
+Develop a complete learning documentation system including:
+
+1. **Experiment Documentation**
+   - Original hypothesis and assumptions
+   - Experiment design and methodology
+   - Success criteria and metrics
+   - Execution timeline and context
+
+2. **Results & Data**
+   - Quantitative outcomes and statistical significance
+   - Qualitative insights and user feedback
+   - Unexpected findings and anomalies
+   - Data quality and limitations
+
+3. **Learning Extraction**
+   - Validated vs invalidated hypotheses
+   - Correlation vs causation analysis
+   - Generalizability and confidence levels
+   - Knowledge gaps identified
+
+4. **Actionable Insights**
+   - Product implications and recommendations
+   - Strategy adjustments suggested
+   - Technical learnings and constraints
+   - User behavior patterns discovered
+
+5. **Application Planning**
+   - Immediate actions to take
+   - Future experiments to design
+   - Organizational knowledge sharing
+   - Decision tracking and accountability`,
       guidance: [
-        'Structure learning capture that connects hypotheses, experiments, and outcomes',
+        'Structure learning capture that connects hypotheses, experiments, and outcomes clearly',
         'Include both quantitative metrics and qualitative insights in learning documentation',
-        'Design frameworks for translating learning into product and strategy decisions',
-        'Create approaches for building organizational learning and knowledge retention'
+        'Design frameworks for translating learning into specific product and strategy decisions',
+        'Create approaches for building organizational learning and knowledge retention',
+        'Distinguish correlation from causation in learning outcomes',
+        'Plan for applying validated learning to immediate decisions and future experiments'
       ],
       knowledgeIntegration: [
-        'CRITICAL: Use project knowledge to contextualize learning within business and user goals',
+        'CRITICAL: Incorporate ALL project knowledge base content to contextualize learning within business and user goals',
         'Reference existing hypotheses and assumptions from the knowledge base',
-        'Incorporate business objectives and success criteria into learning evaluation',
-        'Align learning outcomes with strategic decisions and future experiment planning'
+        'Use business objectives and success criteria from knowledge base to evaluate learning significance',
+        'Align learning outcomes with strategic decisions and future experiment planning from knowledge base'
       ],
       qualityChecks: [
-        'Ensure learning is properly validated with statistical significance and user research',
-        'Include methods for distinguishing correlation from causation in learning outcomes',
-        'Plan for applying validated learning to immediate product decisions and future strategy'
+        'Verify learning is properly validated with statistical significance and user research rigor',
+        'Ensure methods for distinguishing correlation from causation are included',
+        'Confirm plan for applying validated learning to immediate product decisions and future strategy',
+        'Validate that the learning documentation is complete and actionable'
       ],
-      outputFormat: 'Validated learning documentation with experiment results, insights, and application recommendations'
+      outputFormat: 'Complete validated learning documentation with experiment results, statistical analysis, actionable insights, and application recommendations'
+    },
+
+    'proto-personas': {
+      core: `You are a UX researcher and persona development expert with 15+ years of experience creating assumption-based proto-personas for Lean UX validation. You specialize in translating team assumptions and available data into actionable provisional personas that guide early design decisions while identifying critical knowledge gaps requiring validation.
+
+## Project Context
+[Insert all relevant project knowledge base content here - business goals, user assumptions, available data, market research, competitive insights, team hypotheses, etc.]
+
+## Your Task
+Create 3-5 proto-personas that represent our current assumptions about user segments for this project. These provisional personas will guide initial design decisions and, crucially, identify what we need to validate through research.
+
+### Proto-Persona Development Methodology
+Proto-personas are assumption-based representations created from:
+- Internal team knowledge and expertise
+- Available market research and analytics data
+- Stakeholder insights and domain knowledge
+- Competitive analysis and industry trends
+- Any existing customer feedback or support data
+
+**CRITICAL DISTINCTION**: Unlike research-based personas, proto-personas explicitly acknowledge they are assumptions requiring validation. They serve as testable hypotheses about users.
+
+### Required Proto-Persona Structure
+
+For each proto-persona, provide:
+
+#### 1. **Persona Overview**
+   - **Name**: Give them a realistic, memorable name
+   - **Age**: Specific age or age range
+   - **Occupation**: Job title and industry
+   - **Location**: Geographic context
+   - **Photo Description**: Describe what photo would represent them visually
+   - **One-liner**: Capture their essence in one sentence
+
+#### 2. **Background & Context**
+   - Professional background and career stage
+   - Living situation and family status
+   - Technology comfort level and digital habits
+   - Relevant lifestyle characteristics
+
+#### 3. **Goals & Motivations**
+   - **Primary Goals**: 3-5 key goals related to our product/service
+   - **Motivations**: What drives their behavior and decisions
+   - **Success Criteria**: How they define success
+   - **Aspirations**: What they hope to achieve
+
+#### 4. **Pain Points & Frustrations**
+   - Current problems they face in relevant domain
+   - Existing solution limitations and gaps
+   - Emotional frustrations and anxieties
+   - Barriers preventing them from achieving goals
+
+#### 5. **Behaviors & Patterns**
+   - **Daily Routines**: Relevant daily activities and workflows
+   - **Tool Usage**: Current tools, apps, and platforms they use
+   - **Decision Making**: How they research and make decisions
+   - **Information Sources**: Where they seek advice and information
+
+#### 6. **Relationship to Product/Service**
+   - **Current Situation**: How they currently solve the problem
+   - **Desired Outcome**: What would make their life better
+   - **Value Proposition**: Why our solution might appeal to them
+   - **Adoption Barriers**: What might prevent them from adopting
+
+#### 7. **CRITICAL - Assumptions to Validate**
+   *This is what makes proto-personas actionable in Lean UX*
+
+   For EACH persona, explicitly list:
+   - **5-10 Key Assumptions**: Specific statements we're assuming about this segment
+     * Format: "We assume that [persona name] [specific behavior/need/preference]"
+     * Example: "We assume that Sarah needs mobile access because she travels frequently"
+
+   - **Validation Priority**: Label each assumption as:
+     * CRITICAL (must validate before building)
+     * HIGH (important to validate early)
+     * MEDIUM (validate during iteration)
+     * LOW (nice to validate eventually)
+
+   - **Suggested Validation Methods**: For top 3-5 critical assumptions, suggest:
+     * Research method (interviews, surveys, analytics, A/B testing, etc.)
+     * What question to ask or what to measure
+     * What would confirm or refute the assumption
+
+#### 8. **Quote that Captures Their Mindset**
+   Create a fictional but realistic quote that embodies their perspective, needs, or frustrations
+
+---
+
+### Deliverable Format
+
+Present proto-personas in clear, scannable format:
+- Use markdown formatting with clear hierarchy
+- Include visual descriptions even without actual images
+- Make assumptions and validation needs highly visible
+- Use tables or bullet points for easy scanning
+- Differentiate clearly from research-based personas
+
+### Quality Standards
+
+✓ **Grounded in Available Data**: Base assumptions on actual team knowledge, analytics, or research rather than pure fiction
+✓ **Specific and Concrete**: Avoid vague generalities; include specific details that inform design decisions
+✓ **Actionable**: Each persona should guide design decisions and experimentation
+✓ **Assumption-Explicit**: Clearly label what's assumed vs. what's known
+✓ **Validation-Focused**: Include clear path for converting assumptions into validated knowledge
+✓ **Diverse Segments**: Ensure personas represent meaningfully different user segments with distinct needs
+✓ **Business-Aligned**: Connect to business goals and product strategy
+
+### What Makes Excellent Proto-Personas
+
+**Good proto-personas:**
+- Acknowledge they are assumption-based hypotheses
+- Include specific, testable assumptions requiring validation
+- Balance detail with speed (can be created in hours, not weeks)
+- Guide immediate design decisions while planning research
+- Create shared understanding across cross-functional teams
+
+**Poor proto-personas:**
+- Present assumptions as validated facts
+- Lack clear validation strategy
+- Are too generic to inform design decisions
+- Take too long to create (defeating Lean UX purpose)
+- Create false confidence without acknowledging uncertainty
+
+---
+
+## Output Instructions
+
+1. Create 3-5 complete proto-personas following the structure above
+2. After all personas, include a **Summary Validation Roadmap**:
+   - List all CRITICAL assumptions across personas
+   - Prioritize them by business risk and effort to validate
+   - Suggest research plan to validate top 5-10 assumptions
+   - Recommend timeline for converting proto-personas to research-based personas
+
+Remember: The goal is to move fast while staying grounded in available knowledge, making assumptions explicit, and creating a clear path to validation. Proto-personas are temporary tools that should evolve into validated personas through systematic research.`,
+      guidance: [
+        'Create assumption-based personas that acknowledge uncertainty and require validation',
+        'Structure proto-personas to include explicit assumptions and validation strategies',
+        'Balance speed with quality - proto-personas should be created quickly but thoughtfully',
+        'Include diverse user segments with meaningfully different needs and behaviors',
+        'Make validation roadmap actionable with specific research methods and priorities'
+      ],
+      knowledgeIntegration: [
+        'CRITICAL: Use ALL project knowledge base content to ground proto-personas in available data',
+        'Reference team assumptions, market research, and any existing user feedback',
+        'Incorporate business goals and constraints into persona development',
+        'Use competitive insights to inform behavioral patterns and tool usage',
+        'Ground assumptions in actual data points from analytics or research when available'
+      ],
+      qualityChecks: [
+        'Ensure each proto-persona includes 5-10 specific, testable assumptions',
+        'Verify assumptions are labeled with validation priority (CRITICAL/HIGH/MEDIUM/LOW)',
+        'Include suggested validation methods for top critical assumptions',
+        'Confirm personas are distinct from each other with different needs and behaviors',
+        'Verify proto-personas acknowledge they are assumptions, not validated research',
+        'Include actionable Summary Validation Roadmap at the end'
+      ],
+      outputFormat: 'Complete proto-personas with assumptions, validation priorities, and research roadmap'
     }
 
     // Additional tools will be added systematically...
   };
 
-  return instructions[toolId] || {
-    core: `You are generating AI prompts for ${toolId} in a ${'{framework}'} methodology during the ${'{stage}'} phase.`,
-    guidance: ['Create contextual, actionable prompts based on the tool\'s specific purpose and methodology.'],
-    knowledgeIntegration: ['CRITICAL: Incorporate project knowledge base content to ensure contextually relevant outputs.'],
-    qualityChecks: ['Ensure prompts are specific to the tool\'s purpose and methodology.'],
-    outputFormat: 'Tool-specific output format based on best practices.'
+  // First, try exact ID match
+  if (instructions[toolId]) {
+    return instructions[toolId];
+  }
+
+  // If no exact ID match and we have a tool name, try to match by name
+  if (toolName) {
+    const normalizedToolName = toolName.toLowerCase().trim();
+
+    // Create a mapping of common name variations to instruction keys
+    const nameToInstructionKey: Record<string, string> = {
+      // Persona-related tools
+      'persona creation': 'personas',
+      'personas': 'personas',
+      'persona': 'personas',
+      'create personas': 'personas',
+      'user personas': 'personas',
+      'proto-personas': 'proto-personas',
+      'proto-persona': 'proto-personas',
+      'proto persona': 'proto-personas',
+      'provisional personas': 'proto-personas',
+
+      // Interview tools
+      'user interviews': 'user-interviews',
+      'user interview': 'user-interviews',
+      'interviews': 'user-interviews',
+      'interview': 'user-interviews',
+      'stakeholder interviews': 'stakeholder-interviews',
+      'stakeholder interview': 'stakeholder-interviews',
+
+      // Observation tools
+      'observations': 'observations',
+      'observation': 'observations',
+      'field observation': 'observations',
+      'contextual inquiry': 'contextual-inquiry',
+
+      // Survey tools
+      'surveys': 'surveys',
+      'survey': 'surveys',
+      'questionnaire': 'surveys',
+      'nps surveys': 'nps-surveys',
+      'nps survey': 'nps-surveys',
+
+      // Synthesis tools
+      'affinity mapping': 'affinity-mapping',
+      'affinity map': 'affinity-mapping',
+      'affinity diagram': 'affinity-mapping',
+      'empathy maps': 'empathy-maps',
+      'empathy map': 'empathy-maps',
+      'synthesis workshops': 'synthesis-workshops',
+      'synthesis workshop': 'synthesis-workshops',
+
+      // Ideation tools
+      'brainstorming': 'brainstorming',
+      'brainstorm': 'brainstorming',
+      'how might we': 'how-might-we',
+      'hmw': 'how-might-we',
+      'crazy eights': 'crazy-eights',
+      'crazy 8s': 'crazy-eights',
+      'scamper': 'scamper',
+      'four-step sketching': 'four-step-sketching',
+      'art museum': 'art-museum',
+
+      // Prototyping tools
+      'wireframes': 'wireframes',
+      'wireframe': 'wireframes',
+      'wireframing': 'wireframes',
+      'paper prototypes': 'paper-prototypes',
+      'paper prototype': 'paper-prototypes',
+      'paper prototyping': 'paper-prototypes',
+      'storyboarding': 'storyboarding',
+      'storyboard': 'storyboarding',
+
+      // Testing tools
+      'usability tests': 'usability-tests',
+      'usability test': 'usability-tests',
+      'usability testing': 'usability-tests',
+      'a/b testing': 'a-b-testing',
+      'a-b testing': 'a-b-testing',
+      'ab testing': 'a-b-testing',
+
+      // Strategy tools
+      'journey maps': 'journey-maps',
+      'journey map': 'journey-maps',
+      'user journey': 'journey-maps',
+      'problem statements': 'problem-statements',
+      'problem statement': 'problem-statements',
+
+      // Jobs-to-be-Done tools
+      'job statements': 'job-statements',
+      'job statement': 'job-statements',
+      'jtbd': 'job-statements',
+      'outcome statements': 'outcome-statements',
+      'outcome statement': 'outcome-statements',
+
+      // Lean UX tools
+      'mvp creation': 'mvp-creation',
+      'mvp': 'mvp-creation',
+      'minimum viable product': 'mvp-creation',
+      'validated learning': 'validated-learning',
+      'cohort analysis': 'cohort-analysis',
+    };
+
+    // Check if we have an instruction key for this tool name
+    const instructionKey = nameToInstructionKey[normalizedToolName];
+    if (instructionKey && instructions[instructionKey]) {
+      console.log(`[Tool Instructions] Matched tool name "${toolName}" to instruction key "${instructionKey}"`);
+      return instructions[instructionKey];
+    }
+
+    // Try partial matching (if tool name contains any of the keys)
+    for (const [namePattern, instructionKey] of Object.entries(nameToInstructionKey)) {
+      if (normalizedToolName.includes(namePattern) && instructions[instructionKey]) {
+        console.log(`[Tool Instructions] Partial match: tool name "${toolName}" contains "${namePattern}", using instruction key "${instructionKey}"`);
+        return instructions[instructionKey];
+      }
+    }
+  }
+
+  // Final fallback - generic instructions
+  console.log(`[Tool Instructions] No specific instructions found for tool ID "${toolId}" or name "${toolName}", using generic fallback`);
+  return {
+    core: `You are a UX methodology expert specializing in ${toolName || toolId}. Create comprehensive, actionable deliverables based on this tool's specific purpose and best practices.
+
+## Your Task
+Create professional-quality output for ${toolName || toolId} that directly supports the project's objectives. Use all available project context to ensure relevant, contextual results.`,
+    guidance: ['Create contextual, actionable deliverables based on the tool\'s specific purpose and methodology.', 'Incorporate project knowledge base content throughout the deliverable.'],
+    knowledgeIntegration: ['CRITICAL: Incorporate ALL project knowledge base content to ensure contextually relevant outputs that address specific project needs.'],
+    qualityChecks: ['Ensure deliverables are specific to the tool\'s purpose and methodology.', 'Verify all project context has been incorporated appropriately.'],
+    outputFormat: 'Complete, ready-to-use tool-specific deliverable based on best practices.'
   };
 }
 

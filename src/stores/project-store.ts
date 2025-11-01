@@ -29,6 +29,17 @@ export interface ProjectEnhancedSettings {
     industryCompliance: boolean;
     accessibilityFocus: boolean;
   };
+  aiMethodSettings?: {
+    promptStructure?: 'framework-guided' | 'open-ended' | 'structured-templates';
+    creativityLevel?: 'conservative' | 'balanced' | 'creative' | 'experimental';
+    reasoning?: 'step-by-step' | 'direct' | 'exploratory';
+    adaptability?: 'static' | 'context-aware' | 'dynamic-learning';
+    validation?: 'none' | 'basic' | 'built-in' | 'comprehensive';
+    personalization?: 'none' | 'basic-profile' | 'user-preferences' | 'adaptive-learning';
+    temperature?: number;
+    topP?: number;
+    topK?: number;
+  };
 }
 
 export interface Project {
@@ -460,17 +471,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   getEnhancedSettings: (projectId: string) => {
     const state = get();
     const project = state.projects.find(p => p.id === projectId) || state.currentProject;
-    
+
+    console.log('[getEnhancedSettings] Debug:', {
+      projectId,
+      hasProject: !!project,
+      hasEnhancedSettings: !!project?.enhanced_settings,
+      projectName: project?.name
+    });
+
     // First try to get from project data
     if (project?.enhanced_settings) {
+      console.log('[getEnhancedSettings] Found in project data');
       return project.enhanced_settings;
     }
-    
+
     // Fallback to localStorage if database column doesn't exist yet
     try {
       const stored = localStorage.getItem(`enhanced_settings_${projectId}`);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
+      if (stored) {
+        console.log('[getEnhancedSettings] Found in localStorage');
+        return JSON.parse(stored);
+      } else {
+        console.log('[getEnhancedSettings] No settings found, returning null');
+        return null;
+      }
+    } catch (e) {
+      console.error('[getEnhancedSettings] Error reading from localStorage:', e);
       return null;
     }
   },

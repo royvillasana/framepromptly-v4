@@ -293,7 +293,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectFramework: (framework) => set({ selectedFramework: framework }),
   selectStage: (stage) => set({ selectedStage: stage }),
   selectNode: (node) => set({ selectedNode: node }),
-  setExpandedPromptId: (id) => set({ expandedPromptId: id }),
+  setExpandedPromptId: (id) => {
+    console.log('[Workflow Store] setExpandedPromptId called:', id, 'Stack:', new Error().stack);
+    set({ expandedPromptId: id });
+  },
   
   initializeFrameworks: () => set({ frameworks: sampleFrameworks }),
 

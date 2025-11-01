@@ -132,13 +132,18 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         .join('\n\n');
 
       // Get project settings for dynamic prompt customization
-      const projectSettings = currentProject ? getEnhancedSettings(currentProject.id) : null;
+      // If no enhanced settings exist, we'll use STANDARD_DEFAULTS which will be applied in buildLLMConfig
+      const enhancedSettings = currentProject ? getEnhancedSettings(currentProject.id) : null;
+
+      // Even if enhancedSettings is null, we pass an empty object so buildLLMConfig uses STANDARD_DEFAULTS
+      const projectSettings = enhancedSettings || {};
 
       console.log('[Tool Node] Generating prompt with project settings:', {
         projectId: currentProject.id,
-        hasSettings: !!projectSettings,
-        qualityDepth: projectSettings?.qualitySettings?.methodologyDepth || 'default',
-        outputDetail: projectSettings?.qualitySettings?.outputDetail || 'default'
+        hasEnhancedSettings: !!enhancedSettings,
+        usingDefaults: !enhancedSettings,
+        qualityDepth: projectSettings?.qualitySettings?.methodologyDepth || 'will use default',
+        outputDetail: projectSettings?.qualitySettings?.outputDetail || 'will use default'
       });
 
       // Generate prompt content with project settings
@@ -152,7 +157,7 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         undefined,
         knowledgeContext || undefined,
         undefined, // enhancedContext
-        projectSettings || undefined // project settings for dynamic customization
+        projectSettings // project settings (uses STANDARD_DEFAULTS if empty object)
       );
 
       await new Promise(resolve => setTimeout(resolve, 400));

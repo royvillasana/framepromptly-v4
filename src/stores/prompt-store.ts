@@ -16,7 +16,8 @@ import {
   TailoredOutput
 } from '@/lib/destination-driven-tailoring';
 import { destinationTailoringService } from '@/lib/destination-tailoring-service';
-import { buildDynamicPrompt, ProjectSettings, validateProjectSettings } from '@/lib/dynamic-prompt-builder';
+import { buildDynamicPrompt, ProjectSettings, validateProjectSettings, buildAIGenerationParameters } from '@/lib/dynamic-prompt-builder';
+import { generateToolSpecificInstructions } from '@/lib/tool-specific-prompt-instructions';
 
 export interface ConversationMessage {
   id: string;
@@ -916,15 +917,64 @@ export const usePromptStore = create<PromptState>((set, get) => ({
         promptStructure: projectSettings?.aiMethodSettings?.promptStructure || 'default'
       });
     } else {
-      // Fallback - simple direct prompt
-      processedTemplate = `Create ${tool.name} deliverable for the project. Generate actionable outputs for immediate use.`;
+      // Use tool-specific AI instructions
+      try {
+        const specificInstructions = generateToolSpecificInstructions({
+          framework,
+          stage,
+          tool,
+          projectContext: knowledgeContext
+        });
 
-      // Add knowledge context if provided
-      if (knowledgeContext) {
-        processedTemplate = `Project Knowledge Base:
+        // Build the complete AI prompt using the tool-specific template
+        processedTemplate = specificInstructions.promptTemplate;
+
+        // The template already has placeholder for project context
+        // Replace [Project Context] or similar placeholders with actual knowledge
+        if (knowledgeContext) {
+          processedTemplate = processedTemplate.replace(
+            /\[Insert all relevant project knowledge base content here[^\]]*\]/gi,
+            knowledgeContext
+          );
+          processedTemplate = processedTemplate.replace(
+            /\{\{knowledgeBase\}\}/gi,
+            knowledgeContext
+          );
+        }
+
+        // Add AI Generation Parameters from project settings at the BEGINNING
+        const aiParameters = buildAIGenerationParameters(projectSettings);
+        console.log('[Tool-Specific Instructions] AI Parameters generated:', aiParameters?.substring(0, 200));
+        console.log('[Tool-Specific Instructions] Project settings:', projectSettings);
+        if (aiParameters) {
+          processedTemplate = `${aiParameters}
+
+${processedTemplate}`;
+        }
+
+        console.log('[Tool-Specific Instructions] Using AI instructions for:', tool.id);
+        console.log('[Tool-Specific Instructions] Added AI parameters:', !!aiParameters);
+        console.log('[Tool-Specific Instructions] Final template preview:', processedTemplate.substring(0, 300));
+      } catch (error) {
+        console.error('[Tool-Specific Instructions] Error loading instructions:', error);
+        // Final fallback - simple direct prompt
+        processedTemplate = `Create ${tool.name} deliverable for the project. Generate actionable outputs for immediate use.`;
+
+        // Add knowledge context if provided
+        if (knowledgeContext) {
+          processedTemplate = `Project Knowledge Base:
 ${knowledgeContext}
 
 ${processedTemplate}`;
+        }
+
+        // Add AI Generation Parameters at the BEGINNING even in fallback
+        const aiParameters = buildAIGenerationParameters(projectSettings);
+        if (aiParameters) {
+          processedTemplate = `${aiParameters}
+
+${processedTemplate}`;
+        }
       }
     }
 
