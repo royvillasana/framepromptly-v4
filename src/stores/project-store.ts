@@ -68,7 +68,7 @@ interface ProjectState {
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   setCurrentProject: (project: Project | null) => Promise<void>;
-  saveCanvasData: (projectId: string, nodes: any[], edges: any[]) => Promise<void>;
+  saveCanvasData: (projectId: string, nodes: any[], edges: any[], toolToPromptIdMapping?: Record<string, string>) => Promise<void>;
   
   // Miro Settings Actions
   saveMiroToken: (projectId: string, accessToken: string) => Promise<void>;
@@ -224,7 +224,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  saveCanvasData: async (projectId: string, nodes: any[], edges: any[]) => {
+  saveCanvasData: async (projectId: string, nodes: any[], edges: any[], toolToPromptIdMapping?: Record<string, string>) => {
     try {
       // Validate and sanitize canvas data before sending
       const sanitizedNodes = nodes.map(node => ({
@@ -232,22 +232,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         // Remove any potential circular references or non-serializable data
         data: node.data ? JSON.parse(JSON.stringify(node.data)) : null
       }));
-      
+
       const sanitizedEdges = edges.map(edge => ({
         ...edge,
         // Remove any potential circular references
         data: edge.data ? JSON.parse(JSON.stringify(edge.data)) : null
       }));
 
-      const canvasData = { 
-        nodes: sanitizedNodes, 
+      const canvasData = {
+        nodes: sanitizedNodes,
         edges: sanitizedEdges,
+        toolToPromptIdMapping: toolToPromptIdMapping || {},
         lastUpdated: new Date().toISOString()
       };
 
       const { error } = await supabase
         .from('projects')
-        .update({ 
+        .update({
           canvas_data: canvasData
         })
         .eq('id', projectId);
@@ -260,13 +261,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       // Update local state
       set(state => ({
-        projects: state.projects.map(p => 
-          p.id === projectId 
-            ? { ...p, canvas_data: { nodes, edges } }
+        projects: state.projects.map(p =>
+          p.id === projectId
+            ? { ...p, canvas_data: { nodes, edges, toolToPromptIdMapping } }
             : p
         ),
-        currentProject: state.currentProject?.id === projectId 
-          ? { ...state.currentProject, canvas_data: { nodes, edges } }
+        currentProject: state.currentProject?.id === projectId
+          ? { ...state.currentProject, canvas_data: { nodes, edges, toolToPromptIdMapping } }
           : state.currentProject
       }));
     } catch (error) {

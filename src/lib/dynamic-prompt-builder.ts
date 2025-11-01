@@ -325,6 +325,14 @@ export function buildLLMConfig(projectSettings?: ProjectSettings): string {
   };
   const responseStyle = responseStyleMap[ai.promptStructure] || 'structured';
 
+  // Map reasoning style to reasoning_depth
+  const reasoningDepthMap = {
+    'step-by-step': 'deep',
+    'direct': 'shallow',
+    'exploratory': 'mid'
+  };
+  const reasoningDepth = reasoningDepthMap[ai.reasoning] || 'mid';
+
   // Build the XML config block
   const config = `<LLM_CONFIG>
 temperature=${temperature}
@@ -333,6 +341,7 @@ top_k=${topK}
 max_tokens=${maxTokens}
 mode=${mode}
 response_style=${responseStyle}
+reasoning_depth=${reasoningDepth}
 </LLM_CONFIG>`;
 
   return config;
@@ -343,13 +352,8 @@ response_style=${responseStyle}
  * Shows all configuration details including advanced parameters
  */
 export function buildAIGenerationParameters(projectSettings?: ProjectSettings): string {
-  // Build LLM Config block first
-  const llmConfig = buildLLMConfig(projectSettings);
-
   // Always show AI parameters, using defaults if no settings provided
   const sections: string[] = [];
-  sections.push(llmConfig);
-  sections.push('');
   sections.push('# AI GENERATION PARAMETERS');
   sections.push('');
   sections.push('*These parameters influence how this prompt is structured and executed:*');
@@ -368,16 +372,15 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
     if (ctx.timeline) contextParts.push(`**Timeline:** ${ctx.timeline}`);
 
     if (contextParts.length > 0) {
-      sections.push('## 📋 Project Context');
+      sections.push('## Project Context');
       contextParts.forEach(part => sections.push(`- ${part}`));
       sections.push('');
     }
   }
 
-  // Quality Preferences
-  if (projectSettings?.qualitySettings) {
-    const quality = { ...STANDARD_DEFAULTS.qualitySettings, ...projectSettings.qualitySettings };
-    sections.push('## ✓ Quality Preferences');
+  // Quality Preferences - Always show, using defaults if not configured
+  const quality = { ...STANDARD_DEFAULTS.qualitySettings, ...(projectSettings?.qualitySettings || {}) };
+  sections.push('## Quality Preferences');
 
     // Methodology Depth
     sections.push(`- **Methodology Depth:** ${quality.methodologyDepth.toUpperCase()}`);
@@ -409,13 +412,12 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
     sections.push(`- **Industry Compliance Required:** ${quality.industryCompliance ? 'YES' : 'NO'}`);
     sections.push(`- **Accessibility Focus:** ${quality.accessibilityFocus ? 'YES (WCAG guidelines applied)' : 'NO'}`);
     sections.push('');
-  }
 
   // AI Method Settings - Comprehensive Display (always show, using defaults if not configured)
   const ai = { ...STANDARD_DEFAULTS.aiMethodSettings, ...(projectSettings?.aiMethodSettings || {}) };
 
     // Prompt Structure Method
-    sections.push('## 🎯 Prompt Structure Method');
+    sections.push('## Prompt Structure Method');
     sections.push(`- **Selected Method:** ${ai.promptStructure.toUpperCase()}`);
     const structureDescriptions = {
       'framework-guided': 'Follows UX methodology structure with stage-based organization and systematic progression',
@@ -427,7 +429,7 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
 
     // AI Creativity Level - Check for advanced parameters
     const hasAdvancedParams = ai.temperature !== undefined || ai.topP !== undefined || ai.topK !== undefined;
-    sections.push('## 🎨 AI Creativity Level');
+    sections.push('## AI Creativity Level');
 
     if (hasAdvancedParams) {
       sections.push(`- **Mode:** ADVANCED PARAMETERS (overrides creativity level)`);
@@ -456,7 +458,7 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
     sections.push('');
 
     // Reasoning Approach
-    sections.push('## 🧠 Reasoning Approach');
+    sections.push('## Reasoning Approach');
     sections.push(`- **Reasoning Style:** ${ai.reasoning.toUpperCase()}`);
     const reasoningDescriptions = {
       'step-by-step': 'Clear step-by-step explanations with reasoning at each stage',
@@ -467,7 +469,7 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
     sections.push('');
 
     // Adaptability Method
-    sections.push('## 🔄 Adaptability Method');
+    sections.push('## Adaptability Method');
     sections.push(`- **Adaptability Level:** ${ai.adaptability.toUpperCase()}`);
     const adaptabilityDescriptions = {
       'static': 'Consistent approach following fixed patterns',
@@ -478,7 +480,7 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
     sections.push('');
 
     // Validation & Quality Control
-    sections.push('## ✅ Validation & Quality Control');
+    sections.push('## Validation & Quality Control');
     sections.push(`- **Validation Level:** ${ai.validation.toUpperCase()}`);
     const validationDescriptions = {
       'none': 'No validation requirements - rapid output focused',
@@ -491,7 +493,7 @@ export function buildAIGenerationParameters(projectSettings?: ProjectSettings): 
 
     // Personalization Levels
     if (ai.personalization) {
-      sections.push('## 👤 Personalization Level');
+      sections.push('## Personalization Level');
       sections.push(`- **Personalization:** ${ai.personalization.toUpperCase()}`);
       const personalizationDescriptions = {
         'none': 'Generic responses without personalization',

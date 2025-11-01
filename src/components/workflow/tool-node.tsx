@@ -36,8 +36,8 @@ interface ToolNodeProps {
 }
 
 export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
-  const { generatePrompt, setCurrentPrompt, getEnhancedTemplate, generateEnhancedPrompt } = usePromptStore();
-  const { addNode, addEdge, nodes, edges, updateNode } = useWorkflowStore();
+  const { generatePrompt, setCurrentPrompt, getEnhancedTemplate, generateEnhancedPrompt, createPromptVersion } = usePromptStore();
+  const { addNode, addEdge, nodes, edges, updateNode, getPromptNodeForTool, setToolPromptMapping, getPromptIdForTool, setToolPromptIdMapping } = useWorkflowStore();
   const { currentProject, getEnhancedSettings } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
   const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab } = data;
@@ -187,7 +187,11 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         knowledgeCount: knowledgeData.length,
         hasKnowledgeContext: knowledgeData.length > 0
       });
-      
+
+      // Check if this tool already has a prompt ID (for versioning)
+      const existingPromptId = getPromptIdForTool(id);
+      console.log('[Tool Node] Checking for existing prompt before API call:', existingPromptId);
+
       const { data, error } = await supabase.functions.invoke('generate-ai-prompt', {
         body: {
           promptContent,
@@ -196,20 +200,35 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           frameworkName: framework.name,
           stageName: stage.name,
           toolName: tool.name,
-          knowledgeContext: knowledgeData
+          knowledgeContext: knowledgeData,
+          existingPromptId: existingPromptId || undefined  // Pass existing ID if available
         }
       });
 
       if (error) {
-        console.error('Error calling AI function:', error);
+        console.error('❌ Error calling AI function:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
+        console.error('❌ Response data (may contain error details):', data);
+        console.error('❌ Full response data:', JSON.stringify(data, null, 2));
+
+        // Check if data contains error details from the Edge Function
+        if (data && data.error) {
+          console.error('❌ Server error message:', data.error);
+          console.error('❌ Server error details:', data.details);
+          toast.error('AI generation failed: ' + data.error);
+          throw new Error(data.error);
+        }
+
         toast.error('Failed to call AI service: ' + (error.message || 'Unknown error'));
         throw error;
       }
 
-      if (!data.success) {
-        console.error('AI function returned error:', data.error);
-        toast.error('AI generation failed: ' + (data.error || 'Unknown error'));
-        throw new Error(data.error || 'Failed to generate AI response');
+      if (!data || !data.success) {
+        console.error('❌ AI function returned error:', data?.error);
+        console.error('❌ Error details from server:', data?.details);
+        console.error('❌ Full response:', JSON.stringify(data, null, 2));
+        toast.error('AI generation failed: ' + (data?.error || 'Unknown error'));
+        throw new Error(data?.error || 'Failed to generate AI response');
       }
       
       console.log('AI response received:', {
@@ -264,9 +283,20 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
 
       await new Promise(resolve => setTimeout(resolve, 400));
 
+      //  The Edge Function now handles versioning, so we just use the returned prompt ID
+      const finalPromptId = data.id;
+
+      // If this was a new prompt (not a version), store the mapping
+      if (!existingPromptId) {
+        console.log('[Tool Node] Storing new tool-to-prompt mapping:', id, '->', data.id);
+        setToolPromptIdMapping(id, data.id);
+      } else {
+        console.log('[Tool Node] Edge Function created version for existing prompt:', existingPromptId);
+      }
+
       // Create the generated prompt object with both prompt and execution result
       const generatedPrompt = {
-        id: data.id,
+        id: finalPromptId,
         structured_prompt_id: data.structured_prompt_id, // NEW: Link to structured version in library
         workflowId: `workflow-${framework.id}-${stage.id}-${tool.id}`,
         projectId: currentProject.id,
@@ -278,43 +308,62 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
         executionResult, // NEW: Store the execution result
         executionError  // NEW: Store any execution error
       };
-      
+
       // Set as current prompt
       setCurrentPrompt(generatedPrompt);
-      
-      // Get smart position for the new prompt node
-      const newPosition = getSmartPosition('prompt', nodes, { 
-        sourceNodeId: id,
-        workflowType: 'tool-to-prompt' 
-      });
-      
-      // Create a new prompt node with proper positioning
-      const promptNode = {
-        id: `prompt-${id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: 'prompt',
-        position: newPosition,
-        data: {
+
+      // Step 6: Creating/Updating Node
+      setCurrentStep(6);
+
+      // Check if this tool already has a prompt node
+      const existingPromptNodeId = getPromptNodeForTool(id);
+
+      if (existingPromptNodeId) {
+        // Reuse existing prompt node by updating its data
+        console.log('[Tool Node] Reusing existing prompt node:', existingPromptNodeId);
+        updateNode(existingPromptNodeId, {
           prompt: generatedPrompt,
           onSwitchToPromptTab,
           sourceToolId: id,
           sourceToolName: tool.name
-        }
-      };
-      
-      // Step 6: Creating Node
-      setCurrentStep(6);
-
-      addNode(promptNode);
-
-      // Create edge from tool to prompt (right side of tool to left side of prompt)
-      if (id) {
-        const edge = createConnectedEdge(id, promptNode.id, {
-          sourceHandle: `${id}-source-1`, // Tool node uses prefixed handles
-          targetHandle: 'target-1', // Prompt node uses unprefixed handles
-          animated: true,
-          style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
         });
-        addEdge(edge);
+      } else {
+        // Create a new prompt node
+        console.log('[Tool Node] Creating new prompt node for tool:', id);
+
+        // Get smart position for the new prompt node
+        const newPosition = getSmartPosition('prompt', nodes, {
+          sourceNodeId: id,
+          workflowType: 'tool-to-prompt'
+        });
+
+        const promptNode = {
+          id: `prompt-${id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'prompt',
+          position: newPosition,
+          data: {
+            prompt: generatedPrompt,
+            onSwitchToPromptTab,
+            sourceToolId: id,
+            sourceToolName: tool.name
+          }
+        };
+
+        addNode(promptNode);
+
+        // Store the mapping for future reuse
+        setToolPromptMapping(id, promptNode.id);
+
+        // Create edge from tool to prompt (right side of tool to left side of prompt)
+        if (id) {
+          const edge = createConnectedEdge(id, promptNode.id, {
+            sourceHandle: `${id}-source-1`, // Tool node uses prefixed handles
+            targetHandle: 'target-1', // Prompt node uses unprefixed handles
+            animated: true,
+            style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
+          });
+          addEdge(edge);
+        }
       }
 
       // Wait a brief moment for the node to be added to the canvas

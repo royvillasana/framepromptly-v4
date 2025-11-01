@@ -26,6 +26,21 @@ export interface ConversationMessage {
   timestamp: Date;
 }
 
+export interface PromptVersion {
+  id: string;
+  promptId: string;
+  versionNumber: number;
+  versionTitle: string;
+  isActive: boolean;
+  content: string;
+  variables: Record<string, string>;
+  conversation: ConversationMessage[];
+  changeSummary?: string;
+  parentVersionId?: string;
+  aiResponse?: string;
+  createdAt: string;
+}
+
 export interface PromptTemplate {
   id: string;
   framework: string;
@@ -96,7 +111,11 @@ export interface PromptState {
   isGenerating: boolean;
   isValidating: boolean;
   isTailoring: boolean;
-  
+
+  // Version control state
+  promptVersions: Record<string, PromptVersion[]>; // keyed by promptId
+  isLoadingVersions: boolean;
+
   // Actions
   loadProjectPrompts: (projectId: string) => Promise<void>;
   generatePrompt: (projectId: string, framework: UXFramework, stage: UXStage, tool: UXTool, connectedNodes?: any, nodeCustomizations?: Record<string, any>, previousOutputs?: string[], knowledgeContext?: string, enhancedContext?: EnhancedPromptContext, projectSettings?: ProjectSettings) => Promise<string>;
@@ -116,7 +135,15 @@ export interface PromptState {
   generateEnhancedContextPrompt: (request: IntegratedContextRequest) => Promise<IntegratedContextResponse>;
   recordWorkflowOutput: (projectId: string, output: GeneratedPrompt, decisions?: any[], nextStageId?: string) => Promise<void>;
   getWorkflowAnalytics: (projectId: string) => Promise<any>;
-  
+
+  // Version control actions
+  loadPromptVersions: (promptId: string) => Promise<void>;
+  createPromptVersion: (promptId: string, title: string, content: string, variables?: Record<string, string>, conversation?: ConversationMessage[], changeSummary?: string, parentVersionId?: string) => Promise<PromptVersion>;
+  switchToVersion: (promptId: string, versionId: string) => Promise<void>;
+  deleteVersion: (versionId: string) => Promise<void>;
+  getVersionHistory: (promptId: string) => PromptVersion[];
+  getActiveVersion: (promptId: string) => PromptVersion | null;
+
   // Destination-driven tailoring actions
   tailorPromptForDestination: (promptId: string, destinationContext: DestinationContext) => Promise<{ success: boolean; errors?: string[]; clarifyingQuestions?: string[] }>;
   getSupportedDestinations: () => DestinationType[];
@@ -753,6 +780,8 @@ export const usePromptStore = create<PromptState>((set, get) => ({
   isGenerating: false,
   isValidating: false,
   isTailoring: false,
+  promptVersions: {},
+  isLoadingVersions: false,
 
   loadProjectPrompts: async (projectId: string) => {
     try {
@@ -860,8 +889,10 @@ export const usePromptStore = create<PromptState>((set, get) => ({
           switch (variable.type) {
             case 'number':
               if (variable.id === 'sampleSize') {
-                defaultVariables[variable.id] = 15;
+                // Sample size needs to be between 30-10,000 per validation
+                defaultVariables[variable.id] = 50;
               } else {
+                // Use the minimum from validation, or a sensible default
                 defaultVariables[variable.id] = variable.validation?.min || 1;
               }
               break;
@@ -1503,14 +1534,240 @@ ${processedTemplate}`;
 
   clearDestination: (promptId: string) => {
     set(state => ({
-      prompts: state.prompts.map(p => 
-        p.id === promptId 
+      prompts: state.prompts.map(p =>
+        p.id === promptId
           ? { ...p, destination: undefined }
           : p
       ),
-      currentPrompt: state.currentPrompt?.id === promptId 
+      currentPrompt: state.currentPrompt?.id === promptId
         ? { ...state.currentPrompt, destination: undefined }
         : state.currentPrompt
     }));
+  },
+
+  // Version Control Actions
+  loadPromptVersions: async (promptId: string) => {
+    set({ isLoadingVersions: true });
+    try {
+      const { data, error } = await supabase
+        .from('prompt_versions')
+        .select('*')
+        .eq('prompt_id', promptId)
+        .order('version_number', { ascending: true });
+
+      if (error) throw error;
+
+      const versions: PromptVersion[] = (data || []).map(v => ({
+        id: v.id,
+        promptId: v.prompt_id,
+        versionNumber: v.version_number,
+        versionTitle: v.version_title,
+        isActive: v.is_active,
+        content: v.prompt_content,
+        variables: v.variables || {},
+        conversation: v.conversation ? (Array.isArray(v.conversation) ? v.conversation.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })) : []) : [],
+        changeSummary: v.change_summary,
+        parentVersionId: v.parent_version_id,
+        aiResponse: v.ai_response,
+        createdAt: v.created_at
+      }));
+
+      set(state => ({
+        promptVersions: {
+          ...state.promptVersions,
+          [promptId]: versions
+        },
+        isLoadingVersions: false
+      }));
+    } catch (error) {
+      console.error('Error loading prompt versions:', error);
+      set({ isLoadingVersions: false });
+    }
+  },
+
+  createPromptVersion: async (
+    promptId: string,
+    title: string,
+    content: string,
+    variables?: Record<string, string>,
+    conversation?: ConversationMessage[],
+    changeSummary?: string,
+    parentVersionId?: string
+  ) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Get the next version number
+      const { data: nextVersionData, error: versionError } = await supabase
+        .rpc('get_next_version_number', { p_prompt_id: promptId });
+
+      if (versionError) throw versionError;
+      const nextVersion = nextVersionData || 1;
+
+      // Deactivate all existing versions for this prompt
+      await supabase
+        .from('prompt_versions')
+        .update({ is_active: false })
+        .eq('prompt_id', promptId);
+
+      // Create new version
+      const { data, error } = await supabase
+        .from('prompt_versions')
+        .insert({
+          prompt_id: promptId,
+          user_id: user.id,
+          version_number: nextVersion,
+          version_title: title,
+          is_active: true,
+          prompt_content: content,
+          variables: variables || {},
+          conversation: conversation || [],
+          change_summary: changeSummary,
+          parent_version_id: parentVersionId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newVersion: PromptVersion = {
+        id: data.id,
+        promptId: data.prompt_id,
+        versionNumber: data.version_number,
+        versionTitle: data.version_title,
+        isActive: data.is_active,
+        content: data.prompt_content,
+        variables: data.variables || {},
+        conversation: data.conversation ? (Array.isArray(data.conversation) ? data.conversation.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })) : []) : [],
+        changeSummary: data.change_summary,
+        parentVersionId: data.parent_version_id,
+        aiResponse: data.ai_response,
+        createdAt: data.created_at
+      };
+
+      // Update local state
+      set(state => ({
+        promptVersions: {
+          ...state.promptVersions,
+          [promptId]: [
+            ...(state.promptVersions[promptId] || []).map(v => ({ ...v, isActive: false })),
+            newVersion
+          ]
+        }
+      }));
+
+      return newVersion;
+    } catch (error) {
+      console.error('Error creating prompt version:', error);
+      throw error;
+    }
+  },
+
+  switchToVersion: async (promptId: string, versionId: string) => {
+    try {
+      // Deactivate all versions for this prompt
+      await supabase
+        .from('prompt_versions')
+        .update({ is_active: false })
+        .eq('prompt_id', promptId);
+
+      // Activate the selected version
+      const { error } = await supabase
+        .from('prompt_versions')
+        .update({ is_active: true })
+        .eq('id', versionId);
+
+      if (error) throw error;
+
+      // Update local state
+      set(state => ({
+        promptVersions: {
+          ...state.promptVersions,
+          [promptId]: (state.promptVersions[promptId] || []).map(v => ({
+            ...v,
+            isActive: v.id === versionId
+          }))
+        }
+      }));
+
+      // Reload the prompt to reflect the version change
+      const activeVersion = get().promptVersions[promptId]?.find(v => v.id === versionId);
+      if (activeVersion) {
+        // Update the prompt content in the prompts list
+        set(state => ({
+          prompts: state.prompts.map(p =>
+            p.id === promptId
+              ? { ...p, content: activeVersion.content, variables: activeVersion.variables }
+              : p
+          ),
+          currentPrompt: state.currentPrompt?.id === promptId
+            ? { ...state.currentPrompt, content: activeVersion.content, variables: activeVersion.variables }
+            : state.currentPrompt
+        }));
+      }
+    } catch (error) {
+      console.error('Error switching to version:', error);
+      throw error;
+    }
+  },
+
+  deleteVersion: async (versionId: string) => {
+    try {
+      // Don't allow deleting the last version
+      const version = Object.values(get().promptVersions)
+        .flat()
+        .find(v => v.id === versionId);
+
+      if (!version) throw new Error('Version not found');
+
+      const promptVersions = get().promptVersions[version.promptId] || [];
+      if (promptVersions.length <= 1) {
+        throw new Error('Cannot delete the last version of a prompt');
+      }
+
+      // If deleting the active version, activate the previous version
+      if (version.isActive && promptVersions.length > 1) {
+        const sortedVersions = [...promptVersions].sort((a, b) => b.versionNumber - a.versionNumber);
+        const previousVersion = sortedVersions.find(v => v.id !== versionId);
+        if (previousVersion) {
+          await get().switchToVersion(version.promptId, previousVersion.id);
+        }
+      }
+
+      // Delete the version
+      const { error } = await supabase
+        .from('prompt_versions')
+        .delete()
+        .eq('id', versionId);
+
+      if (error) throw error;
+
+      // Update local state
+      set(state => ({
+        promptVersions: {
+          ...state.promptVersions,
+          [version.promptId]: (state.promptVersions[version.promptId] || []).filter(v => v.id !== versionId)
+        }
+      }));
+    } catch (error) {
+      console.error('Error deleting version:', error);
+      throw error;
+    }
+  },
+
+  getVersionHistory: (promptId: string) => {
+    return get().promptVersions[promptId] || [];
+  },
+
+  getActiveVersion: (promptId: string) => {
+    const versions = get().promptVersions[promptId] || [];
+    return versions.find(v => v.isActive) || null;
   }
 }));

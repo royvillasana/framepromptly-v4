@@ -59,8 +59,8 @@ export function ProgressOverlay({ isVisible, currentStep, totalSteps, onComplete
     },
     {
       id: 'creating',
-      label: 'Creating Node',
-      description: 'Adding prompt and result to canvas',
+      label: 'Updating Canvas',
+      description: 'Creating or updating prompt node with result',
       icon: <CheckCircle className="w-4 h-4" />,
       status: 'pending'
     }

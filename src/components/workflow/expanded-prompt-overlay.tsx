@@ -13,7 +13,7 @@ import {
   Edit3, Save, X, BookmarkPlus, MoreHorizontal, RefreshCw,
   ChevronLeft, ChevronRight, Loader2, User, Sparkles,
   Settings, Menu, PanelRightClose, PanelRightOpen, History, Clock,
-  Target, Truck, Key, Play, AlertCircle
+  Target, Truck, Key, Play, AlertCircle, CheckCircle
 } from 'lucide-react';
 import { GeneratedPrompt, ConversationMessage, usePromptStore } from '@/stores/prompt-store';
 import { useKnowledgeStore } from '@/stores/knowledge-store';
@@ -30,6 +30,7 @@ import { DestinationType, DestinationContext } from '@/lib/destination-driven-ta
 import { DeliveryDashboard } from '@/components/delivery/delivery-dashboard';
 import { OAuthConnectionManager } from '@/components/delivery/oauth-connection-manager';
 import { formatForChatDisplay } from '@/lib/text-formatting';
+import { PromptVersionHistory } from './prompt-version-history';
 
 interface SavedPromptVersion {
   id: string;
@@ -58,7 +59,10 @@ function ExpandedPromptOverlayComponent({
   const {
     updatePromptConversation,
     clearDestination,
-    tailorPromptForDestination
+    tailorPromptForDestination,
+    createPromptVersion,
+    getActiveVersion,
+    getVersionHistory
   } = usePromptStore();
   const { entries } = useKnowledgeStore();
   const { currentProject } = useProjectStore();
@@ -101,20 +105,37 @@ function ExpandedPromptOverlayComponent({
   const [isTyping, setIsTyping] = useState(false);
   const [showPromptPanel, setShowPromptPanel] = useState(true);
 
-  // Main view tab state - default to "chat" as it's the interactive view
-  const [mainViewTab, setMainViewTab] = useState<'prompt' | 'chat'>('chat');
-  
+  // Main view tab state - default to "versions" so users select which version to view
+  const [mainViewTab, setMainViewTab] = useState<'prompt' | 'chat' | 'versions'>('versions');
+
+  // Selected version for viewing (null means viewing the active/current version)
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+
   // Prompt editing state
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [editedPromptContent, setEditedPromptContent] = useState(prompt.content);
   const [currentPromptContent, setCurrentPromptContent] = useState(prompt.content);
   
+  // Get the currently selected version or active version for display
+  const displayVersion = useMemo(() => {
+    const versions = getVersionHistory(prompt.id);
+    if (selectedVersionId) {
+      return versions.find(v => v.id === selectedVersionId);
+    }
+    // If no version selected, show the active version
+    return getActiveVersion(prompt.id);
+  }, [selectedVersionId, prompt.id, getVersionHistory, getActiveVersion]);
+
+  // Content and conversation to display based on selected version
+  const displayContent = displayVersion?.content || currentPromptContent;
+  const displayConversation = displayVersion?.conversation || conversationMessages;
+
   // Memoize truncated prompt content to prevent re-calculation on every render
   const displayPromptContent = useMemo(() => {
-    return currentPromptContent.length > 200 
-      ? `${currentPromptContent.slice(0, 200)}...`
-      : currentPromptContent;
-  }, [currentPromptContent]);
+    return displayContent.length > 200
+      ? `${displayContent.slice(0, 200)}...`
+      : displayContent;
+  }, [displayContent]);
 
   // Saved prompt versions state
   const [savedPromptVersions, setSavedPromptVersions] = useState<SavedPromptVersion[]>([
@@ -198,70 +219,45 @@ function ExpandedPromptOverlayComponent({
   // Function to save prompt version
   const savePromptVersion = useCallback(async () => {
     if (!currentProject || isSaving) return;
-    
+
     setIsSaving(true);
     try {
-      const versionTitle = `Version ${savedPromptVersions.length}`;
-      const newVersion: SavedPromptVersion = {
-        id: `version-${Date.now()}`,
-        title: versionTitle,
-        content: currentPromptContent,
-        timestamp: new Date(),
-        conversation: [...conversationMessages],
-        isActive: false
-      };
+      const versionTitle = `After conversation`;
+      const changeSummary = conversationMessages.length > 0
+        ? `Updated through ${conversationMessages.length} conversation messages`
+        : 'Manual save';
 
-      // Add to saved versions
-      setSavedPromptVersions(prev => {
-        const updated = prev.map(v => ({ ...v, isActive: false }));
-        return [...updated, { ...newVersion, isActive: true }];
-      });
-      
-      setActiveVersionId(newVersion.id);
+      // Create version using the Zustand store
+      const newVersion = await createPromptVersion(
+        prompt.id,
+        versionTitle,
+        currentPromptContent,
+        prompt.variables,
+        conversationMessages,
+        changeSummary
+      );
 
-      // Create a library entry with the current prompt content
-      const libraryPrompt = {
-        title: versionTitle,
-        content: currentPromptContent,
-        framework: frameworkName,
-        stage: stageName,
-        tool: toolName,
-        variables: Object.keys(prompt.variables),
-        description: `Saved version of ${toolName} prompt`,
-        project_id: currentProject.id,
-        created_at: new Date().toISOString()
-      };
-
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const promptData = {
-        project_id: currentProject.id,
-        user_id: user.id,
-        framework_name: libraryPrompt.framework,
-        stage_name: libraryPrompt.stage,
-        tool_name: libraryPrompt.tool,
-        prompt_content: libraryPrompt.content,
-        variables: { 
-          ...prompt.variables, 
-          _isPromptVersion: true,
-          _versionTitle: libraryPrompt.title,
-          _versionDescription: libraryPrompt.description,
-          _originalPromptId: prompt.id
-        }
-      };
-      
-      const { error } = await supabase
-        .from('prompts')
-        .insert(promptData);
-
-      if (error) throw error;
-      
       toast.success('Prompt version saved!', {
         description: `"${versionTitle}" has been saved and is now active`
       });
-      
+
+      // Update local state to keep old UI in sync
+      const localVersion: SavedPromptVersion = {
+        id: newVersion.id,
+        title: newVersion.versionTitle,
+        content: newVersion.content,
+        timestamp: new Date(newVersion.createdAt),
+        conversation: newVersion.conversation,
+        isActive: true
+      };
+
+      setSavedPromptVersions(prev => {
+        const updated = prev.map(v => ({ ...v, isActive: false }));
+        return [...updated, localVersion];
+      });
+
+      setActiveVersionId(newVersion.id);
+
     } catch (error) {
       console.error('Failed to save prompt version:', error);
       toast.error('Failed to save prompt version', {
@@ -270,7 +266,7 @@ function ExpandedPromptOverlayComponent({
     } finally {
       setIsSaving(false);
     }
-  }, [currentProject, currentPromptContent, prompt, isSaving, conversationMessages, savedPromptVersions]);
+  }, [currentProject, currentPromptContent, prompt, isSaving, conversationMessages, createPromptVersion]);
 
   // Function to switch to a different prompt version
   const switchToVersion = useCallback((versionId: string) => {
@@ -960,8 +956,8 @@ function ExpandedPromptOverlayComponent({
               )}>
                 {/* Tab Navigation */}
                 <div className="border-b bg-muted/30 px-4 py-2">
-                  <Tabs value={mainViewTab} onValueChange={(value) => setMainViewTab(value as 'prompt' | 'chat')} className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <Tabs value={mainViewTab} onValueChange={(value) => setMainViewTab(value as 'prompt' | 'chat' | 'versions')} className="w-full">
+                    <TabsList className="grid w-full max-w-lg grid-cols-3">
                       <TabsTrigger value="prompt" className="text-sm">
                         <FileText className="w-4 h-4 mr-2" />
                         View Prompt
@@ -969,6 +965,10 @@ function ExpandedPromptOverlayComponent({
                       <TabsTrigger value="chat" className="text-sm">
                         <MessageSquare className="w-4 h-4 mr-2" />
                         Chat
+                      </TabsTrigger>
+                      <TabsTrigger value="versions" className="text-sm">
+                        <History className="w-4 h-4 mr-2" />
+                        Versions
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -993,7 +993,7 @@ function ExpandedPromptOverlayComponent({
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            navigator.clipboard.writeText(currentPromptContent);
+                            navigator.clipboard.writeText(displayContent);
                             toast.success('AI Prompt copied to clipboard');
                           }}
                         >
@@ -1002,10 +1002,39 @@ function ExpandedPromptOverlayComponent({
                         </Button>
                       </div>
 
+                      {/* Version Indicator */}
+                      {displayVersion && (
+                        <div className="mb-4 p-3 bg-muted/30 border rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={displayVersion.isActive ? 'default' : 'secondary'}>
+                                v{displayVersion.versionNumber}
+                              </Badge>
+                              <span className="text-sm font-medium">{displayVersion.versionTitle}</span>
+                              {displayVersion.isActive && (
+                                <Badge variant="outline" className="text-xs">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setMainViewTab('versions')}
+                              className="text-xs"
+                            >
+                              <History className="w-3 h-3 mr-1" />
+                              View All Versions
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Prompt Content */}
                       <div className="bg-muted/50 rounded-lg p-6 border">
                         <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-foreground">
-                          {currentPromptContent}
+                          {displayContent}
                         </pre>
                       </div>
 
@@ -1068,10 +1097,39 @@ function ExpandedPromptOverlayComponent({
                 {/* Chat Tab Content */}
                 {mainViewTab === 'chat' && (
                   <>
+                    {/* Version Indicator Banner */}
+                    {displayVersion && (
+                      <div className="px-4 py-2 bg-muted/30 border-b">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={displayVersion.isActive ? 'default' : 'secondary'} className="text-xs">
+                              v{displayVersion.versionNumber}
+                            </Badge>
+                            <span className="text-xs font-medium">{displayVersion.versionTitle}</span>
+                            {displayVersion.isActive && (
+                              <Badge variant="outline" className="text-xs">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setMainViewTab('versions')}
+                            className="h-6 text-xs"
+                          >
+                            <History className="w-3 h-3 mr-1" />
+                            View All Versions
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Messages Container */}
                     <ScrollArea className="flex-1 px-0">
                   <div className="min-h-full flex flex-col justify-end">
-                    {conversationMessages.length === 0 ? (
+                    {displayConversation.length === 0 ? (
                       <div className="flex items-center justify-center h-full py-20">
                         <div className="text-center text-muted-foreground max-w-md">
                           <div className={cn(
@@ -1140,7 +1198,7 @@ function ExpandedPromptOverlayComponent({
                         )}
                         
                         {/* Chat Messages */}
-                        {conversationMessages.map((message) => (
+                        {displayConversation.map((message) => (
                           <MessageBubble key={message.id} message={message} />
                         ))}
                         
@@ -1200,8 +1258,33 @@ function ExpandedPromptOverlayComponent({
                 </div>
                   </>
                 )}
+
+                {/* Versions Tab Content */}
+                {mainViewTab === 'versions' && (
+                  <PromptVersionHistory
+                    promptId={prompt.id}
+                    onVersionSelect={(version) => {
+                      // Set the selected version ID to view
+                      setSelectedVersionId(version.id);
+                      // Switch to prompt tab to view the version
+                      setMainViewTab('prompt');
+                    }}
+                    onVersionSwitch={(version) => {
+                      // Actually switch the active version in the database
+                      toast.success(`Switched to ${version.versionTitle} as active version`);
+                      // Update the selectedVersionId to the newly active version
+                      setSelectedVersionId(version.id);
+                    }}
+                    onSaveNewVersion={() => {
+                      // Switch to chat tab to save a new version
+                      setMainViewTab('chat');
+                      savePromptVersion();
+                    }}
+                    selectedVersionId={selectedVersionId}
+                  />
+                )}
               </div>
-              
+
               {/* Prompt Versions Panel */}
               <AnimatePresence>
                 {showPromptPanel && (

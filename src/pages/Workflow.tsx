@@ -41,20 +41,21 @@ export default function Workflow() {
 }
 
 function WorkflowWithProject() {
-  const { 
-    selectedFramework, 
+  const {
+    selectedFramework,
     selectedStage,
     selectedNode,
     expandedPromptId,
-    selectFramework, 
-    selectStage, 
-    frameworks, 
+    selectFramework,
+    selectStage,
+    frameworks,
     initializeFrameworks,
-    nodes, 
+    nodes,
     edges,
     addNode,
     loadCanvasData,
-    loadWorkflowFromStorage 
+    loadWorkflowFromStorage,
+    toolToPromptIdMapping
   } = useWorkflowStore();
   const { initializeTemplates, loadProjectPrompts, clearProjectPrompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating, updatePromptVariables } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
@@ -82,9 +83,9 @@ function WorkflowWithProject() {
     loadProjectPrompts(currentProject.id);
     
     // Load canvas data
-    const canvas = currentProject.canvas_data || { nodes: [], edges: [] };
+    const canvas = currentProject.canvas_data || { nodes: [], edges: [], toolToPromptIdMapping: {} };
     loadCanvasData(canvas);
-    const payload = JSON.stringify(canvas);
+    const payload = JSON.stringify({ nodes: canvas.nodes, edges: canvas.edges, toolToPromptIdMapping: canvas.toolToPromptIdMapping });
     lastAppliedRef.current = payload;
     lastSavedRef.current = payload; // prevent immediate save loop after load
     
@@ -105,17 +106,17 @@ function WorkflowWithProject() {
   useEffect(() => {
     if (!currentProject) return;
 
-    const signature = JSON.stringify({ nodes, edges });
+    const signature = JSON.stringify({ nodes, edges, toolToPromptIdMapping });
     // Skip if nothing changed compared to last applied/saved state
     if (signature === lastSavedRef.current || signature === lastAppliedRef.current) return;
 
     const timeoutId = setTimeout(() => {
-      saveCanvasData(currentProject.id, nodes, edges);
+      saveCanvasData(currentProject.id, nodes, edges, toolToPromptIdMapping);
       lastSavedRef.current = signature;
     }, 600);
 
     return () => clearTimeout(timeoutId);
-  }, [nodes, edges, currentProject?.id, saveCanvasData]);
+  }, [nodes, edges, toolToPromptIdMapping, currentProject?.id, saveCanvasData]);
 
   const handleFrameworkSelection = (framework: any) => {
     console.log('Handling framework selection:', framework);

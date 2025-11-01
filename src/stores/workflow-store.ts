@@ -65,6 +65,8 @@ export interface WorkflowState {
   nodeCustomizations: Record<string, NodeCustomization>;
   frameworks: UXFramework[];
   expandedPromptId: string | null;
+  toolToPromptMapping: Record<string, string>; // Maps tool node ID to prompt node ID
+  toolToPromptIdMapping: Record<string, string>; // Maps tool node ID to database prompt ID
 
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
@@ -88,6 +90,10 @@ export interface WorkflowState {
   selectNode: (node: Node | null) => void;
   setExpandedPromptId: (id: string | null) => void;
   initializeFrameworks: () => void;
+  getPromptNodeForTool: (toolNodeId: string) => string | null;
+  setToolPromptMapping: (toolNodeId: string, promptNodeId: string) => void;
+  getPromptIdForTool: (toolNodeId: string) => string | null;
+  setToolPromptIdMapping: (toolNodeId: string, promptId: string) => void;
 }
 
 import completeUXFrameworks from '@/lib/complete-ux-frameworks';
@@ -104,6 +110,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   nodeCustomizations: {},
   frameworks: [],
   expandedPromptId: null,
+  toolToPromptMapping: {},
+  toolToPromptIdMapping: {},
 
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -147,10 +155,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   loadCanvasData: (canvasData: any) => {
     if (canvasData && canvasData.nodes && canvasData.edges) {
-      set({ 
-        nodes: canvasData.nodes || [], 
-        edges: canvasData.edges || [] 
+      set({
+        nodes: canvasData.nodes || [],
+        edges: canvasData.edges || [],
+        toolToPromptIdMapping: canvasData.toolToPromptIdMapping || {}
       });
+      console.log('[Workflow Store] Loaded canvas data with mapping:', canvasData.toolToPromptIdMapping);
     }
   },
   
@@ -299,6 +309,38 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
   
   initializeFrameworks: () => set({ frameworks: sampleFrameworks }),
+
+  // Tool-to-prompt mapping functions
+  getPromptNodeForTool: (toolNodeId: string) => {
+    const state = get();
+    return state.toolToPromptMapping[toolNodeId] || null;
+  },
+
+  setToolPromptMapping: (toolNodeId: string, promptNodeId: string) => {
+    set((state) => ({
+      toolToPromptMapping: {
+        ...state.toolToPromptMapping,
+        [toolNodeId]: promptNodeId
+      }
+    }));
+    console.log('[Workflow Store] Mapped tool', toolNodeId, 'to prompt node', promptNodeId);
+  },
+
+  // Tool-to-prompt ID mapping functions (for database prompt IDs)
+  getPromptIdForTool: (toolNodeId: string) => {
+    const state = get();
+    return state.toolToPromptIdMapping[toolNodeId] || null;
+  },
+
+  setToolPromptIdMapping: (toolNodeId: string, promptId: string) => {
+    set((state) => ({
+      toolToPromptIdMapping: {
+        ...state.toolToPromptIdMapping,
+        [toolNodeId]: promptId
+      }
+    }));
+    console.log('[Workflow Store] Mapped tool', toolNodeId, 'to prompt ID', promptId);
+  },
 
   // Load workflow from storage on initialization
   ...((() => {

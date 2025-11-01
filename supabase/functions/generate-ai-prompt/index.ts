@@ -94,47 +94,81 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      promptContent, 
-      variables, 
-      projectId, 
-      frameworkName, 
-      stageName, 
+    const {
+      promptContent,
+      variables,
+      projectId,
+      frameworkName,
+      stageName,
       toolName,
-      knowledgeContext 
+      knowledgeContext,
+      existingPromptId
     } = await req.json();
 
-    console.log('Generating AI prompt for:', { frameworkName, stageName, toolName, projectId, hasKnowledge: !!knowledgeContext });
+    console.log('🚀 Generating AI prompt for:', { frameworkName, stageName, toolName, projectId, hasKnowledge: !!knowledgeContext, existingPromptId });
+
+    // Validate required parameters
+    if (!promptContent || !projectId || !frameworkName || !stageName || !toolName) {
+      throw new Error('Missing required parameters: promptContent, projectId, frameworkName, stageName, or toolName');
+    }
 
     // Check if this is a stress test request (allow anonymous access)
     const isStressTest = projectId && projectId.toString().startsWith('ai-stress-test-');
-    
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Missing environment variables:', { hasUrl: !!supabaseUrl, hasServiceKey: !!supabaseServiceKey });
+      throw new Error('Missing Supabase environment variables');
+    }
+
+    console.log('✅ Environment variables found');
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('✅ Supabase client created');
 
     // Load project AI settings
     const aiSettings = await loadProjectAISettings(supabase, projectId);
 
     let user = null;
-    
+
     if (!isStressTest) {
       // Regular requests require authentication
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
+        console.error('❌ No authorization header found');
         throw new Error('No authorization header');
       }
 
-      // Get user from JWT
+      // Get user from JWT - use anon key client for auth validation
       const jwt = authHeader.replace('Bearer ', '');
-      const { data: { user: authenticatedUser }, error: authError } = await supabase.auth.getUser(jwt);
-      
-      if (authError || !authenticatedUser) {
-        throw new Error('Invalid authentication');
+      console.log('🔐 Validating user JWT...');
+
+      try {
+        // Use service role key for JWT validation - it can validate all JWTs
+        const { data: { user: authenticatedUser }, error: authError } = await supabase.auth.getUser(jwt);
+
+        if (authError) {
+          console.error('❌ Auth error:', authError.message);
+          console.error('❌ Auth error code:', authError.code);
+          console.error('❌ Auth error status:', authError.status);
+          throw new Error(`Authentication failed: ${authError.message}`);
+        }
+
+        if (!authenticatedUser) {
+          console.error('❌ No user found in JWT');
+          throw new Error('Invalid authentication - no user found');
+        }
+
+        user = authenticatedUser;
+        console.log('✅ User authenticated:', user.id);
+      } catch (err) {
+        console.error('❌ Exception during auth:', err);
+        console.error('❌ Exception details:', err.message);
+        console.error('❌ Exception stack:', err.stack);
+        throw err;
       }
-      
-      user = authenticatedUser;
     } else {
       // Stress test mode: Allow anonymous access
       console.log('🧪 Stress test mode: Allowing anonymous access');
@@ -183,35 +217,117 @@ serve(async (req) => {
     let promptData = null;
     let structuredPromptId = null;
 
+    console.log('💾 Database save check:', { isStressTest, hasUser: !!user, userId: user?.id });
+
     if (!isStressTest && user) {
-      // Step 1: Save to old "prompts" table (backwards compatibility)
-      const { data: savedPrompt, error: insertError } = await supabase
-        .from('prompts')
-        .insert({
-          project_id: projectId,
-          user_id: user.id,
-          framework_name: frameworkName,
-          stage_name: stageName,
-          tool_name: toolName,
-          prompt_content: processedPrompt,
-          ai_response: aiResponse,
-          variables: variables || {}
-        })
-        .select()
-        .single();
+      console.log('✅ Proceeding with database save for user:', user.id);
+      // Check if we should create a version instead of a new prompt
+      // Version tracking is now enabled with proper trigger timing
+      const versioningEnabled = true;
 
-      if (insertError) {
-        console.error('Error saving prompt:', insertError);
-        throw new Error('Failed to save prompt to database');
+      if (existingPromptId && versioningEnabled) {
+        console.log('📝 Creating new version for existing prompt:', existingPromptId);
+
+        // Get the existing prompt to find the current version number
+        const { data: existingPrompt, error: fetchError } = await supabase
+          .from('prompts')
+          .select('current_version, total_versions')
+          .eq('id', existingPromptId)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching existing prompt:', fetchError);
+          throw new Error(`Failed to fetch existing prompt: ${fetchError.message}`);
+        }
+
+        const newVersionNumber = (existingPrompt.total_versions || 0) + 1;
+
+        // Create a new version
+        const { data: newVersion, error: versionError } = await supabase
+          .from('prompt_versions')
+          .insert({
+            prompt_id: existingPromptId,
+            user_id: user.id,
+            version_number: newVersionNumber,
+            version_title: `Version ${newVersionNumber}`,
+            is_active: true,
+            prompt_content: processedPrompt,
+            variables: variables || {},
+            conversation: [],
+            ai_response: aiResponse,
+            change_summary: 'Regenerated from tool node'
+          })
+          .select()
+          .single();
+
+        if (versionError) {
+          console.error('Error creating version:', versionError);
+          throw new Error(`Failed to create version: ${versionError.message}`);
+        }
+
+        // Update the prompt's version counters and make this the active version
+        const { error: updateError } = await supabase
+          .from('prompts')
+          .update({
+            current_version: newVersionNumber,
+            total_versions: newVersionNumber,
+            prompt_content: processedPrompt,
+            ai_response: aiResponse
+          })
+          .eq('id', existingPromptId);
+
+        if (updateError) {
+          console.error('Error updating prompt version counters:', updateError);
+          throw new Error(`Failed to update version counters: ${updateError.message}`);
+        }
+
+        // Deactivate all other versions
+        await supabase
+          .from('prompt_versions')
+          .update({ is_active: false })
+          .eq('prompt_id', existingPromptId)
+          .neq('id', newVersion.id);
+
+        promptData = { id: existingPromptId };
+        console.log('✅ New version created:', newVersionNumber);
+      } else {
+        // Step 1: Save to old "prompts" table (backwards compatibility)
+        const { data: savedPrompt, error: insertError } = await supabase
+          .from('prompts')
+          .insert({
+            project_id: projectId,
+            user_id: user.id,
+            framework_name: frameworkName,
+            stage_name: stageName,
+            tool_name: toolName,
+            prompt_content: processedPrompt,
+            ai_response: aiResponse,
+            variables: variables || {}
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error saving prompt:', insertError);
+          console.error('Error details:', JSON.stringify(insertError, null, 2));
+          throw new Error(`Failed to save prompt to database: ${insertError.message || insertError.code || 'Unknown error'}`);
+        }
+
+        if (!savedPrompt) {
+          console.error('❌ No data returned from prompt insert');
+          throw new Error('Failed to save prompt: No data returned from database');
+        }
+
+        promptData = savedPrompt;
+        console.log('✅ Flat prompt saved to database with ID:', promptData.id);
       }
-
-      promptData = savedPrompt;
-      console.log('✅ Flat prompt saved to database with ID:', promptData.id);
 
       // Step 2: Parse and save to "structured_prompts" table
       try {
         console.log('🔄 Parsing prompt into structured sections...');
+        console.log('🔄 Parse input:', { promptLength: processedPrompt.length, toolName, hasUser: !!user, userId: user?.id });
         const parseResult = parseAIPromptToStructured(processedPrompt, toolName);
+        console.log('✅ Parse completed successfully');
 
         console.log('📊 Parse result:', {
           confidence: parseResult.confidence,
@@ -264,8 +380,7 @@ serve(async (req) => {
         // Continue - flat prompt is already saved
       }
 
-      promptData = savedPrompt;
-      console.log('Prompt saved to database with ID:', promptData.id);
+      console.log('✅ Final prompt data ready with ID:', promptData.id);
     } else {
       console.log('🧪 Stress test mode: Skipping database save');
       promptData = {
@@ -291,9 +406,12 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in generate-ai-prompt function:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
+    console.error('❌ Error in generate-ai-prompt function:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', JSON.stringify(error, null, 2));
+    return new Response(JSON.stringify({
+      error: error.message || 'Unknown error occurred',
+      details: error.toString(),
       success: false 
     }), {
       status: 500,
