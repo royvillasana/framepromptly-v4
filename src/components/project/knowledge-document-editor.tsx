@@ -7,11 +7,13 @@ import { useKnowledgeStore, KnowledgeEntry } from '@/stores/knowledge-store';
 import { useToast } from '@/hooks/use-toast';
 import { enhanceTextWithAI, getSuggestedEnhancements, TextEnhancementRequest } from '@/lib/ai-text-enhancer';
 import { motion } from 'framer-motion';
-import { 
+import {
   Save, Sparkles, FileText, Image, Bold, Italic, Underline,
   AlignLeft, AlignCenter, AlignRight, Plus, Upload, Trash2,
-  Wand2, Loader2, CheckCircle, AlertCircle
+  Wand2, Loader2, CheckCircle, AlertCircle, Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Content editable component that preserves natural text direction
 interface ContentEditableDivProps {
@@ -40,10 +42,10 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
       const selection = window.getSelection();
       const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
       const cursorPosition = range ? range.startOffset : 0;
-      
-      divRef.current.textContent = initialContent || '';
+
+      divRef.current.innerHTML = initialContent || '';
       lastContentRef.current = initialContent || '';
-      
+
       // Restore cursor position if content was updated programmatically
       if (range && divRef.current.firstChild) {
         try {
@@ -62,14 +64,125 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
   }, [initialContent]);
 
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
-    const content = e.currentTarget.textContent || '';
-    
+    const content = e.currentTarget.innerHTML || '';
+
     // Only update if content actually changed
     if (content !== lastContentRef.current) {
       lastContentRef.current = content;
       onContentChange(content);
     }
   }, [onContentChange]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    // Get clipboard data
+    const clipboardData = e.clipboardData;
+
+    // Try to get HTML content first (preserves formatting)
+    let htmlContent = clipboardData.getData('text/html');
+
+    if (htmlContent) {
+      // Clean up the HTML while preserving basic formatting
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+
+      // Remove unwanted attributes but keep formatting tags
+      const allowedTags = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li'];
+      const allowedStyles = ['font-weight', 'font-style', 'text-decoration', 'color', 'background-color', 'font-size', 'font-family'];
+
+      const cleanNode = (node: Node): Node | null => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.cloneNode(true);
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement;
+          const tagName = element.tagName.toLowerCase();
+
+          if (!allowedTags.includes(tagName)) {
+            // If tag not allowed, just return its children
+            const fragment = document.createDocumentFragment();
+            Array.from(element.childNodes).forEach(child => {
+              const cleaned = cleanNode(child);
+              if (cleaned) fragment.appendChild(cleaned);
+            });
+            return fragment;
+          }
+
+          // Create a new element with only allowed attributes
+          const newElement = document.createElement(tagName);
+
+          // Preserve inline styles if present
+          const style = element.getAttribute('style');
+          if (style) {
+            const styleObj: { [key: string]: string } = {};
+            style.split(';').forEach(rule => {
+              const [prop, value] = rule.split(':').map(s => s.trim());
+              if (prop && value && allowedStyles.includes(prop)) {
+                styleObj[prop] = value;
+              }
+            });
+
+            const styleString = Object.entries(styleObj).map(([k, v]) => `${k}: ${v}`).join('; ');
+            if (styleString) {
+              newElement.setAttribute('style', styleString);
+            }
+          }
+
+          // Process children
+          Array.from(element.childNodes).forEach(child => {
+            const cleaned = cleanNode(child);
+            if (cleaned) newElement.appendChild(cleaned);
+          });
+
+          return newElement;
+        }
+
+        return null;
+      };
+
+      const cleanedContent = cleanNode(tempDiv);
+
+      if (cleanedContent) {
+        // Insert the cleaned HTML at cursor position
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+
+          if (cleanedContent instanceof DocumentFragment) {
+            range.insertNode(cleanedContent);
+          } else {
+            range.insertNode(cleanedContent);
+          }
+
+          // Move cursor to end of inserted content
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    } else {
+      // Fallback to plain text if no HTML available
+      const text = clipboardData.getData('text/plain');
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(text));
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+
+    // Trigger input event to update state
+    if (divRef.current) {
+      const event = new Event('input', { bubbles: true });
+      divRef.current.dispatchEvent(event);
+    }
+  }, []);
 
   return (
     <div
@@ -78,6 +191,7 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
       suppressContentEditableWarning
       dir="ltr"
       onInput={handleInput}
+      onPaste={handlePaste}
       onMouseUp={onTextSelection}
       onKeyUp={onTextSelection}
       className={className}
@@ -390,6 +504,86 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
     }
   };
 
+  // PDF Download handler
+  const handleDownloadPDF = async () => {
+    if (!editorRef.current) return;
+
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we create your PDF document..."
+      });
+
+      // Create a clone of the editor content for PDF generation
+      const element = editorRef.current;
+
+      // Use html2canvas to capture the content
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+
+      // Calculate dimensions
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10; // Top margin
+
+      // Calculate how many pages we need
+      const pageHeight = pdfHeight - 20; // Leave margins
+      const contentHeight = imgHeight * ratio;
+      const totalPages = Math.ceil(contentHeight / pageHeight);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) {
+          pdf.addPage();
+        }
+
+        const yPosition = imgY - (page * pageHeight);
+        pdf.addImage(
+          imgData,
+          'PNG',
+          imgX,
+          yPosition,
+          imgWidth * ratio,
+          imgHeight * ratio
+        );
+      }
+
+      // Generate filename from first section title or use default
+      const filename = documentSections.length > 0
+        ? `${documentSections[0].title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
+        : 'knowledge_base_document.pdf';
+
+      pdf.save(filename);
+
+      toast({
+        title: "PDF Downloaded",
+        description: "Your document has been saved as a PDF"
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-full flex flex-col">
       {/* Toolbar */}
@@ -438,7 +632,16 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
             <Plus className="w-4 h-4 mr-2" />
             Add Section
           </Button>
-          
+
+          <Button
+            onClick={handleDownloadPDF}
+            variant="outline"
+            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download PDF
+          </Button>
+
           <Button
             onClick={saveAllChanges}
             disabled={isSaving || !hasUnsavedChanges}
