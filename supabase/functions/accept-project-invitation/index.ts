@@ -86,24 +86,23 @@ serve(async (req) => {
       )
     }
 
-    // Check if user is registered
-    const { data: existingUser, error: userError } = await supabaseClient
-      .from('auth.users')
-      .select('id, email')
-      .eq('email', invitation.invited_email)
-      .single()
+    // Check if user is registered by listing all users and finding by email
+    // Note: This requires service role key to access auth.admin
+    const { data: { users }, error: userError } = await supabaseClient.auth.admin.listUsers()
 
-    if (userError && userError.code !== 'PGRST116') { // PGRST116 is "no rows found"
+    if (userError) {
       console.error('Error checking user:', userError)
       return new Response(
         JSON.stringify({ error: 'Error checking user registration' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
 
+    // Find user by email
+    const existingUser = users?.find(u => u.email === invitation.invited_email)
     let userId = existingUser?.id
 
     // If user doesn't exist, they need to register first

@@ -93,20 +93,62 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProjects: async () => {
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Fetch projects owned by the user
+      const { data: ownedProjects, error: ownedError } = await supabase
         .from('projects')
         .select('*')
-        .order('updated_at', { ascending: false });
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (ownedError) throw ownedError;
 
-      set({ projects: (data || []) as Project[], isLoading: false });
+      // Fetch projects where the user is a member
+      const { data: memberProjects, error: memberError } = await supabase
+        .from('project_members')
+        .select(`
+          project_id,
+          role,
+          projects (*)
+        `)
+        .eq('user_id', user.id);
+
+      if (memberError && memberError.code !== 'PGRST116') {
+        // PGRST116 means "no rows found", which is fine
+        console.warn('Error fetching member projects:', memberError);
+      }
+
+      // Combine owned and member projects
+      const allProjects = [...(ownedProjects || [])];
+
+      if (memberProjects) {
+        memberProjects.forEach((membership: any) => {
+          if (membership.projects) {
+            // Add member projects that aren't already in the list (avoid duplicates)
+            const existingProject = allProjects.find(p => p.id === membership.projects.id);
+            if (!existingProject) {
+              allProjects.push(membership.projects);
+            }
+          }
+        });
+      }
+
+      // Sort by updated_at
+      allProjects.sort((a, b) =>
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+
+      set({ projects: allProjects as Project[], isLoading: false });
+      return allProjects as Project[];
     } catch (error) {
       console.error('Error fetching projects:', error);
-      set({ 
+      set({
         error: error instanceof Error ? error.message : 'Failed to fetch projects',
-        isLoading: false 
+        isLoading: false
       });
+      return [];
     }
   },
 

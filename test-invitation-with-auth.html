@@ -27,13 +27,18 @@
     </div>
 
     <div id="invitation-section">
-        <h3>Step 2: Test Invitation (requires auth)</h3>
+        <h3>Step 2: Select Project and Send Invitation (requires auth)</h3>
+        <select id="projectSelect">
+            <option value="">Loading projects...</option>
+        </select>
+        <br>
         <input type="email" id="inviteEmail" placeholder="Email to invite" value="invite.test@gmail.com">
         <select id="inviteRole">
             <option value="viewer">Viewer</option>
             <option value="editor">Editor</option>
         </select>
         <br>
+        <button onclick="loadProjects()">Refresh Projects</button>
         <button onclick="testInvitation()">Send Invitation</button>
     </div>
 
@@ -101,11 +106,76 @@
                         <p>Now you can test sending invitations!</p>
                     </div>
                 `;
+
+                // Automatically load projects after successful sign in
+                await loadProjects();
             } catch (error) {
                 resultDiv.innerHTML = `
                     <div class="result error">
                         <h3>Sign In Failed</h3>
                         <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadProjects() {
+            const projectSelect = document.getElementById('projectSelect');
+            const resultDiv = document.getElementById('result');
+
+            try {
+                // Check if user is authenticated
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+                if (userError || !user) {
+                    throw new Error('Please sign in first to load projects!');
+                }
+
+                console.log('📂 Loading projects for user:', user.email);
+
+                // Fetch user's projects
+                const { data: projects, error: projectsError } = await supabaseClient
+                    .from('projects')
+                    .select('id, name')
+                    .order('created_at', { ascending: false });
+
+                if (projectsError) {
+                    throw projectsError;
+                }
+
+                if (!projects || projects.length === 0) {
+                    projectSelect.innerHTML = '<option value="">No projects found - Create a project first!</option>';
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>No Projects Found</h3>
+                            <p>You need to create a project first before you can send invitations.</p>
+                            <p>Go to the main app and create a project, then come back here to test.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Populate the dropdown with projects
+                projectSelect.innerHTML = projects.map(project =>
+                    `<option value="${project.id}">${project.name}</option>`
+                ).join('');
+
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>Projects Loaded</h3>
+                        <p>Found ${projects.length} project(s). Select one to send an invitation.</p>
+                        <pre>${JSON.stringify(projects, null, 2)}</pre>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('❌ Failed to load projects:', error);
+                projectSelect.innerHTML = '<option value="">Failed to load projects</option>';
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Failed to Load Projects</h3>
+                        <pre>Error: ${error.message}</pre>
+                        <p>Make sure you're signed in and have RLS policies configured.</p>
                     </div>
                 `;
             }
@@ -134,7 +204,16 @@
             }
         }
 
+        // UUID validation helper
+        function isValidUUID(uuid) {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(uuid);
+        }
+
         async function testInvitation() {
+            const projectSelect = document.getElementById('projectSelect');
+            const projectId = projectSelect.value;
+            const projectName = projectSelect.options[projectSelect.selectedIndex]?.text || 'Unknown Project';
             const inviteEmail = document.getElementById('inviteEmail').value;
             const inviteRole = document.getElementById('inviteRole').value;
             const resultDiv = document.getElementById('result');
@@ -142,19 +221,39 @@
             try {
                 // Check if user is authenticated
                 const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-                
+
                 if (userError || !user) {
                     throw new Error('Please sign in first!');
                 }
 
+                // Validate project selection
+                if (!projectId || projectId === '') {
+                    throw new Error('Please select a project first! Use "Refresh Projects" button to load your projects.');
+                }
+
+                // Validate UUID format
+                if (!isValidUUID(projectId)) {
+                    throw new Error(`Invalid project ID format: "${projectId}". Expected UUID format (e.g., "550e8400-e29b-41d4-a716-446655440000")`);
+                }
+
+                // Validate email
+                if (!inviteEmail || !inviteEmail.includes('@')) {
+                    throw new Error('Please enter a valid email address to invite.');
+                }
+
                 console.log('🧪 Testing invitation with authenticated user:', user.email);
+                console.log('📧 Sending invitation to:', inviteEmail);
+                console.log('🆔 Project ID (validated UUID):', projectId);
+                console.log('📝 Project Name:', projectName);
 
                 const requestBody = {
-                    projectId: 'test-project-id-123',
-                    projectName: 'Test Project for Real Auth',
+                    projectId: projectId,
+                    projectName: projectName,
                     invitedEmail: inviteEmail,
                     role: inviteRole
                 };
+
+                console.log('📤 Request body:', requestBody);
 
                 // Use the original Edge Function with real authentication
                 const { data, error } = await supabaseClient.functions.invoke('send-project-invitation-simple', {
@@ -170,7 +269,13 @@
                 if (data.success) {
                     resultDiv.innerHTML = `
                         <div class="result success">
-                            <h3>Invitation Sent Successfully!</h3>
+                            <h3>✅ Invitation Sent Successfully!</h3>
+                            <p><strong>Project:</strong> ${projectName}</p>
+                            <p><strong>Invited:</strong> ${inviteEmail}</p>
+                            <p><strong>Role:</strong> ${inviteRole}</p>
+                            <p><strong>Invitation Link:</strong></p>
+                            <pre>${data.invitationLink || 'Check console for details'}</pre>
+                            <p><strong>Full Response:</strong></p>
                             <pre>${JSON.stringify(data, null, 2)}</pre>
                         </div>
                     `;
@@ -182,9 +287,16 @@
                 console.error('❌ Invitation failed:', error);
                 resultDiv.innerHTML = `
                     <div class="result error">
-                        <h3>Invitation Failed</h3>
+                        <h3>❌ Invitation Failed</h3>
                         <pre>Error: ${error.message}</pre>
-                        <p>Make sure you're signed in first!</p>
+                        <p><strong>Troubleshooting:</strong></p>
+                        <ul>
+                            <li>Make sure you're signed in</li>
+                            <li>Make sure you've selected a valid project</li>
+                            <li>Check that VERIFIED_EMAIL_DOMAIN is set in Supabase</li>
+                            <li>Verify RESEND_API_KEY is configured</li>
+                            <li>Check browser console for detailed logs</li>
+                        </ul>
                     </div>
                 `;
             }
