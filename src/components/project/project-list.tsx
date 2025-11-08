@@ -9,6 +9,7 @@ import { usePromptStore } from '@/stores/prompt-store';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectDialog } from './project-dialog';
 import { ProjectShareModal } from './project-share-modal';
+import { PendingInvitations } from './pending-invitations';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -161,6 +162,9 @@ export function ProjectList() {
         </div>
         <ProjectDialog />
       </div>
+
+      {/* Pending Invitations */}
+      <PendingInvitations />
 
       {/* Current Project */}
       {currentProject && (

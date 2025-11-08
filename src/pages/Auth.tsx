@@ -36,14 +36,10 @@ export default function Auth() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      // If there's an invitation token, redirect to the invitation page
-      if (invitationToken) {
-        navigate(`/invitation?token=${invitationToken}`);
-      } else {
-        navigate('/projects');
-      }
+      // Always redirect to projects page (where they can see pending invitations)
+      navigate('/projects');
     }
-  }, [user, loading, navigate, invitationToken]);
+  }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,13 +57,13 @@ export default function Auth() {
       } else {
         toast({
           title: 'Welcome back!',
-          description: 'You have been signed in successfully.'
+          description: invitationToken
+            ? 'You have been signed in successfully. Check your pending invitations.'
+            : 'You have been signed in successfully.'
         });
-        
-        // Redirect to invitation if there's a token
-        if (invitationToken) {
-          navigate(`/invitation?token=${invitationToken}`);
-        }
+
+        // Redirect to projects page (where they can see pending invitations)
+        navigate('/projects');
       }
     } catch (error) {
       toast({
@@ -98,19 +94,19 @@ export default function Auth() {
           variant: 'destructive'
         });
       } else {
-        const message = invitationToken 
+        const message = invitationToken
           ? 'Account created! Please check your email to verify, then you can accept your project invitation.'
           : 'Please check your email to verify your account.';
-        
+
         toast({
           title: 'Account created!',
           description: message
         });
-        
-        // For invitation flow, still redirect to invitation page after signup
+
+        // After signup, redirect to projects page where they can accept invitation
+        // Note: User will need to verify email first before they can sign in
         if (invitationToken) {
-          // Note: User will need to verify email first, then the invitation page will handle acceptance
-          navigate(`/invitation?token=${invitationToken}`);
+          navigate('/projects');
         }
       }
     } catch (error) {

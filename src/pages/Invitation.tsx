@@ -58,9 +58,21 @@ export default function Invitation() {
     }
 
     if (!authLoading) {
-      checkInvitation();
+      // If user is logged in, redirect to projects page
+      // They can accept/decline from there
+      if (user) {
+        toast({
+          title: "Check your invitations",
+          description: "View your pending project invitation in the Projects page"
+        });
+        navigate('/projects');
+      } else {
+        // If not logged in, redirect directly to auth page with invitation token
+        // Skip the invitation preview page entirely
+        navigate(`/auth?invitation=${token}`);
+      }
     }
-  }, [token, authLoading]);
+  }, [token, authLoading, user, navigate, toast]);
 
   const checkInvitation = async () => {
     if (!token) return;
@@ -69,65 +81,58 @@ export default function Invitation() {
       setLoading(true);
       setError(null);
 
-      const { data, error: inviteError } = await supabase.functions.invoke('accept-project-invitation', {
-        body: {
-          invitationToken: token,
-          userEmail: user?.email
-        }
-      });
+      // Just fetch invitation details without accepting
+      const { data: invitation, error: inviteError } = await supabase
+        .from('project_invitations')
+        .select(`
+          id,
+          invited_email,
+          role,
+          status,
+          expires_at,
+          projects:project_id (
+            id,
+            name
+          )
+        `)
+        .eq('invitation_token', token)
+        .single();
 
       if (inviteError) {
-        throw new Error(inviteError.message || 'Failed to check invitation');
+        throw new Error('Invalid or expired invitation');
       }
 
-      if (data.error) {
-        if (data.expired) {
-          setError('This invitation has expired. Please ask the project owner to send a new invitation.');
+      if (!invitation) {
+        setError('Invitation not found');
+        return;
+      }
+
+      // Check if expired
+      if (new Date(invitation.expires_at) < new Date()) {
+        setError('This invitation has expired. Please ask the project owner to send a new invitation.');
+        return;
+      }
+
+      // Check if already accepted or declined
+      if (invitation.status !== 'pending') {
+        if (invitation.status === 'accepted') {
+          setError('This invitation has already been accepted.');
         } else {
-          setError(data.error);
+          setError('This invitation is no longer valid.');
         }
         return;
       }
 
-      if (data.success) {
-        // Invitation was accepted successfully
-        setSuccess(true);
-        setInvitationData({
-          requiresRegistration: false,
-          invitedEmail: user?.email || '',
-          projectName: data.projectName,
-          role: data.role,
-          invitationToken: token,
-          projectId: data.projectId
-        });
-
-        toast({
-          title: "Welcome to the project!",
-          description: `You now have ${data.role} access to "${data.projectName}"`
-        });
-
-        // Refresh projects list to include new project
-        await fetchProjects();
-      } else if (data.requiresRegistration) {
-        // User needs to register
-        setInvitationData(data);
-      } else if (data.alreadyMember) {
-        // User is already a member
-        setSuccess(true);
-        setInvitationData({
-          requiresRegistration: false,
-          invitedEmail: user?.email || '',
-          projectName: 'Project', // Will be updated
-          role: data.role,
-          invitationToken: token,
-          projectId: data.projectId
-        });
-
-        toast({
-          title: "Already a member",
-          description: "You already have access to this project"
-        });
-      }
+      // Set invitation data for display
+      // If user is logged in, they don't need to register
+      setInvitationData({
+        requiresRegistration: !user,
+        invitedEmail: invitation.invited_email,
+        projectName: invitation.projects?.name || 'Unknown Project',
+        role: invitation.role,
+        invitationToken: token,
+        projectId: invitation.projects?.id
+      });
 
     } catch (error) {
       console.error('Error checking invitation:', error);
@@ -137,29 +142,16 @@ export default function Invitation() {
     }
   };
 
+  // These handlers are no longer used since logged-in users are redirected to /projects
+  // Keeping them for the success screen's "Open Project" button
   const handleAcceptInvitation = async () => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to accept this invitation",
-        variant: "destructive"
-      });
-      navigate(`/auth?invitation=${token}`);
-      return;
-    }
+    // This should not be called anymore
+    navigate('/projects');
+  };
 
-    try {
-      setAccepting(true);
-      await checkInvitation(); // This will handle the acceptance
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to accept invitation",
-        variant: "destructive"
-      });
-    } finally {
-      setAccepting(false);
-    }
+  const handleDeclineInvitation = async () => {
+    // This should not be called anymore
+    navigate('/projects');
   };
 
   const handleOpenProject = async () => {
@@ -342,19 +334,19 @@ export default function Invitation() {
 
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    To accept this invitation, you need to create an account or sign in with the invited email address.
+                    To view and accept this invitation, you need to sign in or create an account. After signing in, you'll see the invitation in your Projects page where you can accept or decline it.
                   </p>
-                  
+
                   <div className="space-y-3">
                     <Button asChild className="w-full">
                       <Link to={`/auth?invitation=${token}&email=${encodeURIComponent(invitationData.invitedEmail)}`}>
-                        Create Account & Accept
+                        Create Account
                       </Link>
                     </Button>
-                    
+
                     <Button variant="outline" asChild className="w-full">
                       <Link to={`/auth?mode=signin&invitation=${token}&email=${encodeURIComponent(invitationData.invitedEmail)}`}>
-                        Sign In & Accept
+                        Sign In
                       </Link>
                     </Button>
                   </div>
@@ -367,48 +359,20 @@ export default function Invitation() {
     );
   }
 
-  // Logged in user, show invitation details
+  // This should not be reached - logged in users are redirected to /projects
+  // But just in case, show a loading state
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
-      <div className="container mx-auto py-20 px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto"
-        >
-          <Card>
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle>Project Invitation</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Alert>
-                <Clock className="h-4 w-4" />
-                <AlertDescription>
-                  You have a pending invitation to join <strong>"{invitationData?.projectName}"</strong>.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-4">
-                <Button 
-                  onClick={handleAcceptInvitation} 
-                  disabled={accepting}
-                  className="w-full"
-                >
-                  {accepting ? 'Accepting...' : 'Accept Invitation'}
-                </Button>
-                
-                <Button variant="outline" asChild className="w-full">
-                  <Link to="/projects">Maybe Later</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      <div className="flex items-center justify-center py-20">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground">Redirecting to Projects...</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

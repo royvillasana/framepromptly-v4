@@ -14,25 +14,26 @@
     </style>
 </head>
 <body>
-    <h1>Test Invitation System - With Authentication</h1>
-    
-    <div id="auth-section">
-        <h3>Step 1: Sign Up or Sign In</h3>
-        <input type="email" id="email" placeholder="Enter email" value="test.user@example.com">
-        <input type="password" id="password" placeholder="Enter password" value="password123">
+    <h1>Test Invitation System - Complete Flow</h1>
+
+    <div id="auth-section" style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
+        <h3>Step 1: Sign Up or Sign In (Project Owner)</h3>
+        <input type="email" id="email" placeholder="Owner email" value="owner@example.com">
+        <input type="password" id="password" placeholder="Password" value="password123">
         <br>
         <button onclick="signUp()">Sign Up</button>
         <button onclick="signIn()">Sign In</button>
         <button onclick="signOut()">Sign Out</button>
+        <button onclick="getCurrentUser()">Check Current User</button>
     </div>
 
-    <div id="invitation-section">
-        <h3>Step 2: Select Project and Send Invitation (requires auth)</h3>
+    <div id="invitation-section" style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
+        <h3>Step 2: Send Invitation (requires auth)</h3>
         <select id="projectSelect">
             <option value="">Loading projects...</option>
         </select>
         <br>
-        <input type="email" id="inviteEmail" placeholder="Email to invite" value="invite.test@gmail.com">
+        <input type="email" id="inviteEmail" placeholder="Email to invite" value="invited@example.com">
         <select id="inviteRole">
             <option value="viewer">Viewer</option>
             <option value="editor">Editor</option>
@@ -40,6 +41,18 @@
         <br>
         <button onclick="loadProjects()">Refresh Projects</button>
         <button onclick="testInvitation()">Send Invitation</button>
+    </div>
+
+    <div id="test-section" style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
+        <h3>Step 3: Test Invitation Flow</h3>
+        <p>After sending invitation above, use these tools to test:</p>
+        <button onclick="checkPendingInvitations()">Check Pending Invitations</button>
+        <button onclick="viewInvitationLink()">View Last Invitation Link</button>
+        <br>
+        <input type="text" id="invitationToken" placeholder="Paste invitation token here" style="width: 400px;">
+        <br>
+        <button onclick="testAcceptInvitation()">Test Accept Invitation</button>
+        <button onclick="testDeclineInvitation()">Test Decline Invitation</button>
     </div>
 
     <div id="result"></div>
@@ -267,6 +280,11 @@
                 }
 
                 if (data.success) {
+                    // Store the invitation link for later use
+                    if (data.invitationLink) {
+                        lastInvitationData.invitationLink = data.invitationLink;
+                    }
+
                     resultDiv.innerHTML = `
                         <div class="result success">
                             <h3>✅ Invitation Sent Successfully!</h3>
@@ -277,6 +295,8 @@
                             <pre>${data.invitationLink || 'Check console for details'}</pre>
                             <p><strong>Full Response:</strong></p>
                             <pre>${JSON.stringify(data, null, 2)}</pre>
+                            <br>
+                            <button onclick="viewInvitationLink()">View Invitation Details</button>
                         </div>
                     `;
                 } else {
@@ -301,6 +321,269 @@
                 `;
             }
         }
+
+        // Store last invitation data for testing
+        let lastInvitationData = null;
+
+        async function getCurrentUser() {
+            const resultDiv = document.getElementById('result');
+
+            try {
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+
+                if (error) throw error;
+
+                if (user) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>Current User</h3>
+                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>ID:</strong> ${user.id}</p>
+                            <pre>${JSON.stringify(user, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result auth">
+                            <h3>Not Signed In</h3>
+                            <p>No user currently signed in.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Error Getting User</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function checkPendingInvitations() {
+            const resultDiv = document.getElementById('result');
+
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+                if (userError || !user) {
+                    throw new Error('Please sign in first!');
+                }
+
+                console.log('📧 Checking pending invitations for:', user.email);
+
+                const { data: invitations, error } = await supabaseClient
+                    .from('project_invitations')
+                    .select(`
+                        id,
+                        invited_email,
+                        role,
+                        status,
+                        invitation_token,
+                        created_at,
+                        expires_at,
+                        projects:project_id (
+                            id,
+                            name
+                        )
+                    `)
+                    .eq('invited_email', user.email)
+                    .eq('status', 'pending')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="result ${invitations && invitations.length > 0 ? 'success' : 'auth'}">
+                        <h3>Pending Invitations</h3>
+                        <p>Found ${invitations ? invitations.length : 0} pending invitation(s) for ${user.email}</p>
+                        ${invitations && invitations.length > 0 ? `
+                            <pre>${JSON.stringify(invitations, null, 2)}</pre>
+                            <p><strong>To test acceptance:</strong></p>
+                            <ol>
+                                <li>Copy one of the invitation_token values above</li>
+                                <li>Paste it in the "Invitation Token" field</li>
+                                <li>Click "Test Accept Invitation"</li>
+                            </ol>
+                        ` : '<p>No pending invitations found.</p>'}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>Error Checking Invitations</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        function viewInvitationLink() {
+            const resultDiv = document.getElementById('result');
+
+            if (!lastInvitationData || !lastInvitationData.invitationLink) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>No Invitation Sent Yet</h3>
+                        <p>Send an invitation first using Step 2 above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Extract token from URL
+            const url = new URL(lastInvitationData.invitationLink);
+            const token = url.searchParams.get('token');
+
+            resultDiv.innerHTML = `
+                <div class="result success">
+                    <h3>Last Invitation Details</h3>
+                    <p><strong>Full Link:</strong></p>
+                    <pre>${lastInvitationData.invitationLink}</pre>
+                    <p><strong>Invitation Token:</strong></p>
+                    <pre>${token}</pre>
+                    <p><strong>How to test:</strong></p>
+                    <ol>
+                        <li><strong>Option 1 (Full Flow):</strong> Open the invitation link in a new incognito window</li>
+                        <li><strong>Option 2 (API Test):</strong> Copy the token above and paste it in the "Invitation Token" field, then click "Test Accept Invitation"</li>
+                    </ol>
+                    <button onclick="window.open('${lastInvitationData.invitationLink}', '_blank')">Open Invitation Link</button>
+                </div>
+            `;
+        }
+
+        async function testAcceptInvitation() {
+            const token = document.getElementById('invitationToken').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!token) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>No Token Provided</h3>
+                        <p>Please paste an invitation token in the field above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+                if (userError || !user) {
+                    throw new Error('Please sign in as the invited user first!');
+                }
+
+                console.log('✅ Testing invitation acceptance with token:', token);
+
+                const { data, error } = await supabaseClient.functions.invoke('accept-project-invitation', {
+                    body: { token }
+                });
+
+                console.log('📥 Response:', { data, error });
+
+                if (error) throw error;
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ Invitation Accepted!</h3>
+                        <p><strong>Project:</strong> ${data.projectName || 'Unknown'}</p>
+                        <p><strong>Role:</strong> ${data.role || 'Unknown'}</p>
+                        <p><strong>Full Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <p>The project should now appear in your projects list!</p>
+                        <button onclick="loadProjects()">Refresh Projects to Verify</button>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('❌ Failed to accept invitation:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Failed to Accept Invitation</h3>
+                        <pre>${error.message}</pre>
+                        <p><strong>Common issues:</strong></p>
+                        <ul>
+                            <li>Make sure you're signed in as the invited user</li>
+                            <li>Check that the invitation hasn't expired</li>
+                            <li>Verify the token is correct</li>
+                            <li>Check that the Edge Function is deployed</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        async function testDeclineInvitation() {
+            const token = document.getElementById('invitationToken').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!token) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>No Token Provided</h3>
+                        <p>Please paste an invitation token in the field above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+                if (userError || !user) {
+                    throw new Error('Please sign in first!');
+                }
+
+                console.log('❌ Declining invitation with token:', token);
+
+                const { error } = await supabaseClient
+                    .from('project_invitations')
+                    .update({ status: 'declined' })
+                    .eq('invitation_token', token);
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ Invitation Declined</h3>
+                        <p>The invitation has been marked as declined.</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('❌ Failed to decline invitation:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Failed to Decline Invitation</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Wrap the original testInvitation to initialize lastInvitationData first
+        const originalTestInvitation = testInvitation;
+        testInvitation = async function() {
+            // Initialize lastInvitationData BEFORE calling the original function
+            const projectSelect = document.getElementById('projectSelect');
+            const projectId = projectSelect.value;
+            const projectName = projectSelect.options[projectSelect.selectedIndex]?.text;
+            const inviteEmail = document.getElementById('inviteEmail').value;
+            const inviteRole = document.getElementById('inviteRole').value;
+
+            lastInvitationData = {
+                projectId,
+                projectName,
+                inviteEmail,
+                inviteRole,
+                invitationLink: null // Will be populated from response
+            };
+
+            // Now call the original function
+            await originalTestInvitation();
+        };
     </script>
 </body>
 </html>

@@ -86,7 +86,7 @@ serve(async (req) => {
     console.log('🟢 Step 9: Invitation record created', { token: invitationData.invitation_token });
 
     console.log('🟢 Step 10: Preparing email');
-    const baseUrl = Deno.env.get('SITE_URL') || 'http://localhost:8080'
+    const baseUrl = Deno.env.get('INVITATION_SITE_URL') || Deno.env.get('SITE_URL') || 'http://localhost:8080'
     const invitationLink = `${baseUrl}/invitation?token=${invitationData.invitation_token}`
     const subject = `You've been invited to collaborate on "${projectName}" - FramePromptly`
     const text = `Hi! You've been invited to ${role === 'editor' ? 'edit and collaborate on' : 'view'} the project "${projectName}" on FramePromptly. Visit: ${invitationLink}`
