@@ -19,6 +19,9 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
+import { useProjectStore } from '@/stores/project-store';
+import { useAuth } from '@/hooks/use-auth';
+import { useCanvasPresence } from '@/hooks/use-canvas-presence';
 import { StageNode } from './stage-node';
 import { FrameworkNode } from './framework-node';
 import { ToolNode } from './tool-node';
@@ -29,11 +32,15 @@ import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CustomPromptNode } from './custom-prompt-node';
 import { AIBuilderNode } from './ai-builder-node';
 import { CanvasToolbar } from './canvas-toolbar';
+import { CollaboratorsPanel } from './collaborators-panel';
+import { RemoteCursors } from './remote-cursors';
+import { RemoteSelections } from './remote-selections';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useCanvasKeyboardControls } from '@/hooks/use-canvas-keyboard-controls';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoLayout } from '@/hooks/use-auto-layout';
+import { throttle } from 'lodash';
 
 // Define nodeTypes outside the component to prevent recreation on each render
 const staticNodeTypes = {
@@ -83,7 +90,13 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     saveWorkflowToStorage
   } = useWorkflowStore();
 
+  const { currentProject } = useProjectStore();
+  const { user } = useAuth();
   const { toast } = useToast();
+
+  // Real-time collaboration - re-enabled after fixing React error #185
+  const { collaborators, isConnected, updateCursor, updateSelection, myColor } = useCanvasPresence(currentProject?.id);
+  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
 
   // We'll get the ReactFlow instance after the component mounts
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -349,8 +362,12 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedReactFlowNodes }: { nodes: Node[] }) => {
-      setSelectedNodes(selectedReactFlowNodes.map(node => node.id));
-      
+      const nodeIds = selectedReactFlowNodes.map(node => node.id);
+      setSelectedNodes(nodeIds);
+
+      // Broadcast selection to other collaborators
+      updateSelection(nodeIds);
+
       // Update store selection for compatibility with existing components
       if (selectedReactFlowNodes.length === 1) {
         selectNode(selectedReactFlowNodes[0]);
@@ -359,14 +376,34 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       }
       // For multi-selection (length > 1), don't update store selection
     },
-    [selectNode]
+    [selectNode, updateSelection]
   );
 
   const onViewportChange = useCallback(
     (viewport: ViewportChangeEvent) => {
       setZoom(viewport.zoom);
+      setViewport({ x: viewport.x, y: viewport.y, zoom: viewport.zoom });
     },
     []
+  );
+
+  // Throttled cursor update handler
+  const handleMouseMove = useMemo(
+    () => throttle((event: React.MouseEvent) => {
+      if (!reactFlowInstance) return;
+
+      // Get canvas coordinates from screen coordinates
+      const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = event.clientX - bounds.left;
+      const y = event.clientY - bounds.top;
+
+      // Convert to canvas coordinates accounting for zoom and pan
+      const canvasX = (x - viewport.x) / viewport.zoom;
+      const canvasY = (y - viewport.y) / viewport.zoom;
+
+      updateCursor(canvasX, canvasY);
+    }, 50),
+    [reactFlowInstance, viewport, updateCursor]
   );
 
   const onInit = useCallback((reactFlowInstance: any) => {
@@ -522,12 +559,32 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       
       <div
         className={`h-full w-full ${isMarqueeMode ? 'cursor-crosshair' : ''}`}
+        onMouseMove={handleMouseMove}
         {...(isMarqueeMode ? {
           onMouseDown,
-          onMouseMove,
+          onMouseMove: (e) => {
+            onMouseMove(e);
+            handleMouseMove(e);
+          },
           onMouseUp
         } : {})}
       >
+        {/* Collaborators Panel - re-enabled */}
+        <CollaboratorsPanel
+          collaborators={collaborators}
+          isConnected={isConnected}
+          myColor={myColor}
+          currentUserName={user?.email?.split('@')[0] || 'You'}
+        />
+
+        {/* Remote Cursors Overlay - re-enabled */}
+        <RemoteCursors collaborators={collaborators} viewport={viewport} />
+
+        {/* Remote Selections Overlay (absolute positioned) - re-enabled */}
+        <div className="absolute inset-0 pointer-events-none z-10">
+          <RemoteSelections collaborators={collaborators} nodes={flowNodes} />
+        </div>
+
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}

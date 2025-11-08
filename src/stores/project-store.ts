@@ -54,6 +54,8 @@ export interface Project {
   created_at: string;
   updated_at: string;
   last_opened?: string;
+  last_modified_by?: string;
+  last_modified_at?: string;
 }
 
 interface ProjectState {
@@ -242,31 +244,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setCurrentProject: async (project: Project | null) => {
     set({ currentProject: project });
-    
-    // Update last_opened timestamp when a project is set as current
-    if (project) {
-      try {
-        const now = new Date().toISOString();
-        await supabase
-          .from('projects')
-          .update({ last_opened: now })
-          .eq('id', project.id);
-        
-        // Update the project in local state with new timestamp
-        const updatedProject = { ...project, last_opened: now };
-        set((state) => ({
-          currentProject: updatedProject,
-          projects: state.projects.map(p => 
-            p.id === project.id ? updatedProject : p
-          )
-        }));
-      } catch (error) {
-        console.error('Failed to update last_opened timestamp:', error);
-      }
-    }
+    // Temporarily disabled - last_opened update removed to fix React error #185
   },
 
-  saveCanvasData: async (projectId: string, nodes: any[], edges: any[], toolToPromptIdMapping?: Record<string, string>) => {
+  saveCanvasData: async (projectId: string, nodes: any[], edges: any[], toolToPromptIdMapping?: Record<string, string>, userId?: string) => {
     try {
       // Validate and sanitize canvas data before sending
       const sanitizedNodes = nodes.map(node => ({
@@ -288,11 +269,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         lastUpdated: new Date().toISOString()
       };
 
+      const updateData: any = {
+        canvas_data: canvasData
+      };
+
+      // Add last_modified_by if userId is provided (for realtime collaboration tracking)
+      if (userId) {
+        updateData.last_modified_by = userId;
+      }
+
       const { error } = await supabase
         .from('projects')
-        .update({
-          canvas_data: canvasData
-        })
+        .update(updateData)
         .eq('id', projectId);
 
       if (error) {
@@ -515,16 +503,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const state = get();
     const project = state.projects.find(p => p.id === projectId) || state.currentProject;
 
-    console.log('[getEnhancedSettings] Debug:', {
-      projectId,
-      hasProject: !!project,
-      hasEnhancedSettings: !!project?.enhanced_settings,
-      projectName: project?.name
-    });
-
     // First try to get from project data
     if (project?.enhanced_settings) {
-      console.log('[getEnhancedSettings] Found in project data');
       return project.enhanced_settings;
     }
 
@@ -532,10 +512,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const stored = localStorage.getItem(`enhanced_settings_${projectId}`);
       if (stored) {
-        console.log('[getEnhancedSettings] Found in localStorage');
         return JSON.parse(stored);
       } else {
-        console.log('[getEnhancedSettings] No settings found, returning null');
         return null;
       }
     } catch (e) {

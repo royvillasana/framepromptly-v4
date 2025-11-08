@@ -56,9 +56,6 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
   // Check if enhanced template is available
   const enhancedTemplate = getEnhancedTemplate(tool.id);
 
-  // Check if project has enhanced settings configured
-  const hasProjectEnhancedSettings = currentProject ? getEnhancedSettings(currentProject.id) !== null : false;
-
   const handleGeneratePrompt = async (overrideLinkedKnowledge?: string[]) => {
     console.log('[handleGeneratePrompt] Called with override:', overrideLinkedKnowledge);
     console.log('[handleGeneratePrompt] Current linkedKnowledge prop:', linkedKnowledge);

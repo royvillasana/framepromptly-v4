@@ -1,10 +1,12 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { WorkflowCanvas } from '@/components/workflow/workflow-canvas';
 import { PromptPanel } from '@/components/workflow/prompt-panel';
 import { ProjectList } from '@/components/project/project-list';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { usePromptStore } from '@/stores/prompt-store';
 import { useProjectStore } from '@/stores/project-store';
+import { useAuth } from '@/hooks/use-auth';
+import { useCanvasSync } from '@/hooks/use-canvas-sync';
 import { Navigation } from '@/components/ui/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -55,15 +57,50 @@ function WorkflowWithProject() {
     addNode,
     loadCanvasData,
     loadWorkflowFromStorage,
-    toolToPromptIdMapping
+    toolToPromptIdMapping,
+    setNodes,
+    setEdges
   } = useWorkflowStore();
   const { initializeTemplates, loadProjectPrompts, clearProjectPrompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating, updatePromptVariables } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
+  const { user } = useAuth();
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
   const [variables, setVariables] = useState<Record<string, string>>({});
   const [testClicks, setTestClicks] = useState(0);
   const lastAppliedRef = useRef<string>('');
   const lastSavedRef = useRef<string>('');
+  const isRemoteUpdateRef = useRef(false);
+
+  // Handle remote canvas updates
+  const handleRemoteUpdate = useCallback((data: any) => {
+    console.log('📥 Applying remote canvas update');
+    isRemoteUpdateRef.current = true;
+
+    // Update the workflow store with remote data
+    if (data.nodes) setNodes(data.nodes);
+    if (data.edges) setEdges(data.edges);
+
+    // Update refs to prevent save loop
+    const signature = JSON.stringify({
+      nodes: data.nodes,
+      edges: data.edges,
+      toolToPromptIdMapping: data.toolToPromptIdMapping
+    });
+    lastAppliedRef.current = signature;
+    lastSavedRef.current = signature;
+
+    // Reset flag after a short delay
+    setTimeout(() => {
+      isRemoteUpdateRef.current = false;
+    }, 500);
+  }, [setNodes, setEdges]);
+
+  // Setup canvas sync - re-enabled after fixing React error #185
+  const { markLocalUpdate } = useCanvasSync({
+    projectId: currentProject?.id,
+    onRemoteUpdate: handleRemoteUpdate,
+    enabled: true,
+  });
 
   useEffect(() => {
     initializeFrameworks();
@@ -104,19 +141,27 @@ function WorkflowWithProject() {
 
   // Auto-save when nodes or edges change (debounced) and only if changed since last save
   useEffect(() => {
-    if (!currentProject) return;
+    if (!currentProject || !user) return;
+
+    // Skip auto-save if this is a remote update
+    if (isRemoteUpdateRef.current) {
+      console.log('⏭️  Skipping auto-save for remote update');
+      return;
+    }
 
     const signature = JSON.stringify({ nodes, edges, toolToPromptIdMapping });
     // Skip if nothing changed compared to last applied/saved state
     if (signature === lastSavedRef.current || signature === lastAppliedRef.current) return;
 
     const timeoutId = setTimeout(() => {
-      saveCanvasData(currentProject.id, nodes, edges, toolToPromptIdMapping);
+      console.log('💾 Auto-saving canvas data');
+      saveCanvasData(currentProject.id, nodes, edges, toolToPromptIdMapping, user.id);
       lastSavedRef.current = signature;
+      markLocalUpdate(signature);
     }, 600);
 
     return () => clearTimeout(timeoutId);
-  }, [nodes, edges, toolToPromptIdMapping, currentProject?.id, saveCanvasData]);
+  }, [nodes, edges, toolToPromptIdMapping, currentProject?.id, user, saveCanvasData, markLocalUpdate]);
 
   const handleFrameworkSelection = (framework: any) => {
     console.log('Handling framework selection:', framework);
