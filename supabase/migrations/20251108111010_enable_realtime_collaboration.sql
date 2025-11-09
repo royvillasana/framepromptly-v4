@@ -11,7 +11,19 @@ CREATE INDEX IF NOT EXISTS idx_projects_last_modified_at ON public.projects(last
 
 -- Step 3: Enable Realtime for the projects table
 -- This allows clients to subscribe to changes
-ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
+-- Check if table is already in publication, if not add it
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+    AND schemaname = 'public'
+    AND tablename = 'projects'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
+  END IF;
+END $$;
 
 -- Step 4: Update the projects table to set initial values for existing records
 UPDATE public.projects

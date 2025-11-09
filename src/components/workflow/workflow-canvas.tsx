@@ -74,13 +74,15 @@ interface WorkflowCanvasProps {
   initialNodes?: any[];
   initialEdges?: any[];
   projectId?: string;
+  broadcastEditing?: (isEditing: boolean) => void;
 }
 
 export function WorkflowCanvas({
   onSwitchToPromptTab,
   initialNodes = [],
   initialEdges = [],
-  projectId
+  projectId,
+  broadcastEditing
 }: WorkflowCanvasProps) {
   const {
     setNodes,
@@ -329,7 +331,15 @@ export function WorkflowCanvas({
     (changes: any[]) => {
       updateRef.current = true;
       onNodesChange(changes);
-      
+
+      // Broadcast editing state when user makes changes
+      const hasEditingChange = changes.some(
+        (change) => change.type === 'position' || change.type === 'dimensions' || change.type === 'add' || change.type === 'remove'
+      );
+      if (hasEditingChange && broadcastEditing) {
+        broadcastEditing(true);
+      }
+
       // Handle position and dimension changes with auto-save
       changes.forEach((change) => {
         if (change.type === 'position' && change.position && change.id) {
@@ -342,7 +352,7 @@ export function WorkflowCanvas({
         }
       });
     },
-    [onNodesChange, updateNodePosition, updateNodeDimensions]
+    [onNodesChange, updateNodePosition, updateNodeDimensions, broadcastEditing]
   );
 
   const onEdgesChangeHandler = useCallback(

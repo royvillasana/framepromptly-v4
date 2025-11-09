@@ -19,6 +19,8 @@ import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen, Arrow
 import { NodeDetails } from '@/components/workflow/node-details';
 import { KnowledgeTabPanel } from '@/components/knowledge/knowledge-tab-panel';
 import { ProjectSidebar } from '@/components/workflow/project-sidebar';
+import { CollaboratorsPanel } from '@/components/workflow/collaborators-panel';
+import { useProjectPresence } from '@/hooks/use-project-presence';
 import { toast } from 'sonner';
 
 export default function Workflow() {
@@ -57,6 +59,9 @@ function WorkflowWithProject() {
   const { currentProject, saveCanvasData } = useProjectStore();
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
   const [variables, setVariables] = useState<Record<string, string>>({});
+
+  // Initialize real-time presence for this project
+  const { collaborators, isConnected, broadcastEditing } = useProjectPresence(currentProject?.id);
 
   useEffect(() => {
     initializeFrameworks();
@@ -352,12 +357,22 @@ function WorkflowWithProject() {
         )}
         
         {/* Canvas */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
+          {/* Collaborators Panel - Floating in top-right */}
+          <div className="absolute top-4 right-4 z-10">
+            <CollaboratorsPanel
+              collaborators={collaborators}
+              isConnected={isConnected}
+              compact={true}
+            />
+          </div>
+
           <WorkflowCanvas
             onSwitchToPromptTab={() => setActivePanel('prompts')}
             initialNodes={currentProject.canvas_data?.nodes || []}
             initialEdges={currentProject.canvas_data?.edges || []}
             projectId={currentProject.id}
+            broadcastEditing={broadcastEditing}
           />
         </div>
       </div>
