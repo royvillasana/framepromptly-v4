@@ -11,17 +11,13 @@ import { formatDistanceToNow } from 'date-fns';
 interface Invitation {
   id: string;
   project_id: string;
+  project_name: string;
   invited_email: string;
   invited_by: string;
   role: 'viewer' | 'editor';
   invitation_token: string;
   created_at: string;
   expires_at: string;
-  projects: {
-    id: string;
-    name: string;
-    description?: string;
-  };
 }
 
 export function PendingInvitations() {
@@ -49,17 +45,13 @@ export function PendingInvitations() {
         .select(`
           id,
           project_id,
+          project_name,
           invited_email,
           invited_by,
           role,
           invitation_token,
           created_at,
-          expires_at,
-          projects:project_id (
-            id,
-            name,
-            description
-          )
+          expires_at
         `)
         .eq('invited_email', user.email)
         .eq('status', 'pending')
@@ -73,6 +65,7 @@ export function PendingInvitations() {
 
       console.log('✅ Fetched invitations:', data);
       console.log('Number of invitations:', data?.length || 0);
+
       setInvitations(data || []);
     } catch (error) {
       console.error('❌ Error fetching pending invitations:', error);
@@ -109,7 +102,7 @@ export function PendingInvitations() {
 
       toast({
         title: "Invitation Accepted",
-        description: `You now have access to "${invitation.projects.name}"`,
+        description: `You now have access to "${invitation.project_name}"`,
       });
 
       // Refresh invitations list
@@ -154,7 +147,7 @@ export function PendingInvitations() {
 
       toast({
         title: "Invitation Declined",
-        description: `You declined the invitation to "${invitation.projects.name}"`,
+        description: `You declined the invitation to "${invitation.project_name}"`,
       });
 
       // Refresh invitations list
@@ -198,9 +191,7 @@ export function PendingInvitations() {
       </div>
 
       <div className="space-y-3">
-        {invitations
-          .filter(inv => inv.projects !== null) // Filter out invitations with deleted projects
-          .map((invitation, index) => {
+        {invitations.map((invitation, index) => {
           const isProcessing = processingIds.has(invitation.id);
           const isExpired = new Date(invitation.expires_at) < new Date();
 
@@ -222,7 +213,7 @@ export function PendingInvitations() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-semibold text-gray-900">
-                          {invitation.projects?.name || 'Unknown Project'}
+                          {invitation.project_name || 'Unknown Project'}
                         </h4>
                         <Badge variant={invitation.role === 'editor' ? 'default' : 'secondary'}>
                           {invitation.role}
@@ -231,12 +222,6 @@ export function PendingInvitations() {
                           <Badge variant="destructive">Expired</Badge>
                         )}
                       </div>
-
-                      {invitation.projects.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
-                          {invitation.projects.description}
-                        </p>
-                      )}
 
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">

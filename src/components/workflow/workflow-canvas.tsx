@@ -19,9 +19,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '@/stores/workflow-store';
-import { useProjectStore } from '@/stores/project-store';
-import { useAuth } from '@/hooks/use-auth';
-import { useCanvasPresence } from '@/hooks/use-canvas-presence';
 import { StageNode } from './stage-node';
 import { FrameworkNode } from './framework-node';
 import { ToolNode } from './tool-node';
@@ -32,15 +29,11 @@ import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CustomPromptNode } from './custom-prompt-node';
 import { AIBuilderNode } from './ai-builder-node';
 import { CanvasToolbar } from './canvas-toolbar';
-import { CollaboratorsPanel } from './collaborators-panel';
-import { RemoteCursors } from './remote-cursors';
-import { RemoteSelections } from './remote-selections';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useCanvasKeyboardControls } from '@/hooks/use-canvas-keyboard-controls';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoLayout } from '@/hooks/use-auto-layout';
-import { throttle } from 'lodash';
 
 // Define nodeTypes outside the component to prevent recreation on each render
 const staticNodeTypes = {
@@ -76,10 +69,20 @@ const isValidConnection = (connection: Connection, nodes: Node[]) => {
   return true;
 };
 
-export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: () => void }) {
+interface WorkflowCanvasProps {
+  onSwitchToPromptTab?: () => void;
+  initialNodes?: any[];
+  initialEdges?: any[];
+  projectId?: string;
+}
+
+export function WorkflowCanvas({
+  onSwitchToPromptTab,
+  initialNodes = [],
+  initialEdges = [],
+  projectId
+}: WorkflowCanvasProps) {
   const {
-    nodes,
-    edges,
     setNodes,
     setEdges,
     addEdge: addStoreEdge,
@@ -90,13 +93,7 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     saveWorkflowToStorage
   } = useWorkflowStore();
 
-  const { currentProject } = useProjectStore();
-  const { user } = useAuth();
   const { toast } = useToast();
-
-  // Real-time collaboration - re-enabled after fixing React error #185
-  const { collaborators, isConnected, updateCursor, updateSelection, myColor } = useCanvasPresence(currentProject?.id);
-  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
 
   // We'll get the ReactFlow instance after the component mounts
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -123,17 +120,26 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   // Add onSwitchToPromptTab to tool nodes - let React Flow handle selection
   const enhancedNodes = useMemo(() =>
-    nodes.map(node => ({
+    initialNodes.map(node => ({
       ...node,
       data: {
         ...node.data,
         ...(node.type === 'tool' ? { onSwitchToPromptTab } : {})
       }
-    })), [nodes, onSwitchToPromptTab]
+    })), [initialNodes, onSwitchToPromptTab]
   );
 
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(enhancedNodes);
-  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(edges);
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Keep refs to latest flow state for saving on unmount
+  const flowNodesRef = useRef(flowNodes);
+  const flowEdgesRef = useRef(flowEdges);
+
+  useEffect(() => {
+    flowNodesRef.current = flowNodes;
+    flowEdgesRef.current = flowEdges;
+  }, [flowNodes, flowEdges]);
 
   // Handle node double-click to open details
   const handleNodeDoubleClick = useCallback((node: Node) => {
@@ -196,21 +202,21 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
     }
   );
 
-  // Sync store nodes with flow nodes when store nodes change
+  // Save to Zustand on unmount only (prevents infinite loop)
   useEffect(() => {
-    if (updateRef.current) {
-      updateRef.current = false;
-      return;
-    }
-    // console.log('Store nodes changed, updating flow nodes:', enhancedNodes.length);
-    setFlowNodes(enhancedNodes);
-  }, [enhancedNodes, setFlowNodes]);
+    return () => {
+      console.log('💾 Saving canvas state on unmount');
+      const nodes = flowNodesRef.current;
+      const edges = flowEdgesRef.current;
 
-  // Sync store edges with flow edges when store edges change
-  useEffect(() => {
-    // console.log('Store edges changed, updating flow edges:', edges.length);
-    setFlowEdges(edges);
-  }, [edges, setFlowEdges]);
+      // Save to Zustand
+      setNodes(nodes);
+      setEdges(edges);
+
+      // Trigger auto-save (workflow store will save to Supabase via Workflow.tsx effect)
+      saveWorkflowToStorage();
+    };
+  }, [setNodes, setEdges, saveWorkflowToStorage]);
 
   // Define handleClearSelection function first
   const handleClearSelection = useCallback(() => {
@@ -362,12 +368,8 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedReactFlowNodes }: { nodes: Node[] }) => {
-      const nodeIds = selectedReactFlowNodes.map(node => node.id);
-      setSelectedNodes(nodeIds);
-
-      // Broadcast selection to other collaborators
-      updateSelection(nodeIds);
-
+      setSelectedNodes(selectedReactFlowNodes.map(node => node.id));
+      
       // Update store selection for compatibility with existing components
       if (selectedReactFlowNodes.length === 1) {
         selectNode(selectedReactFlowNodes[0]);
@@ -376,34 +378,14 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       }
       // For multi-selection (length > 1), don't update store selection
     },
-    [selectNode, updateSelection]
+    [selectNode]
   );
 
   const onViewportChange = useCallback(
     (viewport: ViewportChangeEvent) => {
       setZoom(viewport.zoom);
-      setViewport({ x: viewport.x, y: viewport.y, zoom: viewport.zoom });
     },
     []
-  );
-
-  // Throttled cursor update handler
-  const handleMouseMove = useMemo(
-    () => throttle((event: React.MouseEvent) => {
-      if (!reactFlowInstance) return;
-
-      // Get canvas coordinates from screen coordinates
-      const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = event.clientX - bounds.left;
-      const y = event.clientY - bounds.top;
-
-      // Convert to canvas coordinates accounting for zoom and pan
-      const canvasX = (x - viewport.x) / viewport.zoom;
-      const canvasY = (y - viewport.y) / viewport.zoom;
-
-      updateCursor(canvasX, canvasY);
-    }, 50),
-    [reactFlowInstance, viewport, updateCursor]
   );
 
   const onInit = useCallback((reactFlowInstance: any) => {
@@ -559,32 +541,12 @@ export function WorkflowCanvas({ onSwitchToPromptTab }: { onSwitchToPromptTab?: 
       
       <div
         className={`h-full w-full ${isMarqueeMode ? 'cursor-crosshair' : ''}`}
-        onMouseMove={handleMouseMove}
         {...(isMarqueeMode ? {
           onMouseDown,
-          onMouseMove: (e) => {
-            onMouseMove(e);
-            handleMouseMove(e);
-          },
+          onMouseMove,
           onMouseUp
         } : {})}
       >
-        {/* Collaborators Panel - re-enabled */}
-        <CollaboratorsPanel
-          collaborators={collaborators}
-          isConnected={isConnected}
-          myColor={myColor}
-          currentUserName={user?.email?.split('@')[0] || 'You'}
-        />
-
-        {/* Remote Cursors Overlay - re-enabled */}
-        <RemoteCursors collaborators={collaborators} viewport={viewport} />
-
-        {/* Remote Selections Overlay (absolute positioned) - re-enabled */}
-        <div className="absolute inset-0 pointer-events-none z-10">
-          <RemoteSelections collaborators={collaborators} nodes={flowNodes} />
-        </div>
-
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}

@@ -108,6 +108,7 @@ serve(async (req) => {
       .from('project_invitations')
       .insert({
         project_id: projectId,
+        project_name: projectName,
         invited_email: invitedEmail,
         role: role,
         invited_by: user.id,
@@ -384,7 +385,7 @@ async function sendInvitationEmail(to: string, subject: string, html: string, te
       console.log('📤 Sending email via Resend to:', to);
       
       const emailPayload = {
-        from: Deno.env.get('FROM_EMAIL') || 'FramePromptly <onboarding@resend.dev>',
+        from: Deno.env.get('FROM_EMAIL') || 'FramePromptly <invitations@framepromptly.com>',
         to: [to],
         subject: subject,
         html: html,
