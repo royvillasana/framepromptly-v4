@@ -11,13 +11,15 @@ import { formatDistanceToNow } from 'date-fns';
 interface Invitation {
   id: string;
   project_id: string;
-  project_name: string;
   invited_email: string;
   invited_by: string;
   role: 'viewer' | 'editor';
   invitation_token: string;
   created_at: string;
   expires_at: string;
+  projects: {
+    name: string;
+  } | null;
 }
 
 export function PendingInvitations() {
@@ -45,13 +47,15 @@ export function PendingInvitations() {
         .select(`
           id,
           project_id,
-          project_name,
           invited_email,
           invited_by,
           role,
           invitation_token,
           created_at,
-          expires_at
+          expires_at,
+          projects:project_id (
+            name
+          )
         `)
         .eq('invited_email', user.email)
         .eq('status', 'pending')
@@ -65,6 +69,11 @@ export function PendingInvitations() {
 
       console.log('✅ Fetched invitations:', data);
       console.log('Number of invitations:', data?.length || 0);
+
+      // Debug: Log the first invitation to see its structure
+      if (data && data.length > 0) {
+        console.log('📋 First invitation structure:', JSON.stringify(data[0], null, 2));
+      }
 
       setInvitations(data || []);
     } catch (error) {
@@ -102,7 +111,7 @@ export function PendingInvitations() {
 
       toast({
         title: "Invitation Accepted",
-        description: `You now have access to "${invitation.project_name}"`,
+        description: `You now have access to "${invitation.projects?.name || 'the project'}"`,
       });
 
       // Refresh invitations list
@@ -147,7 +156,7 @@ export function PendingInvitations() {
 
       toast({
         title: "Invitation Declined",
-        description: `You declined the invitation to "${invitation.project_name}"`,
+        description: `You declined the invitation to "${invitation.projects?.name || 'the project'}"`,
       });
 
       // Refresh invitations list
@@ -159,6 +168,50 @@ export function PendingInvitations() {
       toast({
         title: "Error",
         description: "Failed to decline invitation",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(invitation.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDismissInvitation = async (invitation: Invitation) => {
+    console.log('🗑️ Dismissing expired invitation:', invitation.id);
+    setProcessingIds(prev => new Set([...prev, invitation.id]));
+
+    try {
+      console.log('📝 Updating invitation status to declined (dismissed)...');
+      const { data, error } = await supabase
+        .from('project_invitations')
+        .update({ status: 'declined' })
+        .eq('id', invitation.id)
+        .select();
+
+      if (error) {
+        console.error('❌ Error dismissing invitation:', error);
+        throw error;
+      }
+
+      console.log('✅ Invitation dismissed:', data);
+
+      toast({
+        title: "Invitation Dismissed",
+        description: `Removed expired invitation from "${invitation.projects?.name || 'the project'}"`,
+      });
+
+      // Refresh invitations list
+      console.log('🔄 Refreshing invitations list...');
+      await fetchInvitations();
+      console.log('✅ Invitations refreshed');
+    } catch (error) {
+      console.error('❌ Error dismissing invitation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to dismiss invitation",
         variant: "destructive"
       });
     } finally {
@@ -213,7 +266,7 @@ export function PendingInvitations() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-semibold text-gray-900">
-                          {invitation.project_name || 'Unknown Project'}
+                          {invitation.projects?.name || 'Unknown Project'}
                         </h4>
                         <Badge variant={invitation.role === 'editor' ? 'default' : 'secondary'}>
                           {invitation.role}
@@ -238,42 +291,61 @@ export function PendingInvitations() {
                   </div>
 
                   {/* Right side - Actions */}
-                  {!isExpired && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleAcceptInvitation(invitation)}
-                        disabled={isProcessing}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        {isProcessing ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Accept
-                          </>
-                        )}
-                      </Button>
+                  <div className="flex items-center gap-2">
+                    {!isExpired ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAcceptInvitation(invitation)}
+                          disabled={isProcessing}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Accept
+                            </>
+                          )}
+                        </Button>
 
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeclineInvitation(invitation)}
+                          disabled={isProcessing}
+                          className="border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <X className="w-4 h-4 mr-2" />
+                              Decline
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    ) : (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeclineInvitation(invitation)}
+                        onClick={() => handleDismissInvitation(invitation)}
                         disabled={isProcessing}
-                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        className="border-gray-200 text-gray-600 hover:bg-gray-50"
                       >
                         {isProcessing ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
                             <X className="w-4 h-4 mr-2" />
-                            Decline
+                            Dismiss
                           </>
                         )}
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </Card>
             </motion.div>

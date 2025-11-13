@@ -78,6 +78,7 @@ interface WorkflowCanvasProps {
   projectId?: string;
   broadcastEditing?: (isEditing: boolean) => void;
   onAddNodeCallback?: (addNodeFn: (node: any) => void) => void;
+  isApplyingRemoteUpdateRef?: React.MutableRefObject<boolean>;
 }
 
 export function WorkflowCanvas({
@@ -86,7 +87,8 @@ export function WorkflowCanvas({
   initialEdges = [],
   projectId,
   broadcastEditing,
-  onAddNodeCallback
+  onAddNodeCallback,
+  isApplyingRemoteUpdateRef
 }: WorkflowCanvasProps) {
 
   const {
@@ -144,6 +146,16 @@ export function WorkflowCanvas({
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(enhancedNodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Debug: Log initial state
+  useEffect(() => {
+    console.log('🎨 [WorkflowCanvas] Initial render with:', {
+      initialNodes: initialNodes.length,
+      initialEdges: initialEdges.length,
+      flowNodes: flowNodes.length,
+      flowEdges: flowEdges.length
+    });
+  }, []);
+
   // Keep refs to latest flow state for saving on unmount
   const flowNodesRef = useRef(flowNodes);
   const flowEdgesRef = useRef(flowEdges);
@@ -152,6 +164,25 @@ export function WorkflowCanvas({
     flowNodesRef.current = flowNodes;
     flowEdgesRef.current = flowEdges;
   }, [flowNodes, flowEdges]);
+
+  // Track flowNodes changes to understand what's causing empty nodes
+  useEffect(() => {
+    console.log('🔄 [WorkflowCanvas] flowNodes changed:', {
+      count: flowNodes.length,
+      projectId,
+      firstNode: flowNodes[0] ? { id: flowNodes[0].id, type: flowNodes[0].type } : null,
+      stackTrace: new Error().stack?.split('\n').slice(2, 5).join('\n')
+    });
+  }, [flowNodes, projectId]);
+
+  // Track initialNodes changes
+  useEffect(() => {
+    console.log('📥 [WorkflowCanvas] initialNodes prop changed:', {
+      count: initialNodes.length,
+      projectId,
+      firstNode: initialNodes[0] ? { id: initialNodes[0].id, type: initialNodes[0].type } : null
+    });
+  }, [initialNodes, projectId]);
 
   // DON'T automatically sync from store - this causes infinite loops
   // Instead, React Flow manages its own state and we save back to store on unmount
@@ -312,18 +343,47 @@ export function WorkflowCanvas({
       const newNodes = update.canvasData.nodes || [];
       const newEdges = update.canvasData.edges || [];
 
-      // Update React Flow state
-      setFlowNodes(newNodes);
-      setFlowEdges(newEdges);
+      // CRITICAL: Don't clear canvas if receiving empty update and we have local data
+      // This prevents race conditions where an empty update clears a populated canvas
+      if (newNodes.length === 0 && newEdges.length === 0 && flowNodes.length > 0) {
+        console.log('⚠️ [WorkflowCanvas] Ignoring empty remote update - would clear existing canvas data');
+        return;
+      }
 
-      // Update Zustand store
-      setNodes(newNodes);
-      setEdges(newEdges);
+      // CRITICAL: Set flag to prevent auto-save loop
+      if (isApplyingRemoteUpdateRef) {
+        isApplyingRemoteUpdateRef.current = true;
+        console.log('🔒 [WorkflowCanvas] Setting isApplyingRemoteUpdate flag to prevent auto-save');
+      }
 
-      // Clear local changes flag since we just synced
-      setHasLocalChanges(false);
+      try {
+        console.log('📡 [WorkflowCanvas] Applying remote update:', {
+          nodes: newNodes.length,
+          edges: newEdges.length
+        });
+
+        // Update React Flow state
+        setFlowNodes(newNodes);
+        setFlowEdges(newEdges);
+
+        // Update Zustand store
+        setNodes(newNodes);
+        setEdges(newEdges);
+
+        // Clear local changes flag since we just synced
+        setHasLocalChanges(false);
+      } finally {
+        // CRITICAL: Clear flag after applying updates
+        if (isApplyingRemoteUpdateRef) {
+          // Use setTimeout to ensure the flag is cleared after all state updates have propagated
+          setTimeout(() => {
+            isApplyingRemoteUpdateRef.current = false;
+            console.log('🔓 [WorkflowCanvas] Cleared isApplyingRemoteUpdate flag');
+          }, 100);
+        }
+      }
     }
-  }, [projectId, setFlowNodes, setFlowEdges, setNodes, setEdges]);
+  }, [projectId, setFlowNodes, setFlowEdges, setNodes, setEdges, isApplyingRemoteUpdateRef, flowNodes]);
 
   // Canvas update detection hook
   const {
@@ -343,24 +403,40 @@ export function WorkflowCanvas({
     }
 
     if (remoteUpdate?.canvasData) {
-      const newNodes = remoteUpdate.canvasData.nodes || [];
-      const newEdges = remoteUpdate.canvasData.edges || [];
+      // CRITICAL: Set flag to prevent auto-save loop
+      if (isApplyingRemoteUpdateRef) {
+        isApplyingRemoteUpdateRef.current = true;
+        console.log('🔒 [WorkflowCanvas] Setting isApplyingRemoteUpdate flag (manual apply)');
+      }
 
-      // Update React Flow state
-      setFlowNodes(newNodes);
-      setFlowEdges(newEdges);
+      try {
+        const newNodes = remoteUpdate.canvasData.nodes || [];
+        const newEdges = remoteUpdate.canvasData.edges || [];
 
-      // Update Zustand store
-      setNodes(newNodes);
-      setEdges(newEdges);
+        // Update React Flow state
+        setFlowNodes(newNodes);
+        setFlowEdges(newEdges);
 
-      // Clear local changes flag since we just synced
-      setHasLocalChanges(false);
+        // Update Zustand store
+        setNodes(newNodes);
+        setEdges(newEdges);
+
+        // Clear local changes flag since we just synced
+        setHasLocalChanges(false);
+      } finally {
+        // CRITICAL: Clear flag after applying updates
+        if (isApplyingRemoteUpdateRef) {
+          setTimeout(() => {
+            isApplyingRemoteUpdateRef.current = false;
+            console.log('🔓 [WorkflowCanvas] Cleared isApplyingRemoteUpdate flag (manual apply)');
+          }, 100);
+        }
+      }
     }
 
     // Dismiss the banner
     applyRemoteChanges();
-  }, [projectId, remoteUpdate, setFlowNodes, setFlowEdges, setNodes, setEdges, applyRemoteChanges]);
+  }, [projectId, remoteUpdate, setFlowNodes, setFlowEdges, setNodes, setEdges, applyRemoteChanges, isApplyingRemoteUpdateRef]);
 
   // Handler to dismiss remote changes
   const handleDismissRemoteChanges = useCallback(() => {

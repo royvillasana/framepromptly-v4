@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ProjectList } from '@/components/project/project-list';
+import { PendingInvitations } from '@/components/project/pending-invitations';
 import { Navigation } from '@/components/ui/navigation';
 import { motion } from 'framer-motion';
 import { FolderOpen, Database } from 'lucide-react';
@@ -44,7 +45,11 @@ export default function Projects() {
 
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8">
-          <div>
+          <div className="space-y-8">
+            {/* Pending Invitations Section */}
+            <PendingInvitations />
+
+            {/* Projects List */}
             <ProjectList />
           </div>
         </main>

@@ -249,6 +249,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   saveCanvasData: async (projectId: string, nodes: any[], edges: any[], toolToPromptIdMapping?: Record<string, string>, userId?: string) => {
     try {
+      console.log('💾 [ProjectStore] saveCanvasData called:', {
+        projectId,
+        nodesCount: nodes.length,
+        edgesCount: edges.length,
+        userId,
+        firstNode: nodes[0] ? { id: nodes[0].id, type: nodes[0].type } : null
+      });
+
       // Validate and sanitize canvas data before sending
       const sanitizedNodes = nodes.map(node => ({
         ...node,
@@ -278,6 +286,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         updateData.last_modified_by = userId;
       }
 
+      console.log('💾 [ProjectStore] Sending update to Supabase:', {
+        projectId,
+        nodesCount: canvasData.nodes.length,
+        edgesCount: canvasData.edges.length
+      });
+
       const { error } = await supabase
         .from('projects')
         .update(updateData)
@@ -289,19 +303,36 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         throw error;
       }
 
-      // Update local state
-      set(state => ({
-        projects: state.projects.map(p =>
-          p.id === projectId
-            ? { ...p, canvas_data: { nodes, edges, toolToPromptIdMapping } }
-            : p
-        ),
-        currentProject: state.currentProject?.id === projectId
-          ? { ...state.currentProject, canvas_data: { nodes, edges, toolToPromptIdMapping } }
-          : state.currentProject
-      }));
+      console.log('💾 [ProjectStore] Supabase update successful, updating local state');
+
+      // Update local state - CRITICAL: Use the complete canvasData object to maintain consistency
+      set(state => {
+        const updatedCurrentProject = state.currentProject?.id === projectId
+          ? { ...state.currentProject, canvas_data: canvasData }
+          : state.currentProject;
+
+        console.log('💾 [ProjectStore] Local state updated:', {
+          projectId,
+          wasCurrentProject: state.currentProject?.id === projectId,
+          newCanvasData: {
+            nodesCount: canvasData.nodes.length,
+            edgesCount: canvasData.edges.length
+          }
+        });
+
+        return {
+          projects: state.projects.map(p =>
+            p.id === projectId
+              ? { ...p, canvas_data: canvasData }
+              : p
+          ),
+          currentProject: updatedCurrentProject
+        };
+      });
+
+      console.log('✅ [ProjectStore] saveCanvasData completed successfully');
     } catch (error) {
-      console.error('Error saving canvas data:', error);
+      console.error('❌ [ProjectStore] Error saving canvas data:', error);
       set({ error: error instanceof Error ? error.message : 'Failed to save canvas data' });
     }
   },

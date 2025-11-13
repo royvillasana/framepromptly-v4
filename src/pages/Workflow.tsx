@@ -68,6 +68,9 @@ function WorkflowWithProject() {
   // Track initial mount to prevent auto-save on first render
   const isInitialMount = useRef(true);
 
+  // Track when we're applying remote updates to prevent auto-save loop
+  const isApplyingRemoteUpdate = useRef(false);
+
   // Store the addNodeToCanvas function from WorkflowCanvas
   const addNodeToCanvasRef = useRef<((node: any) => void) | null>(null);
 
@@ -128,6 +131,12 @@ function WorkflowWithProject() {
     // and prevent saving wrong project's data
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      return;
+    }
+
+    // CRITICAL: Skip auto-save when applying remote updates to prevent infinite loop
+    if (isApplyingRemoteUpdate.current) {
+      console.log('⏭️ [Workflow] Skipping auto-save during remote update application');
       return;
     }
 
@@ -240,16 +249,60 @@ function WorkflowWithProject() {
     return matches ? matches.map(match => match.slice(2, -2)) : [];
   };
 
-  // Memoize canvas data to prevent unnecessary re-renders
-  const memoizedInitialNodes = useMemo(() =>
-    currentProject.canvas_data?.nodes || [],
-    [currentProject.canvas_data?.nodes]
-  );
+  // Track currentProject changes to understand what's triggering re-renders
+  useEffect(() => {
+    console.log('🔄 [Workflow] currentProject changed:', {
+      projectId: currentProject?.id,
+      hasCanvasData: !!currentProject?.canvas_data,
+      canvasDataKeys: currentProject?.canvas_data ? Object.keys(currentProject.canvas_data) : [],
+      nodesCount: currentProject?.canvas_data?.nodes?.length || 0,
+      edgesCount: currentProject?.canvas_data?.edges?.length || 0,
+      canvasDataReference: currentProject?.canvas_data ? 'exists' : 'null',
+      fullCanvasData: JSON.stringify(currentProject?.canvas_data, null, 2)
+    });
+  }, [currentProject]);
 
-  const memoizedInitialEdges = useMemo(() =>
-    currentProject.canvas_data?.edges || [],
-    [currentProject.canvas_data?.edges]
-  );
+  // Memoize canvas data to prevent unnecessary re-renders
+  const memoizedInitialNodes = useMemo(() => {
+    const nodes = currentProject.canvas_data?.nodes || [];
+    const canvasData = currentProject.canvas_data;
+
+    console.log('🎨 [Workflow] Memoizing initial nodes:', {
+      projectId: currentProject.id,
+      nodeCount: nodes.length,
+      hasCanvasData: !!canvasData,
+      canvasDataType: typeof canvasData,
+      canvasDataKeys: canvasData ? Object.keys(canvasData) : [],
+      nodesArrayType: Array.isArray(nodes) ? 'array' : typeof nodes,
+      firstNode: nodes[0] ? { id: nodes[0].id, type: nodes[0].type } : null,
+      dependencyCheck: {
+        canvasDataNodesLength: currentProject.canvas_data?.nodes?.length,
+        projectId: currentProject.id
+      }
+    });
+
+    // If we have canvas_data but no nodes, that's suspicious
+    if (canvasData && nodes.length === 0) {
+      console.warn('⚠️ [Workflow] canvas_data exists but nodes array is empty!', {
+        canvasData: JSON.stringify(canvasData, null, 2)
+      });
+    }
+
+    return nodes;
+  }, [currentProject.canvas_data?.nodes, currentProject.id]);
+
+  const memoizedInitialEdges = useMemo(() => {
+    const edges = currentProject.canvas_data?.edges || [];
+    console.log('🎨 [Workflow] Memoizing initial edges:', {
+      projectId: currentProject.id,
+      edgeCount: edges.length,
+      dependencyCheck: {
+        canvasDataEdgesLength: currentProject.canvas_data?.edges?.length,
+        projectId: currentProject.id
+      }
+    });
+    return edges;
+  }, [currentProject.canvas_data?.edges, currentProject.id]);
 
   return (
     <div className="h-screen bg-background flex flex-col w-full">
@@ -463,6 +516,7 @@ function WorkflowWithProject() {
             projectId={currentProject.id}
             broadcastEditing={broadcastEditing}
             onAddNodeCallback={handleAddNodeCallback}
+            isApplyingRemoteUpdateRef={isApplyingRemoteUpdate}
           />
         </div>
       </div>
