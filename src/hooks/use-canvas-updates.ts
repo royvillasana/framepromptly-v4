@@ -34,6 +34,12 @@ export function useCanvasUpdates(
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const lastModifiedAtRef = useRef<string | null>(null);
+  const hasLocalChangesRef = useRef<boolean>(hasLocalChanges);
+
+  // Update ref when hasLocalChanges changes (without triggering re-subscription)
+  useEffect(() => {
+    hasLocalChangesRef.current = hasLocalChanges;
+  }, [hasLocalChanges]);
 
   // Subscribe to database changes for this project
   useEffect(() => {
@@ -86,7 +92,7 @@ export function useCanvasUpdates(
           console.log('🔔 Remote canvas update detected:', {
             modifiedBy: newUpdate.modifiedBy,
             modifiedAt: newUpdate.modifiedAt,
-            hasLocalChanges,
+            hasLocalChanges: hasLocalChangesRef.current,
           });
 
           // Store the update
@@ -94,12 +100,12 @@ export function useCanvasUpdates(
           lastModifiedAtRef.current = newUpdate.modifiedAt;
 
           // Auto-apply changes if no local edits (Phase 3 - Automatic Synchronization)
-          if (!hasLocalChanges && onRemoteUpdate) {
+          if (!hasLocalChangesRef.current && onRemoteUpdate) {
             console.log('✅ Auto-applying remote changes (no local changes detected)');
             onRemoteUpdate(newUpdate);
             // Don't show banner for auto-applied changes
             setHasRemoteChanges(false);
-          } else if (hasLocalChanges) {
+          } else if (hasLocalChangesRef.current) {
             // Show banner with warning if user has local changes
             console.log('⚠️ Local changes detected, showing manual refresh option with warning');
             setHasRemoteChanges(true);
@@ -124,7 +130,7 @@ export function useCanvasUpdates(
       setChannel(null);
       setIsSubscribed(false);
     };
-  }, [projectId, user, hasLocalChanges]);
+  }, [projectId, user]);
 
   // Apply remote changes
   const applyRemoteChanges = useCallback(() => {

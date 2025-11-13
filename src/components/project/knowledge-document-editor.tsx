@@ -3,14 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import ReactMarkdown from 'react-markdown';
 import { useKnowledgeStore, KnowledgeEntry } from '@/stores/knowledge-store';
 import { useToast } from '@/hooks/use-toast';
 import { enhanceTextWithAI, getSuggestedEnhancements, TextEnhancementRequest } from '@/lib/ai-text-enhancer';
+import { copyWithStyle } from '@/lib/copy-with-style';
+import { convertToMarkdown } from '@/lib/html-to-markdown';
+import { markdownToStyledDom } from '@/lib/markdown-to-html';
 import { motion } from 'framer-motion';
 import {
   Save, Sparkles, FileText, Image, Bold, Italic, Underline,
   AlignLeft, AlignCenter, AlignRight, Plus, Upload, Trash2,
-  Wand2, Loader2, CheckCircle, AlertCircle, Download
+  Wand2, Loader2, CheckCircle, AlertCircle, Download, Copy, Clipboard
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -80,101 +86,45 @@ const ContentEditableDiv: React.FC<ContentEditableDivProps> = ({
     const clipboardData = e.clipboardData;
 
     // Try to get HTML content first (preserves formatting)
-    let htmlContent = clipboardData.getData('text/html');
+    const htmlContent = clipboardData.getData('text/html');
+    const plainText = clipboardData.getData('text/plain');
 
+    console.log('📋 Pasting content - HTML:', htmlContent?.length || 0, 'Plain:', plainText?.length || 0);
+
+    // Convert to Markdown (this cleans and normalizes the content)
+    let markdown: string;
     if (htmlContent) {
-      // Clean up the HTML while preserving basic formatting
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlContent;
-
-      // Remove unwanted attributes but keep formatting tags
-      const allowedTags = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li'];
-      const allowedStyles = ['font-weight', 'font-style', 'text-decoration', 'color', 'background-color', 'font-size', 'font-family'];
-
-      const cleanNode = (node: Node): Node | null => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          return node.cloneNode(true);
-        }
-
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as HTMLElement;
-          const tagName = element.tagName.toLowerCase();
-
-          if (!allowedTags.includes(tagName)) {
-            // If tag not allowed, just return its children
-            const fragment = document.createDocumentFragment();
-            Array.from(element.childNodes).forEach(child => {
-              const cleaned = cleanNode(child);
-              if (cleaned) fragment.appendChild(cleaned);
-            });
-            return fragment;
-          }
-
-          // Create a new element with only allowed attributes
-          const newElement = document.createElement(tagName);
-
-          // Preserve inline styles if present
-          const style = element.getAttribute('style');
-          if (style) {
-            const styleObj: { [key: string]: string } = {};
-            style.split(';').forEach(rule => {
-              const [prop, value] = rule.split(':').map(s => s.trim());
-              if (prop && value && allowedStyles.includes(prop)) {
-                styleObj[prop] = value;
-              }
-            });
-
-            const styleString = Object.entries(styleObj).map(([k, v]) => `${k}: ${v}`).join('; ');
-            if (styleString) {
-              newElement.setAttribute('style', styleString);
-            }
-          }
-
-          // Process children
-          Array.from(element.childNodes).forEach(child => {
-            const cleaned = cleanNode(child);
-            if (cleaned) newElement.appendChild(cleaned);
-          });
-
-          return newElement;
-        }
-
-        return null;
-      };
-
-      const cleanedContent = cleanNode(tempDiv);
-
-      if (cleanedContent) {
-        // Insert the cleaned HTML at cursor position
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.deleteContents();
-
-          if (cleanedContent instanceof DocumentFragment) {
-            range.insertNode(cleanedContent);
-          } else {
-            range.insertNode(cleanedContent);
-          }
-
-          // Move cursor to end of inserted content
-          range.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
+      // Convert HTML to Markdown
+      markdown = convertToMarkdown(htmlContent, true);
+      console.log('✨ Converted to Markdown, length:', markdown.length);
+    } else if (plainText) {
+      // Convert plain text to Markdown (handles headings, etc.)
+      markdown = convertToMarkdown(plainText, false);
+      console.log('✨ Converted plain text to Markdown, length:', markdown.length);
     } else {
-      // Fallback to plain text if no HTML available
-      const text = clipboardData.getData('text/plain');
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(document.createTextNode(text));
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
+      console.warn('⚠️ No paste content available');
+      return;
+    }
+
+    // Insert the markdown text directly at cursor position
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+
+      // Create a text node with the markdown
+      const textNode = document.createTextNode(markdown);
+      range.insertNode(textNode);
+
+      // Move cursor to end of inserted content
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      console.log('✅ Markdown content pasted successfully');
+    } else {
+      console.warn('⚠️ No selection available for paste');
     }
 
     // Trigger input event to update state
@@ -584,6 +534,60 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
     }
   };
 
+  // Copy selection with formatting
+  const handleCopySelection = async () => {
+    try {
+      const success = await copyWithStyle.selection({ mode: 'attribute', sanitize: true });
+      if (success) {
+        toast({
+          title: "Copied with Formatting",
+          description: "Selected content copied with all styles preserved"
+        });
+      } else {
+        toast({
+          title: "Copy Failed",
+          description: "Failed to copy selection. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Copy selection error:', error);
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy selection. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Copy entire document with formatting
+  const handleCopyDocument = async () => {
+    if (!editorRef.current) return;
+
+    try {
+      const success = await copyWithStyle.element(editorRef.current, { mode: 'attribute', sanitize: true });
+      if (success) {
+        toast({
+          title: "Document Copied",
+          description: "Entire document copied with all styles preserved"
+        });
+      } else {
+        toast({
+          title: "Copy Failed",
+          description: "Failed to copy document. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Copy document error:', error);
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy document. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-full flex flex-col">
       {/* Toolbar */}
@@ -642,6 +646,27 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
             Download PDF
           </Button>
 
+          {/* Copy with Style Buttons */}
+          {selectedText ? (
+            <Button
+              onClick={handleCopySelection}
+              variant="outline"
+              className="border-purple-200 text-purple-700 hover:bg-purple-50"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Selection
+            </Button>
+          ) : (
+            <Button
+              onClick={handleCopyDocument}
+              variant="outline"
+              className="border-purple-200 text-purple-700 hover:bg-purple-50"
+            >
+              <Clipboard className="w-4 h-4 mr-2" />
+              Copy Document
+            </Button>
+          )}
+
           <Button
             onClick={saveAllChanges}
             disabled={isSaving || !hasUnsavedChanges}
@@ -664,107 +689,245 @@ export const KnowledgeDocumentEditor: React.FC<KnowledgeDocumentEditorProps> = (
           animate={{ opacity: 1, y: 0 }}
           className="max-w-4xl mx-auto"
         >
-          {/* Document Paper */}
-          <Card className="bg-white shadow-lg mb-8">
-            <CardContent className="p-16 py-12" ref={editorRef} style={{ 
-              maxWidth: '8.5in', 
-              margin: '0 auto',
-              minHeight: '800px',
-              background: 'white'
-            }}>
-              {documentSections.map((section, index) => (
-                <motion.div
-                  key={section.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="mb-8 group"
-                  data-section-id={section.id}
-                >
-                  {/* Section Header */}
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between group">
-                      <input
-                        value={section.title}
-                        onChange={(e) => handleContentChange(section.id, 'title', e.target.value)}
-                        className="font-bold text-xl border-none p-0 bg-transparent focus:outline-none focus:bg-transparent w-full mr-4"
-                        dir="ltr"
-                        placeholder="Section title..."
-                        style={{ 
-                          fontFamily: '"Times New Roman", serif',
-                          fontSize: '20px',
-                          fontWeight: 'bold',
-                          lineHeight: '1.3',
-                          color: '#1f2937',
-                          marginBottom: '8px',
-                          direction: 'ltr !important',
-                          textAlign: 'left !important',
-                          unicodeBidi: 'embed',
-                          writingMode: 'horizontal-tb'
-                        }}
-                      />
-                      
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {section.isModified && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                            Modified
-                          </Badge>
-                        )}
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteSection(section.id)}
-                          className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+          {/* Tabs for switching between Markdown and Preview */}
+          <Tabs defaultValue="markdown" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="markdown">Markdown (AI)</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+
+            {/* Markdown Tab - Raw markdown for AI */}
+            <TabsContent value="markdown">
+              <Card className="bg-white shadow-lg mb-8">
+                <CardContent className="p-16 py-12" ref={editorRef} style={{
+                  maxWidth: '8.5in',
+                  margin: '0 auto',
+                  minHeight: '800px',
+                  background: 'white'
+                }}>
+                  {documentSections.map((section, index) => (
+                    <motion.div
+                      key={section.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="mb-8 group"
+                      data-section-id={section.id}
+                    >
+                      {/* Section Header */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between group">
+                          <input
+                            value={section.title}
+                            onChange={(e) => handleContentChange(section.id, 'title', e.target.value)}
+                            className="font-bold text-xl border-none p-0 bg-transparent focus:outline-none focus:bg-transparent w-full mr-4"
+                            dir="ltr"
+                            placeholder="Section title..."
+                            style={{
+                              fontFamily: '"Times New Roman", serif',
+                              fontSize: '20px',
+                              fontWeight: 'bold',
+                              lineHeight: '1.3',
+                              color: '#1f2937',
+                              marginBottom: '8px',
+                              direction: 'ltr !important',
+                              textAlign: 'left !important',
+                              unicodeBidi: 'embed',
+                              writingMode: 'horizontal-tb'
+                            }}
+                          />
+
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {section.isModified && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                                Modified
+                              </Badge>
+                            )}
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteSection(section.id)}
+                              className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Section Content */}
-                  <ContentEditableDiv
-                    key={section.id}
-                    initialContent={section.content || ''}
-                    placeholder="Start writing..."
-                    onContentChange={(content) => handleContentChange(section.id, 'content', content)}
-                    onTextSelection={handleTextSelection}
-                    className="min-h-[120px] p-0 focus:outline-none bg-transparent text-gray-900 leading-relaxed"
-                    style={{ 
-                      fontFamily: '"Times New Roman", serif', 
-                      fontSize: '16px', 
-                      lineHeight: '1.8',
-                      textAlign: 'left',
-                      direction: 'ltr',
-                      unicodeBidi: 'embed',
-                      writingMode: 'horizontal-tb',
-                      marginBottom: '24px'
-                    }}
-                  />
+                      {/* Markdown Editor - Direct text in container */}
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={(e) => {
+                          const text = e.currentTarget.textContent || '';
+                          handleContentChange(section.id, 'content', text);
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const clipboardData = e.clipboardData;
+                          const htmlContent = clipboardData.getData('text/html');
+                          const plainText = clipboardData.getData('text/plain');
 
-                  {index < documentSections.length - 1 && (
-                    <div className="mt-12 mb-8">
-                      <hr className="border-gray-300" style={{ borderWidth: '0.5px' }} />
+                          let markdown: string;
+                          if (htmlContent) {
+                            markdown = convertToMarkdown(htmlContent, true);
+                          } else if (plainText) {
+                            markdown = convertToMarkdown(plainText, false);
+                          } else {
+                            return;
+                          }
+
+                          // Insert markdown at cursor position
+                          const selection = window.getSelection();
+                          if (selection && selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            range.deleteContents();
+                            const textNode = document.createTextNode(markdown);
+                            range.insertNode(textNode);
+                            range.setStartAfter(textNode);
+                            range.collapse(true);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+
+                            // Update state with the new content
+                            const updatedText = e.currentTarget.textContent || '';
+                            handleContentChange(section.id, 'content', updatedText);
+                          }
+                        }}
+                        className="min-h-[200px] focus:outline-none whitespace-pre-wrap"
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          lineHeight: '1.6',
+                          color: '#1f2937'
+                        }}
+                      >
+                        {section.content || ''}
+                      </div>
+                      <p className="text-xs text-gray-400 italic mt-4 mb-4">
+                        Paste formatted content and it will be converted to Markdown automatically. This text will be used in AI instructions.
+                      </p>
+
+                      {index < documentSections.length - 1 && (
+                        <div className="mt-12 mb-8">
+                          <hr className="border-gray-300" style={{ borderWidth: '0.5px' }} />
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+
+                  {/* Empty State */}
+                  {documentSections.length === 0 && (
+                    <div className="text-center py-16 text-gray-500">
+                      <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium mb-2">Start Your Knowledge Base</h3>
+                      <p className="mb-4">Add sections to build your project knowledge base</p>
+                      <Button onClick={addNewSection}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add First Section
+                      </Button>
                     </div>
                   )}
-                </motion.div>
-              ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              {/* Empty State */}
-              {documentSections.length === 0 && (
-                <div className="text-center py-16 text-gray-500">
-                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">Start Your Knowledge Base</h3>
-                  <p className="mb-4">Add sections to build your project knowledge base</p>
-                  <Button onClick={addNewSection}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add First Section
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            {/* Preview Tab - Styled preview */}
+            <TabsContent value="preview">
+              <Card className="bg-white shadow-lg mb-8">
+                <CardContent className="p-16 py-12" style={{
+                  maxWidth: '8.5in',
+                  margin: '0 auto',
+                  minHeight: '800px',
+                  background: 'white'
+                }}>
+                  {documentSections.map((section, index) => (
+                    <motion.div
+                      key={section.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="mb-8 group"
+                      data-section-id={section.id}
+                    >
+                      {/* Section Header */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between group">
+                          <h3
+                            className="font-bold text-xl"
+                            style={{
+                              fontFamily: '"Times New Roman", serif',
+                              fontSize: '20px',
+                              fontWeight: 'bold',
+                              lineHeight: '1.3',
+                              color: '#1f2937',
+                              marginBottom: '8px'
+                            }}
+                          >
+                            {section.title || 'Untitled Section'}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Preview Content */}
+                      <div
+                        style={{
+                          fontFamily: '"Times New Roman", serif',
+                          fontSize: '16px',
+                          lineHeight: '1.8'
+                        }}
+                      >
+                        {section.content ? (
+                          <ReactMarkdown
+                            components={{
+                              h1: ({node, ...props}) => <h1 style={{fontSize: '24px', fontWeight: 'bold', marginTop: '24px', marginBottom: '12px'}} {...props} />,
+                              h2: ({node, ...props}) => <h2 style={{fontSize: '20px', fontWeight: 'bold', marginTop: '20px', marginBottom: '10px'}} {...props} />,
+                              h3: ({node, ...props}) => <h3 style={{fontSize: '18px', fontWeight: 'bold', marginTop: '16px', marginBottom: '8px'}} {...props} />,
+                              p: ({node, ...props}) => <p style={{marginBottom: '12px', lineHeight: '1.6'}} {...props} />,
+                              ul: ({node, ...props}) => <ul style={{marginLeft: '20px', marginBottom: '12px'}} {...props} />,
+                              ol: ({node, ...props}) => <ol style={{marginLeft: '20px', marginBottom: '12px'}} {...props} />,
+                              li: ({node, ...props}) => <li style={{marginBottom: '4px'}} {...props} />,
+                              strong: ({node, ...props}) => <strong style={{fontWeight: 'bold'}} {...props} />,
+                              em: ({node, ...props}) => <em style={{fontStyle: 'italic'}} {...props} />,
+                              code: ({node, ...props}) => <code style={{backgroundColor: '#f3f4f6', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace'}} {...props} />,
+                            }}
+                          >
+                            {section.content}
+                          </ReactMarkdown>
+                        ) : (
+                          <p className="text-gray-400 italic">No content yet. Switch to Markdown tab to add content.</p>
+                        )}
+                      </div>
+
+                      {index < documentSections.length - 1 && (
+                        <div className="mt-12 mb-8">
+                          <hr className="border-gray-300" style={{ borderWidth: '0.5px' }} />
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+
+                  {/* Empty State */}
+                  {documentSections.length === 0 && (
+                    <div className="text-center py-16 text-gray-500">
+                      <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium mb-2">Start Your Knowledge Base</h3>
+                      <p className="mb-4">Add sections to build your project knowledge base</p>
+                      <Button onClick={addNewSection}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add First Section
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <p className="text-xs text-gray-500 text-center">
+                This is how your content will appear with formatting. The actual Markdown is stored in the Markdown tab.
+              </p>
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
 

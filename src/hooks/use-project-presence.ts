@@ -111,7 +111,7 @@ export function useProjectPresence(projectId: string | undefined): UseProjectPre
       setIsConnected(false);
       setCollaborators([]);
     };
-  }, [projectId, user]);
+  }, [projectId, user?.id]);
 
   // Broadcast editing state
   const broadcastEditing = useCallback(

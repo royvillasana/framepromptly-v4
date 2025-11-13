@@ -140,8 +140,19 @@ function WorkflowWithProject() {
       return;
     }
 
+    // CRITICAL: Skip auto-save when nodes array is empty to prevent infinite loop
+    // Empty canvas data triggers re-renders and causes blinking
+    if (nodes.length === 0 && edges.length === 0) {
+      console.log('⏭️ [Workflow] Skipping auto-save for empty canvas (no nodes or edges)');
+      return;
+    }
+
     // Debounce to prevent excessive saves
     const timeoutId = setTimeout(() => {
+      console.log('💾 [Workflow] Auto-saving canvas data:', {
+        nodesCount: nodes.length,
+        edgesCount: edges.length
+      });
       saveCanvasData(
         currentProject.id,
         nodes,

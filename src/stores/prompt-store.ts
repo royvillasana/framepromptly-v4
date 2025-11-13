@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UXFramework, UXStage, UXTool } from './workflow-store';
 import { supabase } from '@/integrations/supabase/client';
+import { useKnowledgeStore } from './knowledge-store';
 import { getEnhancedTemplateById, getAllEnhancedTemplates, EnhancedToolPromptTemplate, validateTemplateVariables, getIndustryAdaptation } from '@/lib/tool-templates-enhanced';
 import { promptQualityValidator, QualityValidationResult } from '@/lib/prompt-quality-validator';
 import { getEnhancedInstructions } from '@/lib/enhanced-tool-instructions';
@@ -1206,9 +1207,27 @@ ${processedTemplate}`;
         processedContent = processedContent.replace(/{{#if previousOutputs}}(.*?){{\/if}}/gs, '');
       }
 
+      // Fetch knowledge base entries for the project
+      const { data: knowledgeEntries, error: knowledgeError } = await supabase
+        .from('knowledge_base')
+        .select('id, title, content')
+        .eq('project_id', prompt.projectId);
+
+      if (knowledgeError) {
+        console.warn('⚠️  Error fetching knowledge base:', knowledgeError);
+      }
+
+      const knowledgeData = (knowledgeEntries || []).map(entry => ({
+        id: entry.id,
+        title: entry.title,
+        content: entry.content
+      }));
+
+      console.log('📚 Fetched knowledge base entries:', knowledgeData.length);
+
       // Call the AI generation service through Supabase function
       console.log('🤖 Calling AI generation service for prompt:', promptId);
-      
+
       const { data: aiResult, error: aiError } = await supabase.functions.invoke('generate-ai-prompt', {
         body: {
           promptContent: processedContent,
@@ -1217,7 +1236,7 @@ ${processedTemplate}`;
           frameworkName: prompt.context.framework.name,
           stageName: prompt.context.stage.name,
           toolName: prompt.context.tool.name,
-          knowledgeContext: null // Could be enhanced with project knowledge later
+          knowledgeContext: knowledgeData
         }
       });
 

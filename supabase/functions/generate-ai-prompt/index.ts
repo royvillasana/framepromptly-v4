@@ -195,17 +195,41 @@ serve(async (req) => {
       }
     }
 
+    // Process knowledge context into formatted string
+    let knowledgeBaseContent = '';
+    if (knowledgeContext && Array.isArray(knowledgeContext) && knowledgeContext.length > 0) {
+      console.log('📚 Processing knowledge context:', knowledgeContext.length, 'entries');
+      knowledgeBaseContent = knowledgeContext
+        .map((entry: any) => {
+          if (entry && entry.title && entry.content) {
+            return `### ${entry.title}\n\n${entry.content}`;
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n\n---\n\n');
+      console.log('📚 Formatted knowledge base length:', knowledgeBaseContent.length);
+    } else {
+      console.log('📚 No knowledge context provided');
+      knowledgeBaseContent = 'No project context available. Please add knowledge base documents to provide context for this tool.';
+    }
+
+    // Add knowledgeBase to variables for replacement
+    const allVariables = {
+      ...variables,
+      knowledgeBase: knowledgeBaseContent
+    };
+
     // Replace variables in prompt content
     let processedPrompt = promptContent;
-    Object.entries(variables || {}).forEach(([key, value]) => {
+    Object.entries(allVariables).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
       processedPrompt = processedPrompt.replace(regex, value as string);
     });
 
-    // Knowledge context is already integrated in the template via {{knowledgeBase}} variable
-    // No additional wrapping needed - the template already has "## Project Context:" section
-    console.log('Knowledge context integrated via template variables');
-    console.log('Final prompt length:', processedPrompt.length);
+    console.log('✅ Knowledge context integrated via template variables');
+    console.log('📊 Final prompt length:', processedPrompt.length);
+    console.log('📊 Knowledge base content length:', knowledgeBaseContent.length);
 
     // Return the processed prompt directly - no AI call needed
     // The prompt is already complete with instructions, context, and brackets
