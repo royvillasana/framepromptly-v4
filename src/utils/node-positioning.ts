@@ -82,66 +82,69 @@ export function createPositionCalculator(spacing: NodeSpacing = DEFAULT_SPACING)
   const getConnectedPosition = (sourceNode: Node, targetNodeType: string, existingNodes: Node[]) => {
     const sourceDimensions = getNodeDimensions(sourceNode.type || 'tool');
     const targetDimensions = getNodeDimensions(targetNodeType);
-    
-    // For prompt nodes, check if there are existing prompts connected to this tool
-    if (targetNodeType === 'prompt') {
-      const connectedPrompts = existingNodes.filter(node => 
-        node.type === 'prompt' && 
-        node.data?.sourceToolId === sourceNode.id
-      );
-      
-      // If there are existing prompts, stack them vertically
-      if (connectedPrompts.length > 0) {
-        const baseY = sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2;
-        const stackedY = baseY + (connectedPrompts.length * (targetDimensions.height + 80));
-        
-        const stackedPosition = {
-          x: sourceNode.position.x + sourceDimensions.width + spacing.horizontal * 0.8,
-          y: stackedY
-        };
-        
-        if (!isPositionOccupied(stackedPosition.x, stackedPosition.y, targetNodeType, existingNodes)) {
-          return stackedPosition;
-        }
+
+    // Horizontal offset: position child to the right of parent
+    const horizontalOffset = spacing.horizontal * 0.8;
+
+    // Vertical spacing between stacked children
+    const verticalSpacing = 200; // Consistent gap between children
+
+    // Find all existing children of this source node
+    // Count nodes that are positioned to the right of the source node
+    const existingChildren = existingNodes.filter(node => {
+      // Check if node is to the right of source (within a reasonable range)
+      const isToTheRight = node.position.x > sourceNode.position.x &&
+                           node.position.x < sourceNode.position.x + sourceDimensions.width + horizontalOffset + 100;
+
+      // Also check if it's within vertical range that suggests it's a child
+      const isWithinVerticalRange = Math.abs(node.position.y - sourceNode.position.y) < spacing.vertical * 3;
+
+      return isToTheRight && isWithinVerticalRange && node.id !== sourceNode.id;
+    });
+
+    // Sort children by Y position to get accurate count
+    existingChildren.sort((a, b) => a.position.y - b.position.y);
+
+    // Calculate position based on number of existing children
+    const childIndex = existingChildren.length;
+
+    // Base X position: to the right of parent
+    const childX = sourceNode.position.x + sourceDimensions.width + horizontalOffset;
+
+    // Base Y position: aligned with parent for first child, then stacked vertically
+    let childY: number;
+
+    if (childIndex === 0) {
+      // First child: center-align with parent
+      childY = sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2;
+    } else {
+      // Subsequent children: stack vertically below the last child
+      const lastChild = existingChildren[existingChildren.length - 1];
+      const lastChildDimensions = getNodeDimensions(lastChild.type || 'tool');
+      childY = lastChild.position.y + lastChildDimensions.height + verticalSpacing;
+    }
+
+    // Ensure Y position is non-negative
+    childY = Math.max(childY, 100);
+
+    // Check if this position is occupied (with a smaller buffer for our calculated position)
+    if (!isPositionOccupied(childX, childY, targetNodeType, existingNodes, 40)) {
+      return { x: childX, y: childY };
+    }
+
+    // If our calculated position is occupied, try shifting down
+    let attemptY = childY;
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      attemptY += verticalSpacing;
+
+      if (!isPositionOccupied(childX, attemptY, targetNodeType, existingNodes, 40)) {
+        return { x: childX, y: attemptY };
       }
     }
-    
-    // Try multiple positions around the source node with better spacing
-    const positions = [
-      // Right of source
-      {
-        x: sourceNode.position.x + sourceDimensions.width + spacing.horizontal * 0.8,
-        y: sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2
-      },
-      // Below source
-      {
-        x: sourceNode.position.x + (sourceDimensions.width - targetDimensions.width) / 2,
-        y: sourceNode.position.y + sourceDimensions.height + spacing.vertical * 0.6
-      },
-      // Above source
-      {
-        x: sourceNode.position.x + (sourceDimensions.width - targetDimensions.width) / 2,
-        y: sourceNode.position.y - targetDimensions.height - spacing.vertical * 0.6
-      },
-      // Left of source
-      {
-        x: sourceNode.position.x - targetDimensions.width - spacing.horizontal * 0.8,
-        y: sourceNode.position.y + (sourceDimensions.height - targetDimensions.height) / 2
-      }
-    ];
-    
-    // Try each position and return the first available one
-    for (const pos of positions) {
-      const x = Math.max(pos.x, 0);
-      const y = Math.max(pos.y, 0);
-      
-      if (!isPositionOccupied(x, y, targetNodeType, existingNodes)) {
-        return { x, y };
-      }
-    }
-    
-    // Fallback to grid-based positioning if all preferred positions are occupied
-    return getAvailablePosition(targetNodeType, existingNodes, sourceNode.position.x, sourceNode.position.y);
+
+    // Ultimate fallback: use grid-based positioning
+    return getAvailablePosition(targetNodeType, existingNodes, childX, childY);
   };
 
   const getAvailablePosition = (nodeType: string, existingNodes: Node[], startX = 0, startY = 0) => {

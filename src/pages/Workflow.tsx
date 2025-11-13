@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { WorkflowCanvas } from '@/components/workflow/workflow-canvas';
 import { PromptPanel } from '@/components/workflow/prompt-panel';
 import { ProjectList } from '@/components/project/project-list';
@@ -21,6 +21,7 @@ import { KnowledgeTabPanel } from '@/components/knowledge/knowledge-tab-panel';
 import { ProjectSidebar } from '@/components/workflow/project-sidebar';
 import { CollaboratorsPanel } from '@/components/workflow/collaborators-panel';
 import { useProjectPresence } from '@/hooks/use-project-presence';
+import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 
 export default function Workflow() {
@@ -53,12 +54,33 @@ function WorkflowWithProject() {
     frameworks,
     initializeFrameworks,
     addNode,
-    loadWorkflowFromStorage
+    loadWorkflowFromStorage,
+    nodes,
+    edges,
+    toolToPromptIdMapping
   } = useWorkflowStore();
   const { initializeTemplates, loadProjectPrompts, clearProjectPrompts, currentPrompt, setCurrentPrompt, executePrompt, isGenerating, updatePromptVariables } = usePromptStore();
   const { currentProject, saveCanvasData } = useProjectStore();
+  const { user } = useAuth();
   const [activePanel, setActivePanel] = useState<'canvas' | 'prompts' | 'knowledge'>('canvas');
   const [variables, setVariables] = useState<Record<string, string>>({});
+
+  // Track initial mount to prevent auto-save on first render
+  const isInitialMount = useRef(true);
+
+  // Store the addNodeToCanvas function from WorkflowCanvas
+  const addNodeToCanvasRef = useRef<((node: any) => void) | null>(null);
+
+  // Stable callback to receive addNodeToCanvas from WorkflowCanvas
+  const handleAddNodeCallback = useCallback((addNodeFn: (node: any) => void) => {
+    console.log('📥 [Workflow] Received addNodeToCanvas callback from WorkflowCanvas');
+    addNodeToCanvasRef.current = addNodeFn;
+  }, []);
+
+  // Stable callback to switch to prompt tab
+  const handleSwitchToPromptTab = useCallback(() => {
+    setActivePanel('prompts');
+  }, []);
 
   // Initialize real-time presence for this project
   const { collaborators, isConnected, broadcastEditing } = useProjectPresence(currentProject?.id);
@@ -93,18 +115,57 @@ function WorkflowWithProject() {
     }
   }, [currentPrompt]);
 
+  // Reset initial mount flag when project changes to prevent cross-project contamination
+  useEffect(() => {
+    isInitialMount.current = true;
+  }, [currentProject?.id]);
+
+  // Auto-save canvas data to database when nodes/edges change
+  useEffect(() => {
+    if (!currentProject || !user) return;
+
+    // Skip auto-save on initial mount/project switch to prevent triggering remote update banner
+    // and prevent saving wrong project's data
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Debounce to prevent excessive saves
+    const timeoutId = setTimeout(() => {
+      saveCanvasData(
+        currentProject.id,
+        nodes,
+        edges,
+        toolToPromptIdMapping,
+        user.id // Pass user ID to update last_modified_by
+      );
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [nodes, edges, toolToPromptIdMapping, currentProject, user, saveCanvasData]);
+
   const handleFrameworkSelection = (framework: any) => {
-    console.log('Handling framework selection:', framework);
+    console.log('🎯 [Workflow] Framework selection:', framework.id);
+    console.log('🔍 [Workflow] Canvas callback available?', !!addNodeToCanvasRef.current);
     selectFramework(framework);
     const newNode = {
       id: `framework-${framework.id}`,
       type: 'framework',
       position: { x: 100, y: 100 },
+      sourcePosition: 'right',
+      targetPosition: 'left',
       data: { framework, isSelected: true },
     };
-    console.log('Creating framework node:', newNode);
-    addNode(newNode);
-    console.log('Current nodes after adding framework:', nodes);
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvasRef.current) {
+      console.log('✅ [Workflow] Using canvas callback to add node');
+      addNodeToCanvasRef.current(newNode);
+    } else {
+      console.warn('⚠️ [Workflow] Canvas callback not ready, using store fallback');
+      addNode(newNode);
+    }
   };
 
   const handleAddStage = (stage: any) => {
@@ -112,9 +173,17 @@ function WorkflowWithProject() {
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
       position: { x: 300, y: 200 },
+      sourcePosition: 'right',
+      targetPosition: 'left',
       data: { stage, isActive: true },
     };
-    addNode(newNode);
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvasRef.current) {
+      addNodeToCanvasRef.current(newNode);
+    } else {
+      addNode(newNode);
+    }
   };
 
   const handleAddTool = (tool: any, framework?: any, stage?: any) => {
@@ -122,9 +191,17 @@ function WorkflowWithProject() {
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: { x: 500, y: 300 },
+      sourcePosition: 'right',
+      targetPosition: 'left',
       data: { tool, framework, stage, isActive: true },
     };
-    addNode(newNode);
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvasRef.current) {
+      addNodeToCanvasRef.current(newNode);
+    } else {
+      addNode(newNode);
+    }
   };
 
   const handleVariableChange = (key: string, value: string) => {
@@ -162,6 +239,17 @@ function WorkflowWithProject() {
     const matches = content.match(/{{(\w+)}}/g);
     return matches ? matches.map(match => match.slice(2, -2)) : [];
   };
+
+  // Memoize canvas data to prevent unnecessary re-renders
+  const memoizedInitialNodes = useMemo(() =>
+    currentProject.canvas_data?.nodes || [],
+    [currentProject.canvas_data?.nodes]
+  );
+
+  const memoizedInitialEdges = useMemo(() =>
+    currentProject.canvas_data?.edges || [],
+    [currentProject.canvas_data?.edges]
+  );
 
   return (
     <div className="h-screen bg-background flex flex-col w-full">
@@ -368,11 +456,13 @@ function WorkflowWithProject() {
           </div>
 
           <WorkflowCanvas
-            onSwitchToPromptTab={() => setActivePanel('prompts')}
-            initialNodes={currentProject.canvas_data?.nodes || []}
-            initialEdges={currentProject.canvas_data?.edges || []}
+            key={currentProject.id} // Force remount when project changes to prevent cross-project contamination
+            onSwitchToPromptTab={handleSwitchToPromptTab}
+            initialNodes={memoizedInitialNodes}
+            initialEdges={memoizedInitialEdges}
             projectId={currentProject.id}
             broadcastEditing={broadcastEditing}
+            onAddNodeCallback={handleAddNodeCallback}
           />
         </div>
       </div>

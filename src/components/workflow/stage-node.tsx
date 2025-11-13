@@ -15,6 +15,8 @@ interface StageNodeData {
   framework?: UXFramework;
   isActive?: boolean;
   isCompleted?: boolean;
+  addNodeToCanvas?: (node: any) => void;
+  addEdgeToCanvas?: (edge: any) => void;
 }
 
 interface StageNodeProps {
@@ -23,88 +25,128 @@ interface StageNodeProps {
 }
 
 export const StageNode = memo(({ data, selected, id }: StageNodeProps & { id?: string }) => {
-  const { stage, framework, isActive, isCompleted } = data;
-  const { addNode, addEdge, nodes } = useWorkflowStore();
+  const { stage, framework, isActive, isCompleted, addNodeToCanvas, addEdgeToCanvas } = data;
+  const { addNode: addNodeToStore, addEdge: addEdgeToStore, nodes } = useWorkflowStore();
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
   // Get framework colors, fallback to design-thinking if no framework
   const colors = getFrameworkColors(framework?.id || 'design-thinking');
 
   const handleAddTool = (tool: UXTool) => {
+    console.log('🎯 [StageNode] Adding tool:', tool.name);
     // Use smart positioning to avoid overlaps
-    const newPosition = getSmartPosition('tool', nodes, { 
+    const newPosition = getSmartPosition('tool', nodes, {
       sourceNodeId: id,
-      workflowType: 'stage-to-tool' 
+      workflowType: 'stage-to-tool'
     });
-    
+
     const toolNode = {
       id: `tool-${tool.id}-${Date.now()}`,
       type: 'tool',
       position: newPosition,
+      sourcePosition: 'right',
+      targetPosition: 'left',
       data: {
         tool,
         stage,
         framework
       }
     };
-    
-    addNode(toolNode);
-    
-    // Create edge from stage to tool
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvas) {
+      console.log('✅ [StageNode] Using canvas callback to add tool');
+      addNodeToCanvas(toolNode);
+    } else {
+      console.warn('⚠️ [StageNode] Canvas callback not available, using store fallback');
+      addNodeToStore(toolNode);
+    }
+
+    // Create edge from stage (right side) to tool (left side)
     if (id) {
       const edge = {
         id: `edge-${id}-${toolNode.id}`,
         source: id,
         target: toolNode.id,
+        sourceHandle: 'source-1', // Right side of stage node
+        targetHandle: 'target-1', // Left side of tool node
         type: 'smoothstep',
         animated: true,
         style: { stroke: 'hsl(var(--primary))' }
       };
-      addEdge(edge);
+
+      // Use canvas callback if available, otherwise fall back to store
+      if (addEdgeToCanvas) {
+        console.log('✅ [StageNode] Using canvas callback to add edge');
+        addEdgeToCanvas(edge);
+      } else {
+        console.warn('⚠️ [StageNode] Edge callback not available, using store fallback');
+        addEdgeToStore(edge);
+      }
     }
   };
 
   const handleRunStage = () => {
+    console.log('🎯 [StageNode] Running stage:', stage.name);
     // Check if there are already tools for this stage
-    const existingToolNodes = nodes.filter(node => 
-      node.type === 'tool' && 
+    const existingToolNodes = nodes.filter(node =>
+      node.type === 'tool' &&
       node.data &&
       (node.data as any).stage?.id === stage.id
     );
-    
+
     // If no tools exist, create all tools for this stage
     if (existingToolNodes.length === 0 && stage.tools) {
       stage.tools.forEach((tool, index) => {
         // Use smart positioning for each tool
-        const newPosition = getSmartPosition('tool', nodes, { 
+        const newPosition = getSmartPosition('tool', nodes, {
           sourceNodeId: id,
-          workflowType: 'stage-to-tool' 
+          workflowType: 'stage-to-tool'
         });
-        
+
         const toolNode = {
           id: `tool-${tool.id}-${Date.now()}-${index}`,
           type: 'tool',
           position: newPosition,
+          sourcePosition: 'right',
+          targetPosition: 'left',
           data: {
             tool,
             stage,
             framework
           }
         };
-        
-        addNode(toolNode);
-        
-        // Create edge from stage to tool
+
+        // Use canvas callback if available, otherwise fall back to store
+        if (addNodeToCanvas) {
+          console.log('✅ [StageNode] Using canvas callback to add tool (Run Stage)');
+          addNodeToCanvas(toolNode);
+        } else {
+          console.warn('⚠️ [StageNode] Canvas callback not available, using store fallback (Run Stage)');
+          addNodeToStore(toolNode);
+        }
+
+        // Create edge from stage (right side) to tool (left side)
         if (id) {
           const edge = {
             id: `edge-${id}-${toolNode.id}`,
             source: id,
             target: toolNode.id,
+            sourceHandle: 'source-1', // Right side of stage node
+            targetHandle: 'target-1', // Left side of tool node
             type: 'smoothstep',
             animated: true,
             style: { stroke: 'hsl(var(--primary))' }
           };
-          addEdge(edge);
+
+          // Use canvas callback if available, otherwise fall back to store
+          if (addEdgeToCanvas) {
+            console.log('✅ [StageNode] Using canvas callback to add edge (Run Stage)');
+            addEdgeToCanvas(edge);
+          } else {
+            console.warn('⚠️ [StageNode] Edge callback not available, using store fallback (Run Stage)');
+            addEdgeToStore(edge);
+          }
         }
       });
     }

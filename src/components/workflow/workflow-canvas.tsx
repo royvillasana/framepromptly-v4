@@ -29,6 +29,8 @@ import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CustomPromptNode } from './custom-prompt-node';
 import { AIBuilderNode } from './ai-builder-node';
 import { CanvasToolbar } from './canvas-toolbar';
+import { CanvasUpdateBanner } from './canvas-update-banner';
+import { useCanvasUpdates, RemoteCanvasUpdate } from '@/hooks/use-canvas-updates';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useCanvasKeyboardControls } from '@/hooks/use-canvas-keyboard-controls';
@@ -75,6 +77,7 @@ interface WorkflowCanvasProps {
   initialEdges?: any[];
   projectId?: string;
   broadcastEditing?: (isEditing: boolean) => void;
+  onAddNodeCallback?: (addNodeFn: (node: any) => void) => void;
 }
 
 export function WorkflowCanvas({
@@ -82,16 +85,16 @@ export function WorkflowCanvas({
   initialNodes = [],
   initialEdges = [],
   projectId,
-  broadcastEditing
+  broadcastEditing,
+  onAddNodeCallback
 }: WorkflowCanvasProps) {
+
   const {
     setNodes,
     setEdges,
     addEdge: addStoreEdge,
     selectNode,
     selectedNode,
-    updateNodePosition,
-    updateNodeDimensions,
     saveWorkflowToStorage
   } = useWorkflowStore();
 
@@ -113,6 +116,7 @@ export function WorkflowCanvas({
   } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
 
   // Create stable nodeTypes - tool node will get onSwitchToPromptTab via context or props
   const nodeTypes = useMemo(() => ({
@@ -120,13 +124,19 @@ export function WorkflowCanvas({
     tool: ToolNode,
   }), []);
 
-  // Add onSwitchToPromptTab to tool nodes - let React Flow handle selection
+  // Forward reference for addNodeToCanvas that will be set after definition
+  const addNodeToCanvasRef = useRef<((node: any) => void) | null>(null);
+  const addEdgeToCanvasRef = useRef<((edge: any) => void) | null>(null);
+
+  // Add callbacks to nodes based on type
   const enhancedNodes = useMemo(() =>
     initialNodes.map(node => ({
       ...node,
       data: {
         ...node.data,
-        ...(node.type === 'tool' ? { onSwitchToPromptTab } : {})
+        ...(node.type === 'tool' ? { onSwitchToPromptTab, addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {}),
+        ...(node.type === 'framework' ? { addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {}),
+        ...(node.type === 'stage' ? { addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {})
       }
     })), [initialNodes, onSwitchToPromptTab]
   );
@@ -142,6 +152,76 @@ export function WorkflowCanvas({
     flowNodesRef.current = flowNodes;
     flowEdgesRef.current = flowEdges;
   }, [flowNodes, flowEdges]);
+
+  // DON'T automatically sync from store - this causes infinite loops
+  // Instead, React Flow manages its own state and we save back to store on unmount
+  // The key prop on WorkflowCanvas ensures component remounts when project changes
+
+  // Expose addNode function to parent component via callback
+  const addNodeToCanvas = useCallback((node: any) => {
+    console.log('➕ [WorkflowCanvas] addNodeToCanvas called with node:', node.id, node.type);
+    console.log('📊 [WorkflowCanvas] Current flowNodes count before add:', flowNodes.length);
+
+    // Enhance the node with necessary props based on node type
+    const enhancedNode = {
+      ...node,
+      data: {
+        ...node.data,
+        ...(node.type === 'tool' ? { onSwitchToPromptTab, addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {}),
+        ...(node.type === 'framework' ? { addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {}),
+        ...(node.type === 'stage' ? { addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {})
+      }
+    };
+
+    setFlowNodes((nodes) => {
+      console.log('➕ [WorkflowCanvas] Adding node to flowNodes. Current count:', nodes.length);
+      const newNodes = [...nodes, enhancedNode];
+      console.log('➕ [WorkflowCanvas] New flowNodes count after add:', newNodes.length);
+      return newNodes;
+    });
+  }, [setFlowNodes, onSwitchToPromptTab]);
+
+  // Expose addEdge function to nodes
+  const addEdgeToCanvas = useCallback((edge: any) => {
+    console.log('🔗 [WorkflowCanvas] addEdgeToCanvas called:', edge.id);
+    setFlowEdges((edges) => [...edges, edge]);
+  }, [setFlowEdges]);
+
+  // Store stable references
+  useEffect(() => {
+    addNodeToCanvasRef.current = addNodeToCanvas;
+    addEdgeToCanvasRef.current = addEdgeToCanvas;
+  }, [addNodeToCanvas, addEdgeToCanvas]);
+
+  // Update existing framework, stage, and tool nodes with the callbacks after they're defined
+  useEffect(() => {
+    if (addNodeToCanvas && addEdgeToCanvas) {
+      setFlowNodes((nodes) =>
+        nodes.map((node) => {
+          if (node.type === 'framework' || node.type === 'stage' || node.type === 'tool') {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                addNodeToCanvas: addNodeToCanvasRef.current,
+                addEdgeToCanvas: addEdgeToCanvasRef.current,
+              },
+            };
+          }
+          return node;
+        })
+      );
+    }
+  }, [addNodeToCanvas, addEdgeToCanvas, setFlowNodes]);
+
+  // Call the callback prop to expose addNode function to parent
+  useEffect(() => {
+    console.log('🔗 [WorkflowCanvas] Setting up callback, onAddNodeCallback exists?', !!onAddNodeCallback);
+    if (onAddNodeCallback) {
+      console.log('🔗 [WorkflowCanvas] Calling onAddNodeCallback to expose addNodeToCanvas');
+      onAddNodeCallback(addNodeToCanvas);
+    }
+  }, [onAddNodeCallback, addNodeToCanvas]);
 
   // Handle node double-click to open details
   const handleNodeDoubleClick = useCallback((node: Node) => {
@@ -207,7 +287,6 @@ export function WorkflowCanvas({
   // Save to Zustand on unmount only (prevents infinite loop)
   useEffect(() => {
     return () => {
-      console.log('💾 Saving canvas state on unmount');
       const nodes = flowNodesRef.current;
       const edges = flowEdgesRef.current;
 
@@ -219,6 +298,86 @@ export function WorkflowCanvas({
       saveWorkflowToStorage();
     };
   }, [setNodes, setEdges, saveWorkflowToStorage]);
+
+  // Handle remote canvas updates - automatically apply to canvas
+  const handleRemoteUpdate = useCallback((update: RemoteCanvasUpdate) => {
+    // CRITICAL: Verify update is for the current project
+    if (update.projectId !== projectId) {
+      console.warn('⚠️ Ignoring update for different project');
+      return;
+    }
+
+    // Apply the remote canvas data directly to the flow
+    if (update.canvasData) {
+      const newNodes = update.canvasData.nodes || [];
+      const newEdges = update.canvasData.edges || [];
+
+      // Update React Flow state
+      setFlowNodes(newNodes);
+      setFlowEdges(newEdges);
+
+      // Update Zustand store
+      setNodes(newNodes);
+      setEdges(newEdges);
+
+      // Clear local changes flag since we just synced
+      setHasLocalChanges(false);
+    }
+  }, [projectId, setFlowNodes, setFlowEdges, setNodes, setEdges]);
+
+  // Canvas update detection hook
+  const {
+    hasRemoteChanges,
+    remoteUpdate,
+    applyRemoteChanges,
+    dismissRemoteChanges,
+    isSubscribed
+  } = useCanvasUpdates(projectId, handleRemoteUpdate, hasLocalChanges);
+
+  // Handler to apply remote changes manually (when user has local changes)
+  const handleApplyRemoteChanges = useCallback(() => {
+    // Verify update is for the current project
+    if (remoteUpdate && remoteUpdate.projectId !== projectId) {
+      console.warn('⚠️ Cannot apply - update is for different project');
+      return;
+    }
+
+    if (remoteUpdate?.canvasData) {
+      const newNodes = remoteUpdate.canvasData.nodes || [];
+      const newEdges = remoteUpdate.canvasData.edges || [];
+
+      // Update React Flow state
+      setFlowNodes(newNodes);
+      setFlowEdges(newEdges);
+
+      // Update Zustand store
+      setNodes(newNodes);
+      setEdges(newEdges);
+
+      // Clear local changes flag since we just synced
+      setHasLocalChanges(false);
+    }
+
+    // Dismiss the banner
+    applyRemoteChanges();
+  }, [projectId, remoteUpdate, setFlowNodes, setFlowEdges, setNodes, setEdges, applyRemoteChanges]);
+
+  // Handler to dismiss remote changes
+  const handleDismissRemoteChanges = useCallback(() => {
+    dismissRemoteChanges();
+  }, [dismissRemoteChanges]);
+
+  // Reset local changes flag when data is saved
+  useEffect(() => {
+    if (hasLocalChanges) {
+      // Reset after a delay to allow for auto-save
+      const timer = setTimeout(() => {
+        setHasLocalChanges(false);
+      }, 5000); // 5 seconds after last change
+
+      return () => clearTimeout(timer);
+    }
+  }, [hasLocalChanges]);
 
   // Define handleClearSelection function first
   const handleClearSelection = useCallback(() => {
@@ -312,15 +471,7 @@ export function WorkflowCanvas({
           ? { fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' }
           : undefined,
       } as Edge;
-      
-      console.log('Creating new edge:', {
-        id: edgeId,
-        source: params.source,
-        target: params.target,
-        sourceHandle: params.sourceHandle,
-        targetHandle: params.targetHandle
-      });
-      
+
       setFlowEdges((eds) => addEdge(newEdge, eds));
       addStoreEdge(newEdge);
     },
@@ -332,37 +483,43 @@ export function WorkflowCanvas({
       updateRef.current = true;
       onNodesChange(changes);
 
-      // Broadcast editing state when user makes changes
+      // Track local changes for conflict detection
       const hasEditingChange = changes.some(
         (change) => change.type === 'position' || change.type === 'dimensions' || change.type === 'add' || change.type === 'remove'
       );
-      if (hasEditingChange && broadcastEditing) {
-        broadcastEditing(true);
+
+      if (hasEditingChange) {
+        setHasLocalChanges(true);
+
+        // Broadcast editing state when user makes changes
+        if (broadcastEditing) {
+          broadcastEditing(true);
+        }
       }
 
-      // Handle position and dimension changes with auto-save
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position && change.id) {
-          // Update position in store and auto-save
-          updateNodePosition(change.id, change.position);
-        }
-        if (change.type === 'dimensions' && change.dimensions && change.id) {
-          // Update dimensions in store and auto-save
-          updateNodeDimensions(change.id, change.dimensions);
-        }
-      });
+      // DON'T update Zustand store here - React Flow manages its own state
+      // Store updates only happen on unmount to prevent infinite loops
     },
-    [onNodesChange, updateNodePosition, updateNodeDimensions, broadcastEditing]
+    [onNodesChange, broadcastEditing]
   );
 
   const onEdgesChangeHandler = useCallback(
     (changes: any[]) => {
       onEdgesChange(changes);
-      
-      // Auto-save when edges change
-      saveWorkflowToStorage();
+
+      // Track local changes for conflict detection
+      const hasEditingChange = changes.some(
+        (change) => change.type === 'add' || change.type === 'remove'
+      );
+
+      if (hasEditingChange) {
+        setHasLocalChanges(true);
+      }
+
+      // DON'T update Zustand store here - React Flow manages its own state
+      // Store updates only happen on unmount to prevent infinite loops
     },
-    [onEdgesChange, saveWorkflowToStorage]
+    [onEdgesChange]
   );
 
   const onNodeClick = useCallback(
@@ -535,7 +692,16 @@ export function WorkflowCanvas({
       transition={{ duration: 0.5 }}
       className="h-full w-full relative"
       style={{ backgroundColor: '#333446' }}
-    >      
+    >
+      {/* Canvas Update Banner */}
+      <CanvasUpdateBanner
+        show={hasRemoteChanges}
+        remoteUpdate={remoteUpdate}
+        onRefresh={handleApplyRemoteChanges}
+        onDismiss={handleDismissRemoteChanges}
+        hasLocalChanges={hasLocalChanges}
+      />
+
       {/* Marquee Selection Rectangle */}
       {marqueeRect && isDrawing && (
         <div
@@ -645,6 +811,7 @@ export function WorkflowCanvas({
         onFitView={handleFitView}
         onApplyLayout={applyLayout}
         selectedNode={selectedNode}
+        addNodeToCanvas={addNodeToCanvas}
       />
     </motion.div>
   );

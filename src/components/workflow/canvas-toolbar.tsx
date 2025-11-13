@@ -18,6 +18,7 @@ interface CanvasToolbarProps {
   onFitView?: () => void;
   onApplyLayout?: () => void;
   selectedNode?: any;
+  addNodeToCanvas?: (node: any) => void;
 }
 
 export function CanvasToolbar({
@@ -29,7 +30,8 @@ export function CanvasToolbar({
   onZoomOut,
   onFitView,
   onApplyLayout,
-  selectedNode
+  selectedNode,
+  addNodeToCanvas
 }: CanvasToolbarProps) {
   const { nodes, setNodes, addNode, addEdge, frameworks, selectFramework } = useWorkflowStore();
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
@@ -181,6 +183,7 @@ export function CanvasToolbar({
         onClose={() => setIsAddPanelOpen(false)}
         onClearSelection={onClearSelection}
         selectedNode={selectedNode}
+        addNodeToCanvas={addNodeToCanvas}
       />
     </>
   );

@@ -16,10 +16,11 @@ interface AddElementPanelProps {
   onClose: () => void;
   onClearSelection?: () => void;
   selectedNode?: any;
+  addNodeToCanvas?: (node: any) => void;
 }
 
-export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNode }: AddElementPanelProps) {
-  const { frameworks, nodes, addNode, selectFramework, addEdge } = useWorkflowStore();
+export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNode, addNodeToCanvas }: AddElementPanelProps) {
+  const { frameworks, nodes, addNode: addNodeToStore, selectFramework, addEdge } = useWorkflowStore();
   const [activeSection, setActiveSection] = useState<'main' | 'frameworks' | 'stages' | 'tools'>('main');
   const [selectedFramework, setSelectedFramework] = useState<any>(null);
   const [selectedStage, setSelectedStage] = useState<any>(null);
@@ -64,6 +65,7 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
   };
 
   const handleFrameworkSelection = (framework: any) => {
+    console.log('🎯 [AddElementPanel] Framework selected:', framework.id);
     selectFramework(framework);
     const position = getSmartPosition('framework', nodes);
     const newNode = {
@@ -72,7 +74,16 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
       position,
       data: { framework, isSelected: true },
     };
-    addNode(newNode);
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvas) {
+      console.log('✅ [AddElementPanel] Using canvas callback');
+      addNodeToCanvas(newNode);
+    } else {
+      console.warn('⚠️ [AddElementPanel] Canvas callback not available, using store fallback');
+      addNodeToStore(newNode);
+    }
+
     onClearSelection?.();
     onClose();
   };
@@ -101,8 +112,13 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
         isDone: false,
       },
     };
-    
-    addNode(newStageNode);
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvas) {
+      addNodeToCanvas(newStageNode);
+    } else {
+      addNodeToStore(newStageNode);
+    }
 
     // Create edge from framework to stage
     const newEdge = createConnectedEdge(
@@ -143,7 +159,12 @@ export function AddElementPanel({ isOpen, onClose, onClearSelection, selectedNod
       },
     };
 
-    addNode(newToolNode);
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvas) {
+      addNodeToCanvas(newToolNode);
+    } else {
+      addNodeToStore(newToolNode);
+    }
 
     // Create edge from stage to tool
     const newEdge = createConnectedEdge(

@@ -27,6 +27,8 @@ interface ToolNodeData {
   isActive?: boolean;
   isCompleted?: boolean;
   linkedKnowledge?: string[];
+  addNodeToCanvas?: (node: any) => void;
+  addEdgeToCanvas?: (edge: any) => void;
 }
 
 interface ToolNodeProps {
@@ -37,10 +39,10 @@ interface ToolNodeProps {
 
 export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: string }) => {
   const { generatePrompt, setCurrentPrompt, getEnhancedTemplate, generateEnhancedPrompt, createPromptVersion } = usePromptStore();
-  const { addNode, addEdge, nodes, edges, updateNode, getPromptNodeForTool, setToolPromptMapping, getPromptIdForTool, setToolPromptIdMapping } = useWorkflowStore();
+  const { addNode: addNodeToStore, addEdge: addEdgeToStore, nodes, edges, updateNode, getPromptNodeForTool, setToolPromptMapping, getPromptIdForTool, setToolPromptIdMapping } = useWorkflowStore();
   const { currentProject, getEnhancedSettings } = useProjectStore();
   const { entries, fetchEntries } = useKnowledgeStore();
-  const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab } = data;
+  const { tool, framework, stage, isActive, isCompleted, linkedKnowledge: rawLinkedKnowledge = [], onSwitchToPromptTab, addNodeToCanvas, addEdgeToCanvas } = data;
   const linkedKnowledge = Array.isArray(rawLinkedKnowledge) ? rawLinkedKnowledge : [];
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   
@@ -338,6 +340,8 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           id: `prompt-${id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: 'prompt',
           position: newPosition,
+          sourcePosition: 'right',
+          targetPosition: 'left',
           data: {
             prompt: generatedPrompt,
             onSwitchToPromptTab,
@@ -346,20 +350,35 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
           }
         };
 
-        addNode(promptNode);
+        // Use canvas callback if available, otherwise fall back to store
+        if (addNodeToCanvas) {
+          console.log('✅ [ToolNode] Using canvas callback to add prompt node');
+          addNodeToCanvas(promptNode);
+        } else {
+          console.warn('⚠️ [ToolNode] Canvas callback not available, using store fallback');
+          addNodeToStore(promptNode);
+        }
 
         // Store the mapping for future reuse
         setToolPromptMapping(id, promptNode.id);
 
-        // Create edge from tool to prompt (right side of tool to left side of prompt)
+        // Create edge from tool (right side) to prompt (left side)
         if (id) {
           const edge = createConnectedEdge(id, promptNode.id, {
-            sourceHandle: `${id}-source-1`, // Tool node uses prefixed handles
-            targetHandle: 'target-1', // Prompt node uses unprefixed handles
+            sourceHandle: 'source-1', // Tool node right side handle
+            targetHandle: 'target-1', // Prompt node left side handle
             animated: true,
             style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
           });
-          addEdge(edge);
+
+          // Use canvas callback if available, otherwise fall back to store
+          if (addEdgeToCanvas) {
+            console.log('✅ [ToolNode] Using canvas callback to add edge');
+            addEdgeToCanvas(edge);
+          } else {
+            console.warn('⚠️ [ToolNode] Edge callback not available, using store fallback');
+            addEdgeToStore(edge);
+          }
         }
       }
 
@@ -488,14 +507,14 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       {id && (
         <>
           <DraggableHandle
-            id={`${id}-target-1`}
+            id="target-1"
             type="target"
             initialPosition={handlePositions['target-1'] || 'left'}
             onPositionChange={(position) => updateHandlePosition('target-1', position)}
             nodeId={id}
           />
           <DraggableHandle
-            id={`${id}-target-2`}
+            id="target-2"
             type="target"
             initialPosition={handlePositions['target-2'] || 'top'}
             onPositionChange={(position) => updateHandlePosition('target-2', position)}
@@ -699,14 +718,14 @@ export const ToolNode = memo(({ data, selected, id }: ToolNodeProps & { id?: str
       {id && (
         <>
           <DraggableHandle
-            id={`${id}-source-1`}
+            id="source-1"
             type="source"
             initialPosition={handlePositions['source-1'] || 'right'}
             onPositionChange={(position) => updateHandlePosition('source-1', position)}
             nodeId={id}
           />
           <DraggableHandle
-            id={`${id}-source-2`}
+            id="source-2"
             type="source"
             initialPosition={handlePositions['source-2'] || 'bottom'}
             onPositionChange={(position) => updateHandlePosition('source-2', position)}

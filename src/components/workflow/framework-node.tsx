@@ -13,6 +13,8 @@ import { getFrameworkColors } from '@/lib/framework-colors';
 interface FrameworkNodeData {
   framework: UXFramework;
   isSelected?: boolean;
+  addNodeToCanvas?: (node: any) => void;
+  addEdgeToCanvas?: (edge: any) => void;
 }
 
 interface FrameworkNodeProps {
@@ -21,41 +23,62 @@ interface FrameworkNodeProps {
 }
 
 export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & { id?: string }) => {
-  const { framework, isSelected } = data;
-  const { addNode, addEdge, nodes } = useWorkflowStore();
+  const { framework, isSelected, addNodeToCanvas, addEdgeToCanvas } = data;
+  const { addNode: addNodeToStore, addEdge: addEdgeToStore, nodes } = useWorkflowStore();
   const { handlePositions, updateHandlePosition } = useDraggableHandles(id);
   const colors = getFrameworkColors(framework.id);
 
   const handleAddStage = (stage: UXStage) => {
+    console.log('🎯 [FrameworkNode] Adding stage:', stage.name);
     // Use smart positioning to avoid overlaps
-    const newPosition = getSmartPosition('stage', nodes, { 
+    const newPosition = getSmartPosition('stage', nodes, {
       sourceNodeId: id,
-      workflowType: 'framework-to-stage' 
+      workflowType: 'framework-to-stage'
     });
-    
+
     const stageNode = {
       id: `stage-${stage.id}-${Date.now()}`,
       type: 'stage',
       position: newPosition,
+      sourcePosition: 'right',
+      targetPosition: 'left',
       data: {
         stage,
-        framework
+        framework,
+        addNodeToCanvas
       }
     };
-    
-    addNode(stageNode);
-    
-    // Create edge from framework to stage
+
+    // Use canvas callback if available, otherwise fall back to store
+    if (addNodeToCanvas) {
+      console.log('✅ [FrameworkNode] Using canvas callback');
+      addNodeToCanvas(stageNode);
+    } else {
+      console.warn('⚠️ [FrameworkNode] Canvas callback not available, using store fallback');
+      addNodeToStore(stageNode);
+    }
+
+    // Create edge from framework (right side) to stage (left side)
     if (id) {
       const edge = {
         id: `edge-${id}-${stageNode.id}`,
         source: id,
         target: stageNode.id,
+        sourceHandle: 'source-1', // Right side of framework node
+        targetHandle: 'target-2', // Left side of stage node
         type: 'smoothstep',
         animated: true,
         style: { stroke: 'hsl(var(--primary))' }
       };
-      addEdge(edge);
+
+      // Use canvas callback if available, otherwise fall back to store
+      if (addEdgeToCanvas) {
+        console.log('✅ [FrameworkNode] Using canvas callback to add edge');
+        addEdgeToCanvas(edge);
+      } else {
+        console.warn('⚠️ [FrameworkNode] Edge callback not available, using store fallback');
+        addEdgeToStore(edge);
+      }
     }
   };
 
@@ -64,34 +87,52 @@ export const FrameworkNode = memo(({ data, selected, id }: FrameworkNodeProps & 
     if (framework.stages) {
       framework.stages.forEach((stage, index) => {
       // For multiple stages, use smart positioning with some variety
-      const newPosition = getSmartPosition('stage', nodes, { 
+      const newPosition = getSmartPosition('stage', nodes, {
         sourceNodeId: id,
-        workflowType: 'framework-to-stage' 
+        workflowType: 'framework-to-stage'
       });
-      
+
       const stageNode = {
         id: `stage-${stage.id}-${Date.now()}-${index}`,
         type: 'stage',
         position: newPosition,
+        sourcePosition: 'right',
+        targetPosition: 'left',
         data: {
           stage,
-          framework
+          framework,
+          addNodeToCanvas
         }
       };
-      
-      addNode(stageNode);
-      
-      // Create edge from framework to stage
+
+      // Use canvas callback if available, otherwise fall back to store
+      if (addNodeToCanvas) {
+        addNodeToCanvas(stageNode);
+      } else {
+        addNodeToStore(stageNode);
+      }
+
+      // Create edge from framework (right side) to stage (left side)
       if (id) {
         const edge = {
           id: `edge-${id}-${stageNode.id}`,
           source: id,
           target: stageNode.id,
+          sourceHandle: 'source-1', // Right side of framework node
+          targetHandle: 'target-2', // Left side of stage node
           type: 'smoothstep',
           animated: true,
           style: { stroke: 'hsl(var(--primary))' }
         };
-        addEdge(edge);
+
+        // Use canvas callback if available, otherwise fall back to store
+        if (addEdgeToCanvas) {
+          console.log('✅ [FrameworkNode] Using canvas callback to add edge (Use Framework)');
+          addEdgeToCanvas(edge);
+        } else {
+          console.warn('⚠️ [FrameworkNode] Edge callback not available, using store fallback (Use Framework)');
+          addEdgeToStore(edge);
+        }
       }
     });
     }

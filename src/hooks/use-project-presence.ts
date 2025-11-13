@@ -56,17 +56,19 @@ export function useProjectPresence(projectId: string | undefined): UseProjectPre
         const state = presenceChannel.presenceState();
         console.log('👥 Presence synced:', state);
 
-        // Convert presence state to collaborators array
-        const allCollaborators: Collaborator[] = [];
+        // Convert presence state to collaborators array and deduplicate by user_id
+        const collaboratorMap = new Map<string, Collaborator>();
         Object.values(state).forEach((presences: any) => {
           presences.forEach((presence: any) => {
             // Don't include current user in collaborators list
             if (presence.user_id !== user.id) {
-              allCollaborators.push(presence as Collaborator);
+              // Only keep the latest presence for each user
+              collaboratorMap.set(presence.user_id, presence as Collaborator);
             }
           });
         });
 
+        const allCollaborators = Array.from(collaboratorMap.values());
         setCollaborators(allCollaborators);
         console.log('✅ Active collaborators:', allCollaborators.length);
       })
