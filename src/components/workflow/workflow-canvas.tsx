@@ -31,6 +31,7 @@ import { AIBuilderNode } from './ai-builder-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { useYjsCollaboration } from '@/hooks/use-yjs-collaboration';
 import { CollaboratorsCursors, SelectionIndicators } from './collaborators-cursors';
+import { CollaboratorsAvatarDropdown } from './collaborators-avatar-dropdown';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useCanvasKeyboardControls } from '@/hooks/use-canvas-keyboard-controls';
@@ -120,6 +121,7 @@ export function WorkflowCanvas({
     isConnected,
     isSynced,
     collaborators,
+    currentUserColor,
     updateCursor,
     updateSelection,
     setNodes: setYjsNodes,
@@ -676,20 +678,14 @@ export function WorkflowCanvas({
       className="h-full w-full relative"
       style={{ backgroundColor: '#333446' }}
     >
-      {/* Yjs Connection Status Indicator */}
-      {isConnected && (
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-sm">
-          <div className={`w-2 h-2 rounded-full ${isSynced ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
-          <span className="font-medium">
-            {isSynced ? 'Synced' : 'Syncing...'}
-          </span>
-          {collaborators.length > 0 && (
-            <span className="text-muted-foreground">
-              · {collaborators.length} {collaborators.length === 1 ? 'collaborator' : 'collaborators'}
-            </span>
-          )}
-        </div>
-      )}
+      {/* Figma-style Collaborators Avatar Dropdown */}
+      <div className="absolute top-4 right-4 z-10">
+        <CollaboratorsAvatarDropdown
+          collaborators={collaborators}
+          currentUserColor={currentUserColor}
+          isConnected={isConnected}
+        />
+      </div>
 
       {/* Marquee Selection Rectangle */}
       {marqueeRect && isDrawing && (

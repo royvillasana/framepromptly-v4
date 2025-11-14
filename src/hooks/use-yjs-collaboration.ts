@@ -39,6 +39,7 @@ interface UseYjsCollaborationReturn {
   isConnected: boolean;
   isSynced: boolean;
   collaborators: CollaboratorInfo[];
+  currentUserColor: string;
   updateCursor: (x: number, y: number) => void;
   updateSelection: (nodeIds: string[]) => void;
   // Methods to update Yjs document
@@ -85,6 +86,7 @@ export function useYjsCollaboration({
   const [isConnected, setIsConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
   const [collaborators, setCollaborators] = useState<CollaboratorInfo[]>([]);
+  const [currentUserColor, setCurrentUserColor] = useState<string>('#4ECDC4');
 
   // Use refs to avoid stale closures in callbacks
   const onNodesChangeRef = useRef(onNodesChange);
@@ -198,12 +200,16 @@ export function useYjsCollaboration({
     const awareness = hocuspocusProvider.awareness;
 
     if (user) {
+      // Generate and store current user color
+      const userColor = generateUserColor(user.id);
+      setCurrentUserColor(userColor);
+
       // Set local user info
       awareness.setLocalState({
         userId: user.id,
         userName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Anonymous',
         userEmail: user.email || '',
-        color: generateUserColor(user.id),
+        color: userColor,
         cursor: null,
         selection: [],
       });
@@ -352,6 +358,7 @@ export function useYjsCollaboration({
     isConnected,
     isSynced,
     collaborators,
+    currentUserColor,
     updateCursor,
     updateSelection,
     setNodes,
