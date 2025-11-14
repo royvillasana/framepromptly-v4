@@ -1,0 +1,21 @@
+{
+  "name": "hocuspocus-server",
+  "version": "1.0.0",
+  "description": "Hocuspocus WebSocket server for real-time Yjs collaboration",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": ["yjs", "hocuspocus", "websocket", "collaboration"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@hocuspocus/extension-database": "^3.4.0",
+    "@hocuspocus/server": "^3.4.0",
+    "@supabase/supabase-js": "^2.81.1",
+    "dotenv": "^17.2.3",
+    "yjs": "^13.6.27"
+  }
+}

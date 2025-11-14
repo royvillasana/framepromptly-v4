@@ -19,8 +19,6 @@ import { Plus, Save, Play, Share, Sparkles, Layers, ChevronDown, BookOpen, Arrow
 import { NodeDetails } from '@/components/workflow/node-details';
 import { KnowledgeTabPanel } from '@/components/knowledge/knowledge-tab-panel';
 import { ProjectSidebar } from '@/components/workflow/project-sidebar';
-import { CollaboratorsPanel } from '@/components/workflow/collaborators-panel';
-import { useProjectPresence } from '@/hooks/use-project-presence';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 
@@ -68,9 +66,6 @@ function WorkflowWithProject() {
   // Track initial mount to prevent auto-save on first render
   const isInitialMount = useRef(true);
 
-  // Track when we're applying remote updates to prevent auto-save loop
-  const isApplyingRemoteUpdate = useRef(false);
-
   // Store the addNodeToCanvas function from WorkflowCanvas
   const addNodeToCanvasRef = useRef<((node: any) => void) | null>(null);
 
@@ -84,9 +79,6 @@ function WorkflowWithProject() {
   const handleSwitchToPromptTab = useCallback(() => {
     setActivePanel('prompts');
   }, []);
-
-  // Initialize real-time presence for this project
-  const { collaborators, isConnected, broadcastEditing } = useProjectPresence(currentProject?.id);
 
   useEffect(() => {
     initializeFrameworks();
@@ -124,24 +116,18 @@ function WorkflowWithProject() {
   }, [currentProject?.id]);
 
   // Auto-save canvas data to database when nodes/edges change
+  // Note: With Yjs, this is now mostly for backward compatibility
+  // The real-time sync happens through Yjs, but we keep this for database persistence
   useEffect(() => {
     if (!currentProject || !user) return;
 
-    // Skip auto-save on initial mount/project switch to prevent triggering remote update banner
-    // and prevent saving wrong project's data
+    // Skip auto-save on initial mount/project switch
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    // CRITICAL: Skip auto-save when applying remote updates to prevent infinite loop
-    if (isApplyingRemoteUpdate.current) {
-      console.log('⏭️ [Workflow] Skipping auto-save during remote update application');
-      return;
-    }
-
-    // CRITICAL: Skip auto-save when nodes array is empty to prevent infinite loop
-    // Empty canvas data triggers re-renders and causes blinking
+    // Skip auto-save when nodes array is empty to prevent clearing data
     if (nodes.length === 0 && edges.length === 0) {
       console.log('⏭️ [Workflow] Skipping auto-save for empty canvas (no nodes or edges)');
       return;
@@ -507,27 +493,16 @@ function WorkflowWithProject() {
             </TabsContent>
           </ProjectSidebar>
         )}
-        
+
         {/* Canvas */}
         <div className="flex-1 overflow-hidden relative">
-          {/* Collaborators Panel - Floating in top-right */}
-          <div className="absolute top-4 right-4 z-10">
-            <CollaboratorsPanel
-              collaborators={collaborators}
-              isConnected={isConnected}
-              compact={true}
-            />
-          </div>
-
           <WorkflowCanvas
             key={currentProject.id} // Force remount when project changes to prevent cross-project contamination
             onSwitchToPromptTab={handleSwitchToPromptTab}
             initialNodes={memoizedInitialNodes}
             initialEdges={memoizedInitialEdges}
             projectId={currentProject.id}
-            broadcastEditing={broadcastEditing}
             onAddNodeCallback={handleAddNodeCallback}
-            isApplyingRemoteUpdateRef={isApplyingRemoteUpdate}
           />
         </div>
       </div>

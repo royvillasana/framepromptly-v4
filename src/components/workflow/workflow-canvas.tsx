@@ -29,8 +29,8 @@ import { KnowledgeDocumentNode } from './knowledge-document-node';
 import { CustomPromptNode } from './custom-prompt-node';
 import { AIBuilderNode } from './ai-builder-node';
 import { CanvasToolbar } from './canvas-toolbar';
-import { CanvasUpdateBanner } from './canvas-update-banner';
-import { useCanvasUpdates, RemoteCanvasUpdate } from '@/hooks/use-canvas-updates';
+import { useYjsCollaboration } from '@/hooks/use-yjs-collaboration';
+import { CollaboratorsCursors, SelectionIndicators } from './collaborators-cursors';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useCanvasKeyboardControls } from '@/hooks/use-canvas-keyboard-controls';
@@ -76,9 +76,7 @@ interface WorkflowCanvasProps {
   initialNodes?: any[];
   initialEdges?: any[];
   projectId?: string;
-  broadcastEditing?: (isEditing: boolean) => void;
   onAddNodeCallback?: (addNodeFn: (node: any) => void) => void;
-  isApplyingRemoteUpdateRef?: React.MutableRefObject<boolean>;
 }
 
 export function WorkflowCanvas({
@@ -86,9 +84,7 @@ export function WorkflowCanvas({
   initialNodes = [],
   initialEdges = [],
   projectId,
-  broadcastEditing,
-  onAddNodeCallback,
-  isApplyingRemoteUpdateRef
+  onAddNodeCallback
 }: WorkflowCanvasProps) {
 
   const {
@@ -118,7 +114,31 @@ export function WorkflowCanvas({
   } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
-  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+
+  // Yjs collaboration hook - replaces old useCanvasUpdates
+  const {
+    isConnected,
+    isSynced,
+    collaborators,
+    updateCursor,
+    updateSelection,
+    setNodes: setYjsNodes,
+    setEdges: setYjsEdges,
+  } = useYjsCollaboration({
+    projectId,
+    initialNodes,
+    initialEdges,
+    onNodesChange: (newNodes) => {
+      console.log('🔄 [Yjs] Remote nodes changed:', newNodes.length);
+      setFlowNodes(newNodes);
+      setNodes(newNodes);
+    },
+    onEdgesChange: (newEdges) => {
+      console.log('🔄 [Yjs] Remote edges changed:', newEdges.length);
+      setFlowEdges(newEdges);
+      setEdges(newEdges);
+    },
+  });
 
   // Create stable nodeTypes - tool node will get onSwitchToPromptTab via context or props
   const nodeTypes = useMemo(() => ({
@@ -330,131 +350,6 @@ export function WorkflowCanvas({
     };
   }, [setNodes, setEdges, saveWorkflowToStorage]);
 
-  // Handle remote canvas updates - automatically apply to canvas
-  const handleRemoteUpdate = useCallback((update: RemoteCanvasUpdate) => {
-    // CRITICAL: Verify update is for the current project
-    if (update.projectId !== projectId) {
-      console.warn('⚠️ Ignoring update for different project');
-      return;
-    }
-
-    // Apply the remote canvas data directly to the flow
-    if (update.canvasData) {
-      const newNodes = update.canvasData.nodes || [];
-      const newEdges = update.canvasData.edges || [];
-
-      // CRITICAL: Don't clear canvas if receiving empty update and we have local data
-      // This prevents race conditions where an empty update clears a populated canvas
-      if (newNodes.length === 0 && newEdges.length === 0 && flowNodes.length > 0) {
-        console.log('⚠️ [WorkflowCanvas] Ignoring empty remote update - would clear existing canvas data');
-        return;
-      }
-
-      // CRITICAL: Set flag to prevent auto-save loop
-      if (isApplyingRemoteUpdateRef) {
-        isApplyingRemoteUpdateRef.current = true;
-        console.log('🔒 [WorkflowCanvas] Setting isApplyingRemoteUpdate flag to prevent auto-save');
-      }
-
-      try {
-        console.log('📡 [WorkflowCanvas] Applying remote update:', {
-          nodes: newNodes.length,
-          edges: newEdges.length
-        });
-
-        // Update React Flow state
-        setFlowNodes(newNodes);
-        setFlowEdges(newEdges);
-
-        // Update Zustand store
-        setNodes(newNodes);
-        setEdges(newEdges);
-
-        // Clear local changes flag since we just synced
-        setHasLocalChanges(false);
-      } finally {
-        // CRITICAL: Clear flag after applying updates
-        if (isApplyingRemoteUpdateRef) {
-          // Use setTimeout to ensure the flag is cleared after all state updates have propagated
-          setTimeout(() => {
-            isApplyingRemoteUpdateRef.current = false;
-            console.log('🔓 [WorkflowCanvas] Cleared isApplyingRemoteUpdate flag');
-          }, 100);
-        }
-      }
-    }
-  }, [projectId, setFlowNodes, setFlowEdges, setNodes, setEdges, isApplyingRemoteUpdateRef, flowNodes]);
-
-  // Canvas update detection hook
-  const {
-    hasRemoteChanges,
-    remoteUpdate,
-    applyRemoteChanges,
-    dismissRemoteChanges,
-    isSubscribed
-  } = useCanvasUpdates(projectId, handleRemoteUpdate, hasLocalChanges);
-
-  // Handler to apply remote changes manually (when user has local changes)
-  const handleApplyRemoteChanges = useCallback(() => {
-    // Verify update is for the current project
-    if (remoteUpdate && remoteUpdate.projectId !== projectId) {
-      console.warn('⚠️ Cannot apply - update is for different project');
-      return;
-    }
-
-    if (remoteUpdate?.canvasData) {
-      // CRITICAL: Set flag to prevent auto-save loop
-      if (isApplyingRemoteUpdateRef) {
-        isApplyingRemoteUpdateRef.current = true;
-        console.log('🔒 [WorkflowCanvas] Setting isApplyingRemoteUpdate flag (manual apply)');
-      }
-
-      try {
-        const newNodes = remoteUpdate.canvasData.nodes || [];
-        const newEdges = remoteUpdate.canvasData.edges || [];
-
-        // Update React Flow state
-        setFlowNodes(newNodes);
-        setFlowEdges(newEdges);
-
-        // Update Zustand store
-        setNodes(newNodes);
-        setEdges(newEdges);
-
-        // Clear local changes flag since we just synced
-        setHasLocalChanges(false);
-      } finally {
-        // CRITICAL: Clear flag after applying updates
-        if (isApplyingRemoteUpdateRef) {
-          setTimeout(() => {
-            isApplyingRemoteUpdateRef.current = false;
-            console.log('🔓 [WorkflowCanvas] Cleared isApplyingRemoteUpdate flag (manual apply)');
-          }, 100);
-        }
-      }
-    }
-
-    // Dismiss the banner
-    applyRemoteChanges();
-  }, [projectId, remoteUpdate, setFlowNodes, setFlowEdges, setNodes, setEdges, applyRemoteChanges, isApplyingRemoteUpdateRef]);
-
-  // Handler to dismiss remote changes
-  const handleDismissRemoteChanges = useCallback(() => {
-    dismissRemoteChanges();
-  }, [dismissRemoteChanges]);
-
-  // Reset local changes flag when data is saved
-  useEffect(() => {
-    if (hasLocalChanges) {
-      // Reset after a delay to allow for auto-save
-      const timer = setTimeout(() => {
-        setHasLocalChanges(false);
-      }, 5000); // 5 seconds after last change
-
-      return () => clearTimeout(timer);
-    }
-  }, [hasLocalChanges]);
-
   // Define handleClearSelection function first
   const handleClearSelection = useCallback(() => {
     setSelectedNodes([]);
@@ -559,43 +454,48 @@ export function WorkflowCanvas({
       updateRef.current = true;
       onNodesChange(changes);
 
-      // Track local changes for conflict detection
+      // Check if we have editing changes
       const hasEditingChange = changes.some(
         (change) => change.type === 'position' || change.type === 'dimensions' || change.type === 'add' || change.type === 'remove'
       );
 
       if (hasEditingChange) {
-        setHasLocalChanges(true);
-
-        // Broadcast editing state when user makes changes
-        if (broadcastEditing) {
-          broadcastEditing(true);
-        }
+        // Sync to Yjs after React Flow state updates
+        setTimeout(() => {
+          const currentNodes = flowNodesRef.current;
+          console.log('📤 [Yjs] Syncing nodes to Yjs:', currentNodes.length);
+          setYjsNodes(currentNodes);
+        }, 0);
       }
 
       // DON'T update Zustand store here - React Flow manages its own state
       // Store updates only happen on unmount to prevent infinite loops
     },
-    [onNodesChange, broadcastEditing]
+    [onNodesChange, setYjsNodes]
   );
 
   const onEdgesChangeHandler = useCallback(
     (changes: any[]) => {
       onEdgesChange(changes);
 
-      // Track local changes for conflict detection
+      // Check if we have editing changes
       const hasEditingChange = changes.some(
         (change) => change.type === 'add' || change.type === 'remove'
       );
 
       if (hasEditingChange) {
-        setHasLocalChanges(true);
+        // Sync to Yjs after React Flow state updates
+        setTimeout(() => {
+          const currentEdges = flowEdgesRef.current;
+          console.log('📤 [Yjs] Syncing edges to Yjs:', currentEdges.length);
+          setYjsEdges(currentEdges);
+        }, 0);
       }
 
       // DON'T update Zustand store here - React Flow manages its own state
       // Store updates only happen on unmount to prevent infinite loops
     },
-    [onEdgesChange]
+    [onEdgesChange, setYjsEdges]
   );
 
   const onNodeClick = useCallback(
@@ -611,8 +511,12 @@ export function WorkflowCanvas({
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedReactFlowNodes }: { nodes: Node[] }) => {
-      setSelectedNodes(selectedReactFlowNodes.map(node => node.id));
-      
+      const selectedIds = selectedReactFlowNodes.map(node => node.id);
+      setSelectedNodes(selectedIds);
+
+      // Sync selection to Yjs for real-time collaboration
+      updateSelection(selectedIds);
+
       // Update store selection for compatibility with existing components
       if (selectedReactFlowNodes.length === 1) {
         selectNode(selectedReactFlowNodes[0]);
@@ -621,7 +525,7 @@ export function WorkflowCanvas({
       }
       // For multi-selection (length > 1), don't update store selection
     },
-    [selectNode]
+    [selectNode, updateSelection]
   );
 
   const onViewportChange = useCallback(
@@ -690,18 +594,21 @@ export function WorkflowCanvas({
   }, [isMarqueeMode]);
 
   const onMouseMove = useCallback((event: React.MouseEvent) => {
+    // Update cursor position for real-time collaboration
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    updateCursor(x, y);
+
+    // Handle marquee selection drawing
     if (isDrawing && marqueeRect && isMarqueeMode) {
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const currentX = event.clientX - rect.left;
-      const currentY = event.clientY - rect.top;
-      
       setMarqueeRect({
         ...marqueeRect,
-        currentX,
-        currentY,
+        currentX: x,
+        currentY: y,
       });
     }
-  }, [isDrawing, marqueeRect, isMarqueeMode]);
+  }, [isDrawing, marqueeRect, isMarqueeMode, updateCursor]);
 
   const onMouseUp = useCallback((event: React.MouseEvent) => {
     if (isDrawing && marqueeRect && isMarqueeMode && reactFlowInstance) {
@@ -769,14 +676,20 @@ export function WorkflowCanvas({
       className="h-full w-full relative"
       style={{ backgroundColor: '#333446' }}
     >
-      {/* Canvas Update Banner */}
-      <CanvasUpdateBanner
-        show={hasRemoteChanges}
-        remoteUpdate={remoteUpdate}
-        onRefresh={handleApplyRemoteChanges}
-        onDismiss={handleDismissRemoteChanges}
-        hasLocalChanges={hasLocalChanges}
-      />
+      {/* Yjs Connection Status Indicator */}
+      {isConnected && (
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-sm">
+          <div className={`w-2 h-2 rounded-full ${isSynced ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
+          <span className="font-medium">
+            {isSynced ? 'Synced' : 'Syncing...'}
+          </span>
+          {collaborators.length > 0 && (
+            <span className="text-muted-foreground">
+              · {collaborators.length} {collaborators.length === 1 ? 'collaborator' : 'collaborators'}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Marquee Selection Rectangle */}
       {marqueeRect && isDrawing && (
@@ -850,6 +763,10 @@ export function WorkflowCanvas({
             size={2}
             variant={BackgroundVariant.Dots}
           />
+
+          {/* Yjs Collaboration UI - Figma-style cursors and selection indicators */}
+          <CollaboratorsCursors collaborators={collaborators} />
+          <SelectionIndicators collaborators={collaborators} />
         </ReactFlow>
       </div>
 
