@@ -15,12 +15,15 @@ import { getSmartPosition } from '@/utils/node-positioning';
 
 interface ToolbarCenteredAIBuilderProps {
   onWorkflowGenerated?: (nodes: any[], edges: any[]) => void;
+  addNodeToCanvas?: (node: any) => void;
 }
 
-export function ToolbarCenteredAIBuilder({ onWorkflowGenerated }: ToolbarCenteredAIBuilderProps) {
-  const { addNode, nodes } = useWorkflowStore();
+export function ToolbarCenteredAIBuilder({ onWorkflowGenerated, addNodeToCanvas }: ToolbarCenteredAIBuilderProps) {
+  const { nodes } = useWorkflowStore();
 
   const handleCreateAIBuilderNode = () => {
+    console.log('🎯 [AI Builder] Button clicked, addNodeToCanvas:', !!addNodeToCanvas);
+
     // Get smart position for the new AI Builder node
     const position = getSmartPosition('ai-builder', nodes);
 
@@ -35,7 +38,15 @@ export function ToolbarCenteredAIBuilder({ onWorkflowGenerated }: ToolbarCentere
       },
     };
 
-    addNode(aiBuilderNode);
+    console.log('🎯 [AI Builder] Created node:', aiBuilderNodeId, 'at position:', position);
+
+    // Use addNodeToCanvas if available (for Yjs sync), otherwise fall back to store
+    if (addNodeToCanvas) {
+      console.log('🎯 [AI Builder] Calling addNodeToCanvas...');
+      addNodeToCanvas(aiBuilderNode);
+    } else {
+      console.warn('⚠️ [AI Builder] addNodeToCanvas not available!');
+    }
   };
 
   return (

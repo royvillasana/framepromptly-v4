@@ -5,7 +5,6 @@
  */
 
 import { useRef, useEffect } from 'react';
-import { useReactFlow } from '@xyflow/react';
 import type { CollaboratorInfo } from '@/hooks/use-yjs-collaboration';
 
 interface CollaboratorsCursorsProps {
@@ -13,18 +12,14 @@ interface CollaboratorsCursorsProps {
 }
 
 export function CollaboratorsCursors({ collaborators }: CollaboratorsCursorsProps) {
-  const { project } = useReactFlow();
-
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
       {collaborators.map((collaborator) => {
         if (!collaborator.cursor) return null;
 
-        // Transform cursor position based on React Flow viewport
-        const { x, y } = project({
-          x: collaborator.cursor.x,
-          y: collaborator.cursor.y,
-        });
+        // Cursor positions are already in screen coordinates
+        const x = collaborator.cursor.x;
+        const y = collaborator.cursor.y;
 
         return (
           <div

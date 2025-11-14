@@ -143,10 +143,13 @@ export function CanvasToolbar({
           </ToolbarButton>
           
           <ToolbarSeparator />
-          
+
           {/* AI Builder Input - Toolbar Centered */}
-          <ToolbarCenteredAIBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />
-          
+          <ToolbarCenteredAIBuilder
+            onWorkflowGenerated={handleAIWorkflowGenerated}
+            addNodeToCanvas={addNodeToCanvas}
+          />
+
           <ToolbarSeparator />
           
           <ToolbarButton

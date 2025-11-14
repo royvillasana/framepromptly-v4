@@ -260,6 +260,7 @@ function WorkflowWithProject() {
   }, [currentProject]);
 
   // Memoize canvas data to prevent unnecessary re-renders
+  // IMPORTANT: Only depend on projectId, not canvas_data, to prevent re-memoization on every save
   const memoizedInitialNodes = useMemo(() => {
     const nodes = currentProject.canvas_data?.nodes || [];
     const canvasData = currentProject.canvas_data;
@@ -286,7 +287,7 @@ function WorkflowWithProject() {
     }
 
     return nodes;
-  }, [currentProject.canvas_data?.nodes, currentProject.id]);
+  }, [currentProject.id]); // Only re-memo when project changes, not on every save
 
   const memoizedInitialEdges = useMemo(() => {
     const edges = currentProject.canvas_data?.edges || [];
@@ -299,7 +300,7 @@ function WorkflowWithProject() {
       }
     });
     return edges;
-  }, [currentProject.canvas_data?.edges, currentProject.id]);
+  }, [currentProject.id]); // Only re-memo when project changes, not on every save
 
   return (
     <div className="h-screen bg-background flex flex-col w-full">

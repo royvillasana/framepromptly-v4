@@ -169,19 +169,42 @@ export function useYjsCollaboration({
           });
 
           console.log('✅ [Yjs] Document initialized with existing data');
-        }
 
-        // Notify React Flow of current state
-        if (onNodesChangeRef.current) {
+          // After populating, notify React Flow with the initial data directly
+          // (don't read from Yjs yet as it may not be fully committed)
+          if (onNodesChangeRef.current && initialNodesRef.current.length > 0) {
+            console.log('📥 [Yjs] Sending initial nodes to React Flow:', initialNodesRef.current.length);
+            onNodesChangeRef.current(initialNodesRef.current);
+          }
+
+          if (onEdgesChangeRef.current && initialEdgesRef.current.length > 0) {
+            console.log('📥 [Yjs] Sending initial edges to React Flow:', initialEdgesRef.current.length);
+            onEdgesChangeRef.current(initialEdgesRef.current);
+          }
+        } else {
+          // Only send Yjs state if it's not empty OR if we don't have initial data
+          // This prevents overwriting existing nodes with empty arrays
           const nodes = Array.from(nodesMap.values()) as Node[];
-          console.log('📥 [Yjs] Synced nodes:', nodes.length);
-          onNodesChangeRef.current(nodes);
-        }
-
-        if (onEdgesChangeRef.current) {
           const edges = Array.from(edgesMap.values()) as Edge[];
-          console.log('📥 [Yjs] Synced edges:', edges.length);
-          onEdgesChangeRef.current(edges);
+
+          console.log('📥 [Yjs] Synced from document - nodes:', nodes.length, 'edges:', edges.length);
+
+          // Only notify if we have data OR if initial data is also empty
+          if (nodes.length > 0 || initialNodesRef.current.length === 0) {
+            if (onNodesChangeRef.current) {
+              onNodesChangeRef.current(nodes);
+            }
+          } else {
+            console.log('⚠️ [Yjs] Skipping empty nodes update - preserving initial data');
+          }
+
+          if (edges.length > 0 || initialEdgesRef.current.length === 0) {
+            if (onEdgesChangeRef.current) {
+              onEdgesChangeRef.current(edges);
+            }
+          } else {
+            console.log('⚠️ [Yjs] Skipping empty edges update - preserving initial data');
+          }
         }
       },
 

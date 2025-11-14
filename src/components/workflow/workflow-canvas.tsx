@@ -116,6 +116,9 @@ export function WorkflowCanvas({
   const [isDrawing, setIsDrawing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
 
+  // Flag to prevent infinite loop when Yjs sends changes
+  const isApplyingYjsChanges = useRef(false);
+
   // Yjs collaboration hook - replaces old useCanvasUpdates
   const {
     isConnected,
@@ -132,13 +135,23 @@ export function WorkflowCanvas({
     initialEdges,
     onNodesChange: (newNodes) => {
       console.log('🔄 [Yjs] Remote nodes changed:', newNodes.length);
+      isApplyingYjsChanges.current = true;
       setFlowNodes(newNodes);
       setNodes(newNodes);
+      // Reset flag after React has processed the update
+      setTimeout(() => {
+        isApplyingYjsChanges.current = false;
+      }, 0);
     },
     onEdgesChange: (newEdges) => {
       console.log('🔄 [Yjs] Remote edges changed:', newEdges.length);
+      isApplyingYjsChanges.current = true;
       setFlowEdges(newEdges);
       setEdges(newEdges);
+      // Reset flag after React has processed the update
+      setTimeout(() => {
+        isApplyingYjsChanges.current = false;
+      }, 0);
     },
   });
 
@@ -456,12 +469,24 @@ export function WorkflowCanvas({
       updateRef.current = true;
       onNodesChange(changes);
 
+      // Don't sync back to Yjs if changes came from Yjs
+      if (isApplyingYjsChanges.current) {
+        console.log('⏭️ [Yjs] Skipping sync - changes came from Yjs');
+        return;
+      }
+
       // Check if we have editing changes
       const hasEditingChange = changes.some(
         (change) => change.type === 'position' || change.type === 'dimensions' || change.type === 'add' || change.type === 'remove'
       );
 
       if (hasEditingChange) {
+        // Only sync if Yjs is connected and synced
+        if (!isSynced) {
+          console.log('⏭️ [Yjs] Skipping sync - not synced yet');
+          return;
+        }
+
         // Sync to Yjs after React Flow state updates
         setTimeout(() => {
           const currentNodes = flowNodesRef.current;
@@ -473,12 +498,18 @@ export function WorkflowCanvas({
       // DON'T update Zustand store here - React Flow manages its own state
       // Store updates only happen on unmount to prevent infinite loops
     },
-    [onNodesChange, setYjsNodes]
+    [onNodesChange, setYjsNodes, isSynced]
   );
 
   const onEdgesChangeHandler = useCallback(
     (changes: any[]) => {
       onEdgesChange(changes);
+
+      // Don't sync back to Yjs if changes came from Yjs
+      if (isApplyingYjsChanges.current) {
+        console.log('⏭️ [Yjs] Skipping sync - edges came from Yjs');
+        return;
+      }
 
       // Check if we have editing changes
       const hasEditingChange = changes.some(
@@ -486,6 +517,12 @@ export function WorkflowCanvas({
       );
 
       if (hasEditingChange) {
+        // Only sync if Yjs is connected and synced
+        if (!isSynced) {
+          console.log('⏭️ [Yjs] Skipping sync - not synced yet');
+          return;
+        }
+
         // Sync to Yjs after React Flow state updates
         setTimeout(() => {
           const currentEdges = flowEdgesRef.current;
@@ -497,7 +534,7 @@ export function WorkflowCanvas({
       // DON'T update Zustand store here - React Flow manages its own state
       // Store updates only happen on unmount to prevent infinite loops
     },
-    [onEdgesChange, setYjsEdges]
+    [onEdgesChange, setYjsEdges, isSynced]
   );
 
   const onNodeClick = useCallback(
@@ -702,9 +739,9 @@ export function WorkflowCanvas({
       
       <div
         className={`h-full w-full ${isMarqueeMode ? 'cursor-crosshair' : ''}`}
+        onMouseMove={onMouseMove}
         {...(isMarqueeMode ? {
           onMouseDown,
-          onMouseMove,
           onMouseUp
         } : {})}
       >
