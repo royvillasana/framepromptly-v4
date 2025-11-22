@@ -64,6 +64,16 @@ export const AIBuilderNode = memo(({ data, selected, id }: AIBuilderNodeProps) =
   const [localPrompt, setLocalPrompt] = useState('');
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  // Debug logging for preview state
+  useEffect(() => {
+    console.log('🔍 [AI Builder] State:', {
+      showPreview,
+      hasCurrentGeneration: !!currentGeneration,
+      stages: currentGeneration?.stages?.length,
+      tools: currentGeneration?.tools?.length,
+    });
+  }, [showPreview, currentGeneration]);
+
   // Sync local prompt with store
   useEffect(() => {
     setLocalPrompt(currentPrompt);
@@ -91,7 +101,9 @@ export const AIBuilderNode = memo(({ data, selected, id }: AIBuilderNodeProps) =
   };
 
   const handleAcceptGeneration = () => {
+    console.log('🎯 [AI Builder] Accept button clicked');
     const { nodes: generatedNodes, edges: generatedEdges } = acceptGeneration();
+    console.log('🎯 [AI Builder] Generated nodes:', generatedNodes.length, 'edges:', generatedEdges.length);
 
     if (generatedNodes.length === 0) {
       toast.error('No workflow generated');
@@ -144,7 +156,12 @@ export const AIBuilderNode = memo(({ data, selected, id }: AIBuilderNodeProps) =
     const firstFrameworkNode = adjustedNodes.find(node => node.type === 'framework');
 
     // Add adjusted nodes to workflow
-    adjustedNodes.forEach(node => addNode(node));
+    console.log('🎯 [AI Builder] Adding', adjustedNodes.length, 'nodes to canvas');
+    adjustedNodes.forEach((node, index) => {
+      console.log(`🎯 [AI Builder] Adding node ${index + 1}:`, node.type, node.id);
+      addNode(node);
+    });
+    console.log('🎯 [AI Builder] Adding', generatedEdges.length, 'edges to canvas');
     generatedEdges.forEach(edge => addEdge(edge));
 
     // Create edge from AI Builder to first framework node

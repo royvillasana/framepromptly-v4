@@ -107,14 +107,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       if (ownedError) throw ownedError;
 
-      // Fetch projects where the user is a member
-      const { data: memberProjects, error: memberError } = await supabase
+      // Fetch projects where the user is a member (two-step query to avoid RLS recursion)
+      // Step 1: Get membership records
+      const { data: memberships, error: memberError } = await supabase
         .from('project_members')
-        .select(`
-          project_id,
-          role,
-          projects (*)
-        `)
+        .select('project_id, role')
         .eq('user_id', user.id);
 
       if (memberError && memberError.code !== 'PGRST116') {
@@ -122,17 +119,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         console.warn('Error fetching member projects:', memberError);
       }
 
+      // Step 2: Fetch the actual projects for those memberships
+      let memberProjects = [];
+      if (memberships && memberships.length > 0) {
+        const projectIds = memberships.map(m => m.project_id);
+        const { data: projects, error: projectsError } = await supabase
+          .from('projects')
+          .select('*')
+          .in('id', projectIds);
+
+        if (projectsError) {
+          console.warn('Error fetching member projects:', projectsError);
+        } else {
+          memberProjects = projects || [];
+        }
+      }
+
       // Combine owned and member projects
       const allProjects = [...(ownedProjects || [])];
 
-      if (memberProjects) {
-        memberProjects.forEach((membership: any) => {
-          if (membership.projects) {
-            // Add member projects that aren't already in the list (avoid duplicates)
-            const existingProject = allProjects.find(p => p.id === membership.projects.id);
-            if (!existingProject) {
-              allProjects.push(membership.projects);
-            }
+      if (memberProjects.length > 0) {
+        memberProjects.forEach((project: any) => {
+          // Add member projects that aren't already in the list (avoid duplicates)
+          const existingProject = allProjects.find(p => p.id === project.id);
+          if (!existingProject) {
+            allProjects.push(project);
           }
         });
       }

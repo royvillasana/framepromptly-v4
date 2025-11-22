@@ -80,7 +80,7 @@ function ExpandedPromptOverlayComponent({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const lastConversationLengthRef = useRef<number>(0);
+  const lastConversationLengthRef = useRef<{ length: number; lastId: string | null }>({ length: 0, lastId: null });
   
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>(() => {
     // Initialize from stored conversation (loaded from database)
@@ -442,18 +442,34 @@ function ExpandedPromptOverlayComponent({
 
   // Sync conversation messages with the store and update active version (optimized)
   useEffect(() => {
+    // Get the last message ID to detect actual content changes
+    const lastMessageId = conversationMessages.length > 0
+      ? conversationMessages[conversationMessages.length - 1].id
+      : null;
+    const lastTrackedId = lastConversationLengthRef.current?.lastId;
+    const lastTrackedLength = lastConversationLengthRef.current?.length ?? 0;
+
     console.log('💬 Conversation effect triggered:', {
       currentLength: conversationMessages.length,
-      lastLength: lastConversationLengthRef.current,
+      lastLength: lastTrackedLength,
+      lastMessageId,
+      lastTrackedId,
       promptId: prompt.id,
       hasMessages: conversationMessages.length > 0
     });
-    
-    // Only update if conversation has actually changed
-    if (lastConversationLengthRef.current !== conversationMessages.length || 
-        conversationMessages.length === 0) {
+
+    // Detect changes by comparing both length AND last message ID
+    // This handles the case where we remove typing indicator and add AI message (same length)
+    const hasChanged = lastTrackedLength !== conversationMessages.length ||
+                       lastTrackedId !== lastMessageId ||
+                       conversationMessages.length === 0;
+
+    if (hasChanged) {
       console.log('💬 Conversation changed, updating store and saving...');
-      lastConversationLengthRef.current = conversationMessages.length;
+      lastConversationLengthRef.current = {
+        length: conversationMessages.length,
+        lastId: lastMessageId
+      };
       
       updatePromptConversation(prompt.id, conversationMessages);
       

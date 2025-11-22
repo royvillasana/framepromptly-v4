@@ -35,8 +35,8 @@ export interface AIBuilderService {
 export class SupabaseAIWorkflowBuilder implements AIBuilderService {
   async generateWorkflow(prompt: string, availableFrameworks: Framework[]): Promise<WorkflowGeneration> {
     try {
-      console.log('Calling Supabase AI workflow generator function...');
-      
+      console.log('Calling Supabase Edge Function for AI workflow generation...');
+
       const { data, error } = await supabase.functions.invoke('ai-workflow-generator', {
         body: {
           prompt,
@@ -46,9 +46,16 @@ export class SupabaseAIWorkflowBuilder implements AIBuilderService {
       });
 
       if (error) {
-        console.error('Supabase function error:', error);
-        throw new Error('Failed to generate workflow. Please try again.');
+        console.error('Supabase function error details:', {
+          message: error.message,
+          name: error.name,
+          context: error.context,
+          details: error
+        });
+        throw new Error(`Edge Function error: ${error.message || 'Unknown error'}`);
       }
+
+      console.log('Edge Function response:', { success: data?.success, hasError: !!data?.error, data });
 
       if (!data?.success) {
         console.error('AI workflow generation failed:', data?.error);
@@ -59,14 +66,14 @@ export class SupabaseAIWorkflowBuilder implements AIBuilderService {
       return data.data;
     } catch (error) {
       console.error('AI workflow generation failed:', error);
-      throw new Error('Failed to generate workflow. Please try again.');
+      throw new Error(error instanceof Error ? error.message : 'Failed to generate workflow. Please try again.');
     }
   }
 
   async refineWorkflow(workflow: any, refinementPrompt: string): Promise<WorkflowGeneration> {
     try {
-      console.log('Calling Supabase AI workflow refinement function...');
-      
+      console.log('Calling Supabase Edge Function to refine workflow...');
+
       const { data, error } = await supabase.functions.invoke('ai-workflow-generator', {
         body: {
           prompt: refinementPrompt,
@@ -89,7 +96,7 @@ export class SupabaseAIWorkflowBuilder implements AIBuilderService {
       return data.data;
     } catch (error) {
       console.error('AI workflow refinement failed:', error);
-      throw new Error('Failed to refine workflow. Please try again.');
+      throw new Error(error instanceof Error ? error.message : 'Failed to refine workflow. Please try again.');
     }
   }
 }

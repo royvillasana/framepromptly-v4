@@ -116,6 +116,13 @@ export const useAIBuilderStore = create<AIBuilderState>()(
           timestamp: new Date(),
         };
 
+        console.log('🔍 [AI Builder Store] Setting generation state:', {
+          nodesCount: nodes.length,
+          edgesCount: edges.length,
+          showPreview: true,
+          generation: generation,
+        });
+
         set((state) => ({
           isGenerating: false,
           currentGeneration: generation,
@@ -125,6 +132,12 @@ export const useAIBuilderStore = create<AIBuilderState>()(
           conversationHistory: [...state.conversationHistory, conversationEntry],
           currentPrompt: '', // Clear input after successful generation
         }));
+
+        console.log('🔍 [AI Builder Store] State after set:', {
+          previewNodesCount: get().previewNodes.length,
+          previewEdgesCount: get().previewEdges.length,
+          showPreview: get().showPreview,
+        });
       } catch (error) {
         console.error('Workflow generation failed:', error);
         
@@ -209,7 +222,13 @@ export const useAIBuilderStore = create<AIBuilderState>()(
 
     acceptGeneration: () => {
       const { previewNodes, previewEdges, currentGeneration } = get();
-      
+
+      console.log('🎯 [AI Builder Store] acceptGeneration called:', {
+        previewNodesCount: previewNodes.length,
+        previewEdgesCount: previewEdges.length,
+        hasCurrentGeneration: !!currentGeneration,
+      });
+
       // Clear the preview and generation state
       set({
         currentGeneration: null,
@@ -220,11 +239,18 @@ export const useAIBuilderStore = create<AIBuilderState>()(
       });
 
       // Return the nodes and edges to be added to the main workflow
-      return {
+      const result = {
         nodes: previewNodes,
         edges: previewEdges,
         framework: undefined, // Framework will be determined by convertAIGenerationToNodes
       };
+
+      console.log('🎯 [AI Builder Store] Returning:', {
+        nodesCount: result.nodes.length,
+        edgesCount: result.edges.length,
+      });
+
+      return result;
     },
 
     rejectGeneration: () => {

@@ -94,6 +94,9 @@ export function useYjsCollaboration({
   const initialNodesRef = useRef(initialNodes);
   const initialEdgesRef = useRef(initialEdges);
 
+  // Flag to prevent infinite loops when WE update Yjs
+  const isLocalUpdate = useRef(false);
+
   useEffect(() => {
     onNodesChangeRef.current = onNodesChange;
     onEdgesChangeRef.current = onEdgesChange;
@@ -261,17 +264,29 @@ export function useYjsCollaboration({
     const edgesMap = doc.getMap('edges');
 
     const handleNodesObserve = () => {
+      // Skip if this is our own local update (prevents infinite loop)
+      if (isLocalUpdate.current) {
+        console.log('⏭️ [Yjs] Skipping observe callback - local update');
+        return;
+      }
+
       if (onNodesChangeRef.current) {
         const nodes = Array.from(nodesMap.values()) as Node[];
-        console.log('🔄 [Yjs] Nodes changed:', nodes.length);
+        console.log('🔄 [Yjs] Nodes changed (remote):', nodes.length);
         onNodesChangeRef.current(nodes);
       }
     };
 
     const handleEdgesObserve = () => {
+      // Skip if this is our own local update (prevents infinite loop)
+      if (isLocalUpdate.current) {
+        console.log('⏭️ [Yjs] Skipping observe callback - local update');
+        return;
+      }
+
       if (onEdgesChangeRef.current) {
         const edges = Array.from(edgesMap.values()) as Edge[];
-        console.log('🔄 [Yjs] Edges changed:', edges.length);
+        console.log('🔄 [Yjs] Edges changed (remote):', edges.length);
         onEdgesChangeRef.current(edges);
       }
     };
@@ -327,6 +342,9 @@ export function useYjsCollaboration({
 
     const nodesMap = yDoc.getMap('nodes');
 
+    // Set flag to prevent observe callback from triggering
+    isLocalUpdate.current = true;
+
     // Clear existing nodes
     yDoc.transact(() => {
       nodesMap.clear();
@@ -337,7 +355,13 @@ export function useYjsCollaboration({
       });
     });
 
-    console.log('💾 [Yjs] Nodes updated:', nodes.length);
+    console.log('💾 [Yjs] Nodes updated (local):', nodes.length);
+
+    // Reset flag after transaction completes
+    // Use setTimeout to ensure transaction is fully processed
+    setTimeout(() => {
+      isLocalUpdate.current = false;
+    }, 0);
   }, [yDoc]);
 
   // Set edges in Yjs document
@@ -345,6 +369,9 @@ export function useYjsCollaboration({
     if (!yDoc) return;
 
     const edgesMap = yDoc.getMap('edges');
+
+    // Set flag to prevent observe callback from triggering
+    isLocalUpdate.current = true;
 
     // Clear existing edges
     yDoc.transact(() => {
@@ -356,7 +383,13 @@ export function useYjsCollaboration({
       });
     });
 
-    console.log('💾 [Yjs] Edges updated:', edges.length);
+    console.log('💾 [Yjs] Edges updated (local):', edges.length);
+
+    // Reset flag after transaction completes
+    // Use setTimeout to ensure transaction is fully processed
+    setTimeout(() => {
+      isLocalUpdate.current = false;
+    }, 0);
   }, [yDoc]);
 
   // Get current nodes from Yjs document

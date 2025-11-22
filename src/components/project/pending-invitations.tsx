@@ -42,20 +42,18 @@ export function PendingInvitations() {
       }
 
       // Fetch pending invitations for the current user's email
-      const { data, error } = await supabase
+      // Note: We can't select invited_by (references auth.users) due to RLS permissions
+      // We also avoid nested joins to prevent RLS recursion issues
+      const { data: invitationsData, error } = await supabase
         .from('project_invitations')
         .select(`
           id,
           project_id,
           invited_email,
-          invited_by,
           role,
           invitation_token,
           created_at,
-          expires_at,
-          projects:project_id (
-            name
-          )
+          expires_at
         `)
         .eq('invited_email', user.email)
         .eq('status', 'pending')
@@ -65,6 +63,27 @@ export function PendingInvitations() {
         console.error('❌ Error fetching invitations:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
         throw error;
+      }
+
+      // Fetch project names separately to avoid nested join RLS issues
+      let data = invitationsData;
+      if (invitationsData && invitationsData.length > 0) {
+        const projectIds = invitationsData.map(inv => inv.project_id);
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('id, name')
+          .in('id', projectIds);
+
+        if (!projectsError && projectsData) {
+          // Merge project names into invitation data
+          data = invitationsData.map(inv => {
+            const project = projectsData.find(p => p.id === inv.project_id);
+            return {
+              ...inv,
+              projects: project ? { name: project.name } : null
+            };
+          });
+        }
       }
 
       console.log('✅ Fetched invitations:', data);

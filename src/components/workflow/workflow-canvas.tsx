@@ -89,6 +89,8 @@ export function WorkflowCanvas({
 }: WorkflowCanvasProps) {
 
   const {
+    nodes: storeNodes,
+    edges: storeEdges,
     setNodes,
     setEdges,
     addEdge: addStoreEdge,
@@ -119,6 +121,28 @@ export function WorkflowCanvas({
   // Flag to prevent infinite loop when Yjs sends changes
   const isApplyingYjsChanges = useRef(false);
 
+  // Forward references for callbacks - defined early so they can be used in Yjs callback
+  const addNodeToCanvasRef = useRef<((node: any) => void) | null>(null);
+  const addEdgeToCanvasRef = useRef<((edge: any) => void) | null>(null);
+
+  // Helper to enhance nodes with callbacks
+  const enhanceNodesWithCallbacks = (nodes: any[]) => {
+    return nodes.map((node) => {
+      if (node.type === 'framework' || node.type === 'stage' || node.type === 'tool') {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            addNodeToCanvas: addNodeToCanvasRef.current,
+            addEdgeToCanvas: addEdgeToCanvasRef.current,
+            onSwitchToPromptTab: node.type === 'tool' ? onSwitchToPromptTab : undefined,
+          },
+        };
+      }
+      return node;
+    });
+  };
+
   // Yjs collaboration hook - replaces old useCanvasUpdates
   const {
     isConnected,
@@ -136,22 +160,26 @@ export function WorkflowCanvas({
     onNodesChange: (newNodes) => {
       console.log('🔄 [Yjs] Remote nodes changed:', newNodes.length);
       isApplyingYjsChanges.current = true;
-      setFlowNodes(newNodes);
-      setNodes(newNodes);
-      // Reset flag after React has processed the update
+      // Enhance nodes with callbacks before setting them
+      const enhancedNodes = enhanceNodesWithCallbacks(newNodes);
+      setFlowNodes(enhancedNodes);
+      setNodes(enhancedNodes);
+      // Reset flag after React Flow has processed the update
+      // Increased delay to ensure React Flow completes processing
       setTimeout(() => {
         isApplyingYjsChanges.current = false;
-      }, 0);
+      }, 100);
     },
     onEdgesChange: (newEdges) => {
       console.log('🔄 [Yjs] Remote edges changed:', newEdges.length);
       isApplyingYjsChanges.current = true;
       setFlowEdges(newEdges);
       setEdges(newEdges);
-      // Reset flag after React has processed the update
+      // Reset flag after React Flow has processed the update
+      // Increased delay to ensure React Flow completes processing
       setTimeout(() => {
         isApplyingYjsChanges.current = false;
-      }, 0);
+      }, 100);
     },
   });
 
@@ -160,10 +188,6 @@ export function WorkflowCanvas({
     ...staticNodeTypes,
     tool: ToolNode,
   }), []);
-
-  // Forward reference for addNodeToCanvas that will be set after definition
-  const addNodeToCanvasRef = useRef<((node: any) => void) | null>(null);
-  const addEdgeToCanvasRef = useRef<((edge: any) => void) | null>(null);
 
   // Add callbacks to nodes based on type
   const enhancedNodes = useMemo(() =>
@@ -219,8 +243,52 @@ export function WorkflowCanvas({
     });
   }, [initialNodes, projectId]);
 
-  // DON'T automatically sync from store - this causes infinite loops
-  // Instead, React Flow manages its own state and we save back to store on unmount
+  // Subscribe to workflow store nodes to sync AI-generated nodes to canvas
+  // This allows AI Builder to add nodes via the store which then appear on the canvas
+  useEffect(() => {
+    // Skip if we're applying Yjs changes to avoid loops
+    if (isApplyingYjsChanges.current) {
+      return;
+    }
+
+    // Check if new nodes were added to the store (by comparing IDs)
+    const flowNodeIds = new Set(flowNodes.map(n => n.id));
+    const newNodes = storeNodes.filter(n => !flowNodeIds.has(n.id));
+
+    if (newNodes.length > 0) {
+      console.log('🔄 [WorkflowCanvas] Syncing new nodes from store to canvas:', {
+        newNodesCount: newNodes.length,
+        currentFlowNodesCount: flowNodes.length,
+        storeNodesCount: storeNodes.length,
+        newNodeIds: newNodes.map(n => ({ id: n.id, type: n.type }))
+      });
+
+      // Enhance new nodes with callbacks before adding them to the canvas
+      const enhancedNewNodes = newNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          ...(node.type === 'tool' ? { onSwitchToPromptTab, addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {}),
+          ...(node.type === 'framework' ? { addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {}),
+          ...(node.type === 'stage' ? { addNodeToCanvas: addNodeToCanvasRef.current, addEdgeToCanvas: addEdgeToCanvasRef.current } : {})
+        }
+      }));
+
+      // Add new nodes to canvas
+      setFlowNodes(nodes => [...nodes, ...enhancedNewNodes]);
+
+      // Also sync edges from store if there are new ones
+      const flowEdgeIds = new Set(flowEdges.map(e => e.id));
+      const newEdges = storeEdges.filter(e => !flowEdgeIds.has(e.id));
+      if (newEdges.length > 0) {
+        console.log('🔄 [WorkflowCanvas] Syncing new edges from store to canvas:', newEdges.length);
+        setFlowEdges(edges => [...edges, ...newEdges]);
+      }
+    }
+  }, [storeNodes, storeEdges, flowNodes, flowEdges, onSwitchToPromptTab, setFlowNodes, setFlowEdges]);
+
+  // DON'T automatically sync ALL nodes from store - this causes infinite loops
+  // Instead, we only sync NEW nodes (detected above) and save back to store on unmount
   // The key prop on WorkflowCanvas ensures component remounts when project changes
 
   // Expose addNode function to parent component via callback
