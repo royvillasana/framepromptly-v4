@@ -251,14 +251,18 @@ export function WorkflowCanvas({
       return;
     }
 
+    // Use refs to get current flow nodes/edges to avoid infinite loop
+    const currentFlowNodes = flowNodesRef.current;
+    const currentFlowEdges = flowEdgesRef.current;
+
     // Check if new nodes were added to the store (by comparing IDs)
-    const flowNodeIds = new Set(flowNodes.map(n => n.id));
+    const flowNodeIds = new Set(currentFlowNodes.map(n => n.id));
     const newNodes = storeNodes.filter(n => !flowNodeIds.has(n.id));
 
     if (newNodes.length > 0) {
       console.log('🔄 [WorkflowCanvas] Syncing new nodes from store to canvas:', {
         newNodesCount: newNodes.length,
-        currentFlowNodesCount: flowNodes.length,
+        currentFlowNodesCount: currentFlowNodes.length,
         storeNodesCount: storeNodes.length,
         newNodeIds: newNodes.map(n => ({ id: n.id, type: n.type }))
       });
@@ -278,14 +282,14 @@ export function WorkflowCanvas({
       setFlowNodes(nodes => [...nodes, ...enhancedNewNodes]);
 
       // Also sync edges from store if there are new ones
-      const flowEdgeIds = new Set(flowEdges.map(e => e.id));
+      const flowEdgeIds = new Set(currentFlowEdges.map(e => e.id));
       const newEdges = storeEdges.filter(e => !flowEdgeIds.has(e.id));
       if (newEdges.length > 0) {
         console.log('🔄 [WorkflowCanvas] Syncing new edges from store to canvas:', newEdges.length);
         setFlowEdges(edges => [...edges, ...newEdges]);
       }
     }
-  }, [storeNodes, storeEdges, flowNodes, flowEdges, onSwitchToPromptTab, setFlowNodes, setFlowEdges]);
+  }, [storeNodes, storeEdges, onSwitchToPromptTab, setFlowNodes, setFlowEdges]);
 
   // DON'T automatically sync ALL nodes from store - this causes infinite loops
   // Instead, we only sync NEW nodes (detected above) and save back to store on unmount
